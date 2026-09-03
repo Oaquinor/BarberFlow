@@ -1,0 +1,86 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>a1b2c3d4-5e6f-4789-9abc-def012345678</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>app\main.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>backend</Name>
+    <RootNamespace>backend</RootNamespace>
+    <InterpreterId>MSBuild|venv|$(MSBuildProjectFullPath)</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Interpreter Include="venv\">
+      <Id>venv</Id>
+      <Version>3.13</Version>
+      <Description>venv (Python 3.13)</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="app\**\*.py" />
+    <Compile Include="alembic\**\*.py" />
+    <Compile Include="scripts\**\*.py" />
+    <Compile Include="tests\**\*.py" />
+    <Compile Include="fix_user.py" />
+    <Compile Include="setup_db.py" />
+    <Compile Include="test_mysql.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="requirements.txt" />
+    <Content Include="requirements-mysql.txt" />
+    <Content Include="requirements-simple.txt" />
+    <Content Include="pyproject.toml" />
+    <Content Include="alembic.ini" />
+    <Content Include=".env.example" />
+    <Content Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="alembic\" />
+    <Folder Include="alembic\versions\" />
+    <Folder Include="app\" />
+    <Folder Include="app\ai\" />
+    <Folder Include="app\analytics\" />
+    <Folder Include="app\api\" />
+    <Folder Include="app\api\v1\" />
+    <Folder Include="app\api\v1\endpoints\" />
+    <Folder Include="app\core\" />
+    <Folder Include="app\core\config\" />
+    <Folder Include="app\core\constants\" />
+    <Folder Include="app\core\database\" />
+    <Folder Include="app\core\exceptions\" />
+    <Folder Include="app\core\logging\" />
+    <Folder Include="app\core\security\" />
+    <Folder Include="app\middleware\" />
+    <Folder Include="app\models\" />
+    <Folder Include="app\notifications\" />
+    <Folder Include="app\repositories\" />
+    <Folder Include="app\schemas\" />
+    <Folder Include="app\services\" />
+    <Folder Include="app\utils\" />
+    <Folder Include="app\websocket\" />
+    <Folder Include="app\workers\" />
+    <Folder Include="scripts\" />
+    <Folder Include="tests\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

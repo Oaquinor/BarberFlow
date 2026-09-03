@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11723.231 stable
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "BarberFlow", "BarberFlow.pyproj", "{F9E5A0DF-6BC8-4372-9EDB-629A1A4A3ACC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F9E5A0DF-6BC8-4372-9EDB-629A1A4A3ACC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9E5A0DF-6BC8-4372-9EDB-629A1A4A3ACC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8C8DFEA0-2768-4D0A-ACC3-278002E551EA}
+	EndGlobalSection
+EndGlobal

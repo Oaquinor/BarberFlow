@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <title>Cliente - KingFlow Barber</title>
+    <style>
+        :root {
+            --brand-primary: #667eea;
+            --brand-secondary: #764ba2;
+            --text-primary: #18181b;
+            --text-secondary: #52525b;
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-strong: #ffffff;
+            --ring: rgba(255, 255, 255, 0.35);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(255,255,255,0.35) 0%, transparent 35%),
+                radial-gradient(circle at 100% 100%, rgba(255,255,255,0.15) 0%, transparent 30%),
+                linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 18px;
+        }
+        .container { max-width: 1040px; margin: 0 auto; }
+        .card {
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--ring);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 12px 35px rgba(0,0,0,.12);
+            margin-bottom: 16px;
+        }
+        .title { font-size: 1.5rem; margin-bottom: 8px; font-weight: 800; letter-spacing: .2px; }
+        .muted { color: var(--text-secondary); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .actions-bar { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+        .option-panel { max-width: 780px; margin: 0 auto 14px auto; }
+        .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        .field label { font-weight: 700; color: #3f3f46; }
+        input, select, textarea {
+            border: 1px solid #d4d4d8;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+            font: inherit;
+            width: 100%;
+            transition: all .2s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px rgba(102,126,234,.18);
+        }
+        textarea { min-height: 88px; }
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            box-shadow: 0 8px 20px rgba(102,126,234,.25);
+            transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(102,126,234,.35);
+        }
+        .secondary {
+            background: #f4f4f5;
+            color: #27272a;
+            box-shadow: none;
+        }
+        .actions-bar button.active {
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            box-shadow: 0 10px 22px rgba(102,126,234,.35);
+        }
+        .list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .item {
+            border: 1px solid #e4e4e7;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+        }
+        #shopName {
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        .option-panel {
+            animation: fadeIn .25s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1 class="title" id="shopName">💈 Cargando barbería...</h1>
+            <p class="muted">Agenda tu cita sin registrarte y revisa su estado con tu teléfono.</p>
+        </div>
+
+        <div class="card actions-bar">
+            <button id="showBookBtn" type="button">📅 Quiero agendar</button>
+            <button id="showTrackBtn" type="button" class="secondary">🔎 Quiero consultar</button>
+            <button id="showSupportBtn" type="button" class="secondary">🆘 Tengo problemas / Contactar soporte</button>
+        </div>
+
+        <div id="optionsContainer">
+            <section class="card option-panel" id="bookSection" style="display:none;">
+                <h2 class="title">📅 Agendar cita</h2>
+                <div class="field">
+                    <label>Nombre</label>
+                    <input id="clientName" placeholder="Tu nombre" />
+                </div>
+                <div class="field">
+                    <label>Teléfono</label>
+                    <input id="clientPhone" placeholder="8095550000" />
+                </div>
+                <div class="field">
+                    <label>Servicio</label>
+                    <select id="serviceSelect"></select>
+                </div>
+                <div class="field">
+                    <label>Turno disponible</label>
+                    <select id="scheduledTime"></select>
+                </div>
+                <div class="field">
+                    <label>Notas (opcional)</label>
+                    <textarea id="clientNotes" placeholder="Ej: corte degradado"></textarea>
+                </div>
+                <button id="bookBtn">Confirmar cita</button>
+                <p id="bookResult" class="muted" style="margin-top:8px;"></p>
+            </section>
+
+            <section class="card option-panel" id="trackSection" style="display:none;">
+                <h2 class="title">🔎 Ver estado de cita</h2>
+                <div class="field">
+                    <label>Teléfono</label>
+                    <input id="trackPhone" placeholder="8095550000" />
+                </div>
+                <div class="field">
+                    <label>ID de cita (opcional)</label>
+                    <input id="trackId" placeholder="Ej: 12" />
+                </div>
+                <button id="trackBtn">Consultar</button>
+                <div id="trackList" class="list"></div>
+            </section>
+        </div>
+
+        <section class="card option-panel" id="supportSection" style="display:none;">
+            <h2 class="title">🆘 Contactar soporte</h2>
+            <div class="field">
+                <label>Tu nombre</label>
+                <input id="supportName" placeholder="Juan Pérez" />
+            </div>
+            <div class="grid">
+                <div class="field">
+                    <label>Email (opcional)</label>
+                    <input id="supportEmail" placeholder="juan@email.com" />
+                </div>
+                <div class="field">
+                    <label>Teléfono (opcional)</label>
+                    <input id="supportPhone" placeholder="8095550000" />
+                </div>
+            </div>
+            <div class="field">
+                <label>Mensaje</label>
+                <textarea id="supportMessage" placeholder="Describe tu situación"></textarea>
+            </div>
+            <button id="supportBtn">Enviar soporte</button>
+            <p id="supportResult" class="muted" style="margin-top:8px;"></p>
+        </section>
+    </div>
+
+    <script src="js/pwa.js"></script>
+    <script src="js/client.js"></script>
+</body>
+</html>

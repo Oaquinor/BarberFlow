@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: kingflow_db
+    restart: always
+    environment:
+      POSTGRES_USER: kingflow
+      POSTGRES_PASSWORD: kingflow123
+      POSTGRES_DB: kingflow_barber
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kingflow_network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: kingflow_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - kingflow_network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kingflow_backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://kingflow:kingflow123@db:5432/kingflow_barber
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=False
+      - ENVIRONMENT=production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      - db
+      - redis
+    networks:
+      - kingflow_network
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  kingflow_network:
+    driver: bridge

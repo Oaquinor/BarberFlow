@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="KingFlow Barber">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <title>KingFlow Barber - Sistema Operativo para Barberías</title>
+    <style>
+        :root {
+            --brand-primary: #667eea;
+            --brand-secondary: #764ba2;
+            --surface-glass: rgba(255, 255, 255, 0.88);
+            --surface-border: rgba(255, 255, 255, 0.45);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background:
+                radial-gradient(circle at 0% 0%, rgba(255,255,255,0.3) 0%, transparent 32%),
+                radial-gradient(circle at 100% 100%, rgba(255,255,255,0.16) 0%, transparent 30%),
+                linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            color: #333; 
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: var(--surface-glass); border: 1px solid var(--surface-border); backdrop-filter: blur(10px); padding: 25px 35px; border-radius: 18px; margin-bottom: 30px; box-shadow: 0 12px 28px rgba(0,0,0,0.16); display: flex; justify-content: space-between; align-items: center; }
+        .logo h1 { color: #667eea; font-size: 2.2em; margin: 0; letter-spacing: .2px; }
+        .subtitle { color: #666; font-size: 0.95em; margin-top: 5px; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .user-info { display: flex; align-items: center; gap: 15px; font-weight: 600; }
+        .btn-install { padding: 10px 16px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; display: none; box-shadow: 0 8px 20px rgba(102,126,234,.3); }
+        .auth-section { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+        .auth-card { background: var(--surface-glass); border: 1px solid var(--surface-border); backdrop-filter: blur(10px); padding: 50px; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; }
+        .auth-header { text-align: center; margin-bottom: 35px; }
+        .auth-icon { font-size: 4em; margin-bottom: 15px; }
+        .auth-header h2 { color: #333; font-size: 2em; margin-bottom: 10px; }
+        .auth-header p { color: #666; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 10px; color: #333; font-weight: 600; }
+        .form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; transition: all 0.3s; }
+        .form-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .test-credentials { margin-top: 25px; padding: 20px; background: #fff3cd; border-radius: 12px; font-size: 14px; color: #856404; border-left: 4px solid #ffc107; }
+        .test-credentials p { margin: 5px 0; } 
+        .auth-footer { text-align: center; margin-top: 25px; color: #666; font-size: 0.9em; }
+        .auth-footer a, .auth-footer button { color: #667eea; text-decoration: none; font-weight: 700; background: none; border: none; cursor: pointer; }
+        .support-inline { margin-top: 14px; text-align: left; background: rgba(255,255,255,.65); border: 1px solid #e4e4e7; padding: 12px; border-radius: 12px; }
+        .support-inline input, .support-inline textarea { width: 100%; padding: 10px 12px; border: 1px solid #d4d4d8; border-radius: 10px; font-size: 14px; margin-top: 8px; }
+        .support-inline textarea { min-height: 86px; resize: vertical; }
+        .support-inline .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+        .support-inline .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .support-inline .send-btn { padding: 9px 14px; border-radius: 10px; color: #fff; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 6px 18px rgba(102,126,234,.28); }
+        .btn-primary { padding: 16px 32px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 22px rgba(102, 126, 234, 0.3); width: 100%; transition: transform .15s ease, box-shadow .2s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 26px rgba(102, 126, 234, 0.42); }
+        .btn-secondary { padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-success { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: white; padding: 14px 28px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3); flex: 1; }
+        .btn-large { width: 100%; padding: 16px; font-size: 18px; }
+        #dashboardSection { background: var(--surface-glass); border: 1px solid var(--surface-border); backdrop-filter: blur(10px); border-radius: 22px; padding: 35px; box-shadow: 0 10px 26px rgba(0,0,0,0.15); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 35px; border-bottom: 3px solid #e0e0e0; flex-wrap: wrap; }
+        .tab { padding: 14px 28px; background: none; border: none; border-bottom: 4px solid transparent; cursor: pointer; font-size: 15px; font-weight: 700; color: #666; border-radius: 10px 10px 0 0; transition: all .2s ease; }
+        .tab:hover { color: #4f46e5; background: rgba(255,255,255,.55); }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; background: linear-gradient(to top, rgba(102, 126, 234, 0.12), transparent); }
+        .tab-content { display: none; }
+        .tab-content h2 { color: #333; margin-bottom: 30px; font-size: 2em; }
+        .service-card { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; padding: 35px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); }
+        .service-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .service-header h3 { font-size: 1.8em; margin: 0; }
+        .status-badge { padding: 10px 20px; background: rgba(255,255,255,0.25); border-radius: 25px; font-size: 14px; font-weight: 600; }
+        .status-badge.in-progress { background: rgba(74, 222, 128, 0.9); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .service-details { background: rgba(255,255,255,0.15); padding: 25px; border-radius: 15px; margin-bottom: 25px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row .label { font-weight: 500; opacity: 0.9; }
+        .detail-row .value { font-weight: 700; }
+        .time-display { font-size: 1.8em !important; font-weight: 800 !important; font-family: 'Courier New', monospace; }
+        .progress-section { margin: 25px 0; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 600; }
+        .progress-percent { font-size: 1.2em; }
+        .progress-bar { background: rgba(255,255,255,0.25); height: 12px; border-radius: 20px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(90deg, #4ade80, #22c55e); height: 100%; transition: width 0.5s ease; }
+        .alert { padding: 15px 20px; border-radius: 12px; margin: 10px 0; font-weight: 600; }
+        .alert-warning { background: rgba(255, 193, 7, 0.2); border-left: 4px solid #ffc107; }
+        .action-buttons { display: flex; gap: 15px; margin-top: 25px; }
+        .next-appointment-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 25px; }
+        .next-appointment-card h3 { color: #333; margin-bottom: 20px; }
+        .appointment-preview { display: flex; gap: 25px; align-items: center; }
+        .appointment-time { text-align: center; padding: 20px; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); border-radius: 12px; color: white; min-width: 120px; }
+        .time-big { font-size: 2em; font-weight: 800; }
+        .time-detail { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
+        .appointment-info h4 { color: #333; margin-bottom: 8px; font-size: 1.3em; }
+        .appointment-info p { color: #666; margin: 5px 0; }
+        .duration { color: var(--brand-primary); font-weight: 600; }
+        .quick-actions { background: #f8f9fa; padding: 25px; border-radius: 15px; }
+        .quick-actions h3 { color: #333; margin-bottom: 20px; }
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .action-btn { background: white; border: 2px solid #e0e0e0; padding: 20px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .action-btn:hover { border-color: var(--brand-primary); transform: translateY(-3px); }
+        .action-icon { font-size: 2em; }
+        .action-text { font-weight: 600; color: #333; }
+        .date-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px; }
+        .date-header h3 { color: #333; font-size: 1.5em; }
+        .btn-icon { background: #f8f9fa; border: 2px solid #e0e0e0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 18px; }
+        .appointments-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .summary-item { background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); padding: 20px; border-radius: 12px; text-align: center; color: white; }
+        .summary-number { display: block; font-size: 2.5em; font-weight: 800; margin-bottom: 5px; }
+        .summary-label { font-size: 0.9em; opacity: 0.95; }
+        .appointments-list { display: flex; flex-direction: column; gap: 15px; }
+        .appointment-card { display: flex; gap: 20px; background: white; padding: 20px; border-radius: 15px; border-left: 5px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .appointment-card.completed { border-left-color: #22c55e; background: linear-gradient(to right, rgba(34, 197, 94, 0.05), white); }
+        .appointment-card.in-progress { border-left-color: var(--brand-primary); background: linear-gradient(to right, rgba(102, 126, 234, 0.1), white); animation: glow 2s infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.08); } 50% { box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); } }
+        .appointment-card.upcoming { border-left-color: #ffc107; }
+        .appointment-time-badge { background: #f8f9fa; padding: 15px 20px; border-radius: 10px; font-weight: 800; font-size: 1.2em; color: #333; text-align: center; min-width: 100px; }
+        .appointment-time-badge.current { background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); color: white; }
+        .appointment-content { flex: 1; }
+        .appointment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .appointment-header h4 { color: #333; font-size: 1.3em; margin: 0; }
+        .status-badge.completed { background: #d4edda; color: #155724; }
+        .status-badge.confirmed { background: #fff3cd; color: #856404; }
+        .service-name { color: #666; margin: 8px 0; font-size: 1.05em; }
+        .appointment-meta { display: flex; gap: 20px; margin-top: 12px; font-size: 0.95em; color: #666; flex-wrap: wrap; }
+        .appointment-meta span { font-weight: 600; }
+        .pulse { animation: pulse 2s infinite; color: var(--brand-primary) !important; }
+        .btn-start { background: var(--brand-primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 35px; }
+        .stat-card { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; }
+        .stat-card.highlight { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .stat-icon { font-size: 3em; margin-bottom: 15px; }
+        .stat-value { font-size: 3em; font-weight: 800; margin: 15px 0; }
+        .stat-label { font-size: 1em; opacity: 0.95; font-weight: 500; }
+        .stat-trend { margin-top: 10px; padding: 8px 12px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 0.9em; display: inline-block; }
+        .stat-trend.positive { background: rgba(74, 222, 128, 0.3); }
+        .chart-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .chart-card h3 { color: #333; margin-bottom: 25px; }
+        .simple-chart { padding: 20px 0; }
+        .chart-bars { display: flex; justify-content: space-around; align-items: flex-end; height: 200px; gap: 10px; }
+        .chart-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .bar-fill { width: 100%; background: linear-gradient(to top, var(--brand-primary), var(--brand-secondary)); border-radius: 8px 8px 0 0; }
+        .chart-bar.active .bar-fill { background: linear-gradient(to top, #4ade80, #22c55e); }
+        .chart-bar.future .bar-fill { background: #e0e0e0; }
+        .bar-label { font-weight: 700; color: #666; font-size: 0.9em; }
+        .insights-card { background: #f8f9fa; padding: 30px; border-radius: 15px; }
+        .insights-card h3 { color: #333; margin-bottom: 25px; }
+        .insights-list { display: flex; flex-direction: column; gap: 15px; }
+        .insight-item { display: flex; gap: 20px; padding: 20px; background: white; border-radius: 12px; border-left: 4px solid #e0e0e0; }
+        .insight-item.positive { border-left-color: #22c55e; }
+        .insight-item.warning { border-left-color: #ffc107; }
+        .insight-icon { font-size: 2.5em; }
+        .insight-content h4 { color: #333; margin-bottom: 8px; }
+        .insight-content p { color: #666; line-height: 1.6; }
+        .achievements-summary { display: flex; justify-content: center; gap: 50px; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); border-radius: 15px; color: white; }
+        .achievement-stat { text-align: center; }
+        .stat-number { display: block; font-size: 3em; font-weight: 800; margin-bottom: 5px; }
+        .stat-text { font-size: 1em; opacity: 0.95; }
+        .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .achievement-card { background: white; padding: 25px; border-radius: 15px; text-align: center; border: 3px solid #e0e0e0; position: relative; }
+        .achievement-card.unlocked { background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-color: var(--brand-primary); }
+        .achievement-card.locked { opacity: 0.7; }
+        .achievement-icon { font-size: 3.5em; margin-bottom: 15px; }
+        .locked-icon { filter: grayscale(100%); opacity: 0.5; }
+        .achievement-card h4 { color: #333; margin: 15px 0 10px; font-size: 1.2em; }
+        .achievement-card p { color: #666; font-size: 0.95em; line-height: 1.5; margin-bottom: 15px; }
+        .achievement-points { color: var(--brand-primary); font-weight: 800; font-size: 1.1em; margin: 15px 0; }
+        .achievement-badge { background: #22c55e; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 700; display: inline-block; margin: 10px 0; }
+        .achievement-progress { margin-top: 15px; }
+        .achievement-progress span { display: block; margin-top: 8px; color: #666; font-size: 0.9em; font-weight: 600; }
+        .progress-bar.small { height: 8px; margin: 8px 0; }
+        .achievement-rarity { position: absolute; top: 10px; right: 10px; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; font-weight: 700; text-transform: uppercase; }
+        .achievement-rarity.common { background: #9ca3af; color: white; }
+        .achievement-rarity.rare { background: #3b82f6; color: white; }
+        .achievement-rarity.epic { background: #a855f7; color: white; }
+        .achievement-rarity.legendary { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .services-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 20px; }
+        .search-input { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; width: 300px; }
+        .services-categories { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .category-btn { padding: 10px 20px; background: white; border: 2px solid #e0e0e0; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        .category-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .services-list { display: flex; flex-direction: column; gap: 15px; }
+        .service-item { display: flex; align-items: center; gap: 20px; background: white; padding: 20px; border-radius: 15px; border: 2px solid #e0e0e0; }
+        .service-item.featured { background: linear-gradient(to right, rgba(102, 126, 234, 0.05), white); border-color: #667eea; }
+        .service-icon { font-size: 2.5em; min-width: 60px; text-align: center; }
+        .service-info { flex: 1; }
+        .service-info h4 { color: #333; margin-bottom: 8px; font-size: 1.2em; }
+        .service-info p { color: #666; margin-bottom: 10px; }
+        .service-meta { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .tag { background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
+        .popular { background: #ffc107; color: #333; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 700; }
+        .service-price { font-size: 1.8em; font-weight: 800; color: #667eea; min-width: 100px; text-align: right; }
+
+        html { font-size: clamp(14px, 1vw, 16px); }
+
+        @media (max-width: 1200px) {
+            .container { max-width: 100%; }
+            #dashboardSection { padding: 24px; }
+            .auth-card { max-width: 560px; }
+        }
+
+        @media (max-width: 992px) {
+            body { padding: 14px; }
+            .header { padding: 18px 20px; align-items: flex-start; gap: 12px; }
+            .header-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+            .tabs { gap: 6px; }
+            .tab { padding: 10px 14px; font-size: 14px; }
+            .service-header,
+            .date-header,
+            .appointment-header,
+            .services-header { flex-wrap: wrap; gap: 10px; }
+            .appointment-preview { flex-wrap: wrap; }
+            .service-item { flex-wrap: wrap; }
+            .service-price { text-align: left; min-width: auto; }
+            .search-input { width: 100%; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .logo h1 { font-size: 1.45rem; line-height: 1.2; }
+            .subtitle { font-size: 0.85rem; }
+            .auth-card { padding: 24px 18px; }
+            .auth-header h2 { font-size: 1.5rem; }
+            .support-inline .row { grid-template-columns: 1fr; }
+            #dashboardSection { padding: 14px; border-radius: 14px; }
+            .tab-content h2 { font-size: 1.45rem; margin-bottom: 16px; }
+            .service-card,
+            .next-appointment-card,
+            .quick-actions,
+            .chart-card,
+            .insights-card,
+            .achievements-summary { padding: 16px; border-radius: 12px; }
+            .detail-row { gap: 8px; flex-wrap: wrap; }
+            .action-buttons { flex-direction: column; }
+            .appointments-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .summary-number { font-size: 1.8rem; }
+            .appointment-card { flex-direction: column; gap: 12px; }
+            .appointment-time-badge { width: 100%; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .stat-value { font-size: 2rem; }
+            .achievements-summary { flex-direction: column; gap: 16px; }
+            .achievements-grid { grid-template-columns: 1fr; }
+            .services-list { gap: 10px; }
+            .service-item { padding: 14px; }
+        }
+
+        @media (max-width: 576px) {
+            .header { padding: 14px; }
+            .header-actions,
+            .user-info { width: 100%; }
+            .user-info { flex-wrap: wrap; }
+            .btn-install,
+            .btn-secondary { width: 100%; text-align: center; }
+            .btn-primary,
+            .btn-large,
+            .btn-success,
+            .btn-start { width: 100%; }
+            .tab { width: calc(50% - 4px); text-align: center; }
+            .service-header h3 { font-size: 1.2rem; }
+            .time-display { font-size: 1.2rem !important; }
+            .appointment-meta { flex-direction: column; gap: 8px; }
+            .appointments-summary { grid-template-columns: 1fr; }
+            .chart-bars { height: 150px; }
+        }
+
+        @media (max-width: 400px) {
+            body { padding: 8px; }
+            .auth-card,
+            #dashboardSection { padding: 10px; }
+            .tab { width: 100%; }
+            .service-card,
+            .next-appointment-card,
+            .quick-actions,
+            .chart-card,
+            .insights-card,
+            .achievement-card,
+            .service-item { padding: 12px; }
+            .logo h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <h1>👑 KingFlow Barber</h1>
+                <p class="subtitle">Sistema Operativo para Barberías</p>
+            </div>
+            <div class="header-actions">
+                <button id="installAppBtn" class="btn-install" type="button">📲 Instalar App</button>
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span id="userName">Carlos Martínez (Barbero)</span>
+                    <button onclick="logout()" class="btn-secondary">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="auth-section">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="auth-icon">🔐</div>
+                    <h2>Iniciar Sesión</h2>
+                    <p>Accede a tu cuenta de KingFlow Barber</p>
+                </div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>📧 Email</label>
+                        <input type="email" id="loginEmail" required placeholder="juanperez@gmail.com" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>🔒 Contraseña</label>
+                        <input type="password" id="loginPassword" required placeholder="Contraseña" value="">
+                    </div>
+                    <button type="submit" class="btn-primary btn-large">Entrar al Sistema</button>
+                </form>
+                <div class="auth-footer">
+                    <p>¿Problemas para acceder? <button type="button" id="toggleLoginSupportBtn">Contacta soporte</button></p>
+                    <div id="loginSupportPanel" class="support-inline" style="display:none;">
+                        <label for="loginSupportName" style="font-weight:600; color:#333;">Nombre</label>
+                        <input id="loginSupportName" type="text" placeholder="Tu nombre" />
+                        <div class="row">
+                            <div>
+                                <label for="loginSupportEmail" style="font-weight:600; color:#333;">Email (opcional)</label>
+                                <input id="loginSupportEmail" type="email" placeholder="tu@email.com" />
+                            </div>
+                            <div>
+                                <label for="loginSupportPhone" style="font-weight:600; color:#333;">Teléfono (opcional)</label>
+                                <input id="loginSupportPhone" type="text" placeholder="8095550000" />
+                            </div>
+                        </div>
+                        <label for="loginSupportMessage" style="font-weight:600; color:#333; margin-top:8px; display:block;">Mensaje</label>
+                        <textarea id="loginSupportMessage" placeholder="Describe tu problema de acceso"></textarea>
+                        <div class="actions">
+                            <button type="button" id="sendLoginSupportBtn" class="send-btn">Enviar solicitud</button>
+                        </div>
+                        <p id="loginSupportResult" style="margin-top:8px; color:#52525b;"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" style="display: none;">
+            <!-- Navigation Tabs -->
+            <nav class="tabs">
+                <button class="tab active" onclick="showTab('serviceMode')">🔥 Modo Servicio</button>
+                <button class="tab" onclick="showTab('appointments')">📅 Citas</button>
+                <button class="tab" onclick="showTab('performance')">📊 Rendimiento</button>
+                <button class="tab" onclick="showTab('achievements')">🎮 Logros</button>
+                <button class="tab" onclick="showTab('services')">🛠️ Servicios</button>
+            </nav>
+
+            <!-- SERVICE MODE TAB -->
+            <div id="serviceModeTab" class="tab-content">
+                <!-- Contextual Greeting -->
+                <div id="contextualGreeting"></div>
+                <div id="smartMessages"></div>
+
+                <h2>🔥 Modo En Servicio</h2>
+
+                <!-- Active Service Card -->
+                <div class="service-card active-service">
+                    <div class="service-header">
+                        <h3>⏰ Servicio en Progreso</h3>
+                        <span class="status-badge in-progress">En Servicio</span>
+                    </div>
+
+                    <div class="service-details">
+                        <div class="detail-row">
+                            <span class="label">👤 Cliente:</span>
+                            <span class="value" id="activeServiceClient">Sin servicio activo</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">✂️ Servicio:</span>
+                            <span class="value" id="activeServiceType">Esperando próximas citas</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">⏱️ Tiempo transcurrido:</span>
+                            <span class="value time-display" id="elapsedTime">00:00:00</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="label">📊 Tiempo estimado:</span>
+                            <span class="value" id="activeServiceEstimated">-- minutos</span>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <div class="progress-label">
+                            <span>Progreso</span>
+                            <span class="progress-percent" id="activeServiceProgress">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="activeServiceProgressBar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="service-alerts">
+                        <div class="alert alert-warning" id="activeServiceAlert">
+                            ⏳ Sin servicio activo en este momento
+                        </div>
+                    </div>
+
+                <div style="background:#f8f9fa; border:1px solid #e0e0e0; border-radius:12px; padding:14px; margin-top:14px;">
+                    <h4 style="margin-bottom:10px; color:#333;">🗓️ Configurar turnos del día</h4>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
+                        <input type="date" id="slotDate" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="time" id="slotStart" value="09:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="time" id="slotEnd" value="18:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <select id="slotMinutes" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                            <option value="15">15 min</option>
+                            <option value="20">20 min</option>
+                            <option value="30" selected>30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">60 min</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="createSlotsBtn" class="btn-secondary" type="button">Crear turnos</button>
+                        <span id="createSlotsResult" style="color:#555;"></span>
+                    </div>
+                </div>
+
+                    <div class="action-buttons">
+                        <button class="btn-success btn-large" onclick="finishService()">
+                            ✅ Finalizar Servicio
+                        </button>
+                        <button class="btn-secondary" onclick="pauseService()">
+                            ⏸️ Pausar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Next Appointment -->
+                <div class="next-appointment-card">
+                    <h3>📍 Próxima Cita</h3>
+                    <div class="appointment-preview">
+                        <div class="appointment-time">
+                            <div class="time-big" id="nextAppointmentTime">--:--</div>
+                            <div class="time-detail" id="nextAppointmentEta">Sin próxima cita</div>
+                        </div>
+                        <div class="appointment-info">
+                            <h4 id="nextAppointmentClient">Agenda del día</h4>
+                            <p id="nextAppointmentService">Los datos se cargan desde tus citas reales</p>
+                            <p class="duration" id="nextAppointmentDuration">⏱️ -- min estimados</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3>⚡ Acciones Rápidas</h3>
+                    <div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:12px; margin-bottom:14px;">
+                        <div style="font-weight:700; margin-bottom:8px;">🔗 Link público para clientes</div>
+                        <input id="shareLinkInput" type="text" readonly style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px;" placeholder="Cargando link...">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button id="copyShareLinkBtn" class="btn-secondary" type="button">Copiar link</button>
+                            <button id="shareWhatsappBtn" class="btn-secondary" type="button">Compartir por WhatsApp</button>
+                        </div>
+                    </div>
+                    <div class="actions-grid">
+                        <button class="action-btn" onclick="testConnection()">
+                            <span class="action-icon">🔌</span>
+                            <span class="action-text">Test API</span>
+                        </button>
+                        <button class="action-btn">
+                            <span class="action-icon">📊</span>
+                            <span class="action-text">Ver Stats</span>
+                        </button>
+                        <button class="action-btn">
+                            <span class="action-icon">⏭️</span>
+                            <span class="action-text">Siguiente</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="connectionResult" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- APPOINTMENTS TAB -->
+            <div id="appointmentsTab" class="tab-content" style="display: none;">
+                <h2>📅 Mis Citas de Hoy</h2>
+
+                <div class="date-header">
+                    <button class="btn-icon">◀️</button>
+                    <h3 id="appointmentsDateHeader">Cargando fecha...</h3>
+                    <button class="btn-icon">▶️</button>
+                </div>
+
+                <div class="appointments-summary">
+                    <div class="summary-item">
+                        <span class="summary-number" id="summaryTotal">0</span>
+                        <span class="summary-label">Total Citas</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-number" id="summaryCompleted">0</span>
+                        <span class="summary-label">Completadas</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-number" id="summaryPending">0</span>
+                        <span class="summary-label">Pendientes</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-number" id="summaryInProgress">0</span>
+                        <span class="summary-label">En Progreso</span>
+                    </div>
+                </div>
+
+                <div class="appointments-list" id="appointmentsList"></div>
+            </div>
+
+            <!-- PERFORMANCE TAB -->
+            <div id="performanceTab" class="tab-content" style="display: none;">
+                <h2>📊 Mi Rendimiento <span id="goalBadge" style="font-size: 0.6em; color: #666;"></span></h2>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-value" id="statsCompletedToday">0</div>
+                        <div class="stat-label">Citas Completadas Hoy</div>
+                        <div class="stat-trend positive" id="statsCompletedTrend">↗️ 0 vs ayer</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="statsRevenueToday">$0</div>
+                        <div class="stat-label">Ingresos del Día</div>
+                        <div class="stat-trend positive" id="statsRevenueTrend">↗️ $0.00 vs ayer</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value" id="statsEfficiency">0%</div>
+                        <div class="stat-label">Eficiencia de Tiempo</div>
+                        <div class="stat-trend positive" id="statsEfficiencyTrend">↗️ 0% vs ayer</div>
+                    </div>
+                    <div class="stat-card highlight">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-value" id="statsPendingCount">0</div>
+                        <div class="stat-label">Pendientes Hoy</div>
+                        <div class="stat-trend positive">🏆 ¡Sigue así!</div>
+                    </div>
+                </div>
+
+                <!-- Performance Chart -->
+                <div class="chart-card">
+                    <h3>📈 Rendimiento Semanal</h3>
+                    <div class="simple-chart">
+                        <div class="chart-bars" id="performanceChartBars"></div>
+                    </div>
+                </div>
+
+                <!-- Insights -->
+                <div class="insights-card">
+                    <h3>💡 Insights Personalizados</h3>
+                    <div class="insights-list" id="insightsList"></div>
+                </div>
+            </div>
+
+            <!-- ACHIEVEMENTS TAB -->
+            <div id="achievementsTab" class="tab-content" style="display: none;">
+                <h2>🎮 Mis Logros</h2>
+                <div id="dynamicAchievements"></div>
+
+                <div class="achievements-summary">
+                    <div class="achievement-stat">
+                        <span class="stat-number" id="achievementUnlocked">0</span>
+                        <span class="stat-text">Logros Desbloqueados</span>
+                    </div>
+                    <div class="achievement-stat">
+                        <span class="stat-number" id="achievementPoints">0</span>
+                        <span class="stat-text">Puntos Totales</span>
+                    </div>
+                    <div class="achievement-stat">
+                        <span class="stat-number" id="achievementProgress">0%</span>
+                        <span class="stat-text">Progreso Global</span>
+                    </div>
+                </div>
+
+                <div class="achievements-grid" id="achievementsGrid"></div>
+            </div>
+
+            <!-- SERVICES TAB -->
+            <div id="servicesTab" class="tab-content" style="display: none;">
+                <h2>🛠️ Catálogo de Servicios</h2>
+
+                <div class="services-header">
+                    <button class="btn-primary">➕ Nuevo Servicio</button>
+                    <input type="text" placeholder="🔍 Buscar servicio..." class="search-input">
+                </div>
+
+                <div class="services-categories">
+                    <button class="category-btn active" type="button">Todos</button>
+                </div>
+
+                <div class="services-list" id="servicesList"></div>
+            </div>
+        </div>
+
+        <!-- Notifications Container -->
+        <div id="notifications"></div>
+    </div>
+
+    <script src="js/main.js?v=2024-01-01"></script>
+    <script src="js/pwa.js"></script>
+</body>
+</html>
