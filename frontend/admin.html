@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <title>Admin - KingFlow Barber</title>
+    <style>
+        :root {
+            --brand-primary: #667eea;
+            --brand-secondary: #764ba2;
+            --text-primary: #18181b;
+            --text-secondary: #52525b;
+            --surface: rgba(255, 255, 255, 0.92);
+            --ring: rgba(255, 255, 255, 0.35);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(255,255,255,0.3) 0%, transparent 32%),
+                radial-gradient(circle at 100% 100%, rgba(255,255,255,0.16) 0%, transparent 30%),
+                linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card {
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--ring);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.16);
+            margin-bottom: 20px;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header h1 { color: var(--brand-primary); font-size: 1.8em; letter-spacing: .2px; }
+        .header p { color: var(--text-secondary); margin-top: 4px; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .85em; background: rgba(102,126,234,.12); color: var(--brand-primary); }
+        button.logout {
+            border: none; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer;
+            background: #f4f4f5; color: #27272a;
+        }
+        .title { font-size: 1.3em; font-weight: 800; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e4e4e7; font-size: .95em; }
+        th { color: var(--text-secondary); text-transform: uppercase; font-size: .78em; letter-spacing: .05em; }
+        tr:hover td { background: rgba(102,126,234,.04); }
+        .pill { padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: .78em; }
+        .pill.active { background: #dcfce7; color: #166534; }
+        .pill.inactive { background: #fee2e2; color: #991b1b; }
+        .pill.plan { background: #ede9fe; color: #5b21b6; }
+        select, input {
+            border: 1px solid #d4d4d8; background: #fff; border-radius: 10px;
+            padding: 8px 10px; font: inherit;
+        }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+        .toolbar button {
+            border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; color: #fff;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            box-shadow: 0 8px 20px rgba(102,126,234,.25);
+        }
+        .toggle-btn {
+            border: none; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: .85em;
+        }
+        .toggle-btn.on { background: #dcfce7; color: #166534; }
+        .toggle-btn.off { background: #f4f4f5; color: #52525b; }
+        .empty-state { text-align: center; padding: 30px; color: var(--text-secondary); }
+        .login-gate { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
+        .login-card { max-width: 420px; width: 100%; text-align: center; }
+        .login-card h2 { margin-bottom: 10px; color: var(--brand-primary); }
+        .login-card p { color: var(--text-secondary); margin-bottom: 18px; }
+        .login-card a { color: var(--brand-primary); font-weight: 700; text-decoration: none; }
+        @media (max-width: 700px) {
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { display: none; }
+            tr { margin-bottom: 14px; border: 1px solid #e4e4e7; border-radius: 12px; padding: 10px; }
+            td { border: none; display: flex; justify-content: space-between; gap: 10px; }
+            td::before { content: attr(data-label); font-weight: 700; color: var(--text-secondary); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="gateContainer" style="display:none;">
+        <div class="login-gate">
+            <div class="card login-card">
+                <h2>🔒 Acceso restringido</h2>
+                <p>Esta sección es solo para Super Admin. Inicia sesión con una cuenta administradora.</p>
+                <a href="/index.html">Ir a iniciar sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="adminContainer" style="display:none;">
+        <div class="card header">
+            <div>
+                <h1>🛡️ Panel de Administración</h1>
+                <p>Gestión de barberías afiliadas, roles y soporte</p>
+            </div>
+            <div class="header-actions">
+                <span class="badge" id="adminEmail">-</span>
+                <button class="logout" id="logoutBtn">Cerrar sesión</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="title">🏢 Barberías afiliadas</div>
+            <div class="toolbar">
+                <button id="refreshTenantsBtn">🔄 Actualizar</button>
+                <span id="tenantsCount" style="color: var(--text-secondary); font-weight: 600;"></span>
+            </div>
+            <div id="tenantsTableWrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Barbería</th>
+                            <th>Owner</th>
+                            <th>Plan</th>
+                            <th>Estado suscripción</th>
+                            <th>Estado tenant</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tenantsBody"></tbody>
+                </table>
+                <div id="tenantsEmpty" class="empty-state" style="display:none;">No hay barberías registradas aún.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="title">👥 Usuarios y permisos</div>
+            <div class="toolbar">
+                <select id="tenantFilter">
+                    <option value="">Todas las barberías</option>
+                </select>
+                <button id="refreshUsersBtn">🔄 Actualizar</button>
+                <span id="usersCount" style="color: var(--text-secondary); font-weight: 600;"></span>
+            </div>
+            <div id="usersTableWrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Barbería</th>
+                            <th>Estado</th>
+                            <th>Soporte por correo</th>
+                            <th>Branding automático</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody"></tbody>
+                </table>
+                <div id="usersEmpty" class="empty-state" style="display:none;">No hay usuarios para mostrar.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

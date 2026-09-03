@@ -60,11 +60,6 @@ def create_application() -> FastAPI:
     # Get the frontend directory path
     frontend_dir = Path(__file__).parent.parent.parent / "frontend"
 
-    # Mount static files if frontend exists
-    if frontend_dir.exists():
-        application.mount("/css", StaticFiles(directory=str(frontend_dir / "css")), name="css")
-        application.mount("/js", StaticFiles(directory=str(frontend_dir / "js")), name="js")
-
     @application.get("/")
     async def root():
         """Serve the frontend index.html."""
@@ -82,6 +77,13 @@ def create_application() -> FastAPI:
     async def health_check():
         """Health check endpoint."""
         return {"status": "healthy"}
+
+    # Mount the whole frontend directory last so it acts as a catch-all for
+    # static assets and PWA pages (client.html, onboarding.html, admin.html,
+    # manifest.webmanifest, sw.js, offline.html, css/, js/, icons/) without
+    # shadowing the API routes or the explicit routes above.
+    if frontend_dir.exists():
+        application.mount("/", StaticFiles(directory=str(frontend_dir)), name="frontend")
 
     return application
 

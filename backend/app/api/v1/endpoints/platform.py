@@ -41,6 +41,8 @@ from app.schemas.platform import (
     BarberShareLinkResponse,
     AdminTenantItem,
     AdminTenantsResponse,
+    AdminUserItem,
+    AdminUsersResponse,
     SupportRequest,
     AdminUserSupportToggleRequest,
     AdminUserFeatureFlagRequest,
@@ -789,6 +791,36 @@ def admin_tenants(
         )
 
     return AdminTenantsResponse(items=items)
+
+
+@router.get("/admin/users", response_model=AdminUsersResponse)
+def admin_users(
+    barbershop_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    admin = _get_current_user(db, authorization)
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo super admin")
+
+    query = db.query(User).filter(User.is_deleted == False)
+    if barbershop_id is not None:
+        query = query.filter(User.barbershop_id == barbershop_id)
+
+    users = query.order_by(User.id.asc()).all()
+    items = [
+        AdminUserItem(
+            id=u.id,
+            email=u.email,
+            full_name=u.full_name,
+            role=u.role,
+            barbershop_id=u.barbershop_id,
+            is_active=u.is_active,
+            support_contact_enabled=u.support_contact_enabled,
+        )
+        for u in users
+    ]
+    return AdminUsersResponse(items=items)
 
 
 @router.put("/admin/users/{user_id}/support")

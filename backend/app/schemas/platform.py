@@ -129,5 +129,19 @@ class AdminUserFeatureFlagRequest(BaseModel):
     enabled: bool
 
 
+class AdminUserItem(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    role: str
+    barbershop_id: Optional[int] = None
+    is_active: bool
+    support_contact_enabled: bool
+
+
+class AdminUsersResponse(BaseModel):
+    items: List[AdminUserItem]
+
+
 class BarberAppointmentStatusUpdateRequest(BaseModel):
     status: str = Field(..., description="pending|confirmed|in_progress|completed|cancelled|no_show")

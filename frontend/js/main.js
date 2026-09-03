@@ -722,6 +722,11 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             role: data.user.role
         };
 
+        if (currentUser.role === 'super_admin') {
+            window.location.href = '/admin.html';
+            return;
+        }
+
         const canContinue = await loadBarbershopProfile();
         if (!canContinue) return;
 
