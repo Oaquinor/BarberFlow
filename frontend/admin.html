@@ -133,6 +133,52 @@
         </div>
 
         <div class="card">
+            <div class="title">💳 Cobros y suscripción</div>
+            <div class="toolbar">
+                <select id="subscriptionTenantSelect">
+                    <option value="">Selecciona una barbería...</option>
+                </select>
+                <button id="loadSubscriptionBtn">🔍 Cargar</button>
+            </div>
+            <div id="subscriptionPanel" style="display:none;">
+                <div class="toolbar" style="align-items:flex-end;">
+                    <div>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
+                        <select id="subPlan">
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="professional">Professional</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de pago</label>
+                        <select id="subStatus">
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                            <option value="suspended">Suspendido</option>
+                            <option value="cancelled">Cancelado</option>
+                            <option value="expired">Vencido</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Próximo cobro</label>
+                        <input type="date" id="subPeriodEnd" />
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Auto-renovación</label>
+                        <select id="subAutoRenew">
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    <button id="saveSubscriptionBtn">💾 Guardar</button>
+                </div>
+                <p id="subscriptionResult" style="margin-top:10px;color:var(--text-secondary);"></p>
+            </div>
+        </div>
+
+        <div class="card">
             <div class="title">👥 Usuarios y permisos</div>
             <div class="toolbar">
                 <select id="tenantFilter">

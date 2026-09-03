@@ -87,6 +87,18 @@ async function loadTenants() {
                 filter.appendChild(opt);
             }
         });
+
+        const subSelect = document.getElementById('subscriptionTenantSelect');
+        const existingSubValues = new Set(Array.from(subSelect.options).map((o) => o.value));
+        currentTenants.forEach((t) => {
+            const value = String(t.barbershop_id);
+            if (!existingSubValues.has(value)) {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = t.barbershop_name;
+                subSelect.appendChild(opt);
+            }
+        });
     } catch (error) {
         console.error('Error cargando tenants:', error);
     }
@@ -173,6 +185,75 @@ document.getElementById('usersBody')?.addEventListener('click', async (event) =>
         alert(`❌ ${error.message}`);
     }
 });
+
+async function loadSubscription() {
+    const tenantId = document.getElementById('subscriptionTenantSelect').value;
+    const resultEl = document.getElementById('subscriptionResult');
+    const panel = document.getElementById('subscriptionPanel');
+    resultEl.textContent = '';
+
+    if (!tenantId) {
+        alert('Selecciona una barbería primero');
+        return;
+    }
+
+    try {
+        const sub = await fetchJson(`/api/v1/admin/tenants/${tenantId}/subscription`);
+        panel.style.display = 'block';
+        document.getElementById('subPlan').value = sub.plan;
+        document.getElementById('subStatus').value = sub.status;
+        document.getElementById('subAutoRenew').value = String(sub.auto_renew);
+        document.getElementById('subPeriodEnd').value = (sub.current_period_end || '').slice(0, 10);
+        resultEl.textContent = `Suscripción #${sub.subscription_id} · Límites: ${sub.max_barbers ?? '∞'} barberos, ${sub.max_appointments_per_month ?? '∞'} citas/mes, ${sub.max_clients ?? '∞'} clientes.`;
+    } catch (error) {
+        if (error.message && error.message.toLowerCase().includes('no tiene una suscripci')) {
+            // Sin suscripción todavía: permitir crear una desde cero.
+            panel.style.display = 'block';
+            document.getElementById('subPlan').value = 'free';
+            document.getElementById('subStatus').value = 'active';
+            document.getElementById('subAutoRenew').value = 'true';
+            document.getElementById('subPeriodEnd').value = '';
+            resultEl.textContent = 'Esta barbería no tiene suscripción aún. Guarda para crear una.';
+        } else {
+            resultEl.textContent = `❌ ${error.message}`;
+        }
+    }
+}
+
+async function saveSubscription() {
+    const tenantId = document.getElementById('subscriptionTenantSelect').value;
+    const resultEl = document.getElementById('subscriptionResult');
+
+    if (!tenantId) {
+        alert('Selecciona una barbería primero');
+        return;
+    }
+
+    const periodEndValue = document.getElementById('subPeriodEnd').value;
+    const payload = {
+        plan: document.getElementById('subPlan').value,
+        status: document.getElementById('subStatus').value,
+        auto_renew: document.getElementById('subAutoRenew').value === 'true',
+    };
+    if (periodEndValue) {
+        payload.current_period_end = new Date(`${periodEndValue}T00:00:00`).toISOString();
+    }
+
+    try {
+        const sub = await fetchJson(`/api/v1/admin/tenants/${tenantId}/subscription`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        resultEl.textContent = `✅ Guardado. Plan: ${sub.plan} · Estado: ${sub.status} · Próximo cobro: ${(sub.current_period_end || '').slice(0, 10)}`;
+        await loadTenants();
+    } catch (error) {
+        resultEl.textContent = `❌ ${error.message}`;
+    }
+}
+
+document.getElementById('loadSubscriptionBtn')?.addEventListener('click', loadSubscription);
+document.getElementById('saveSubscriptionBtn')?.addEventListener('click', saveSubscription);
 
 document.getElementById('refreshTenantsBtn')?.addEventListener('click', loadTenants);
 document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);

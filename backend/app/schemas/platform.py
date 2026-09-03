@@ -129,6 +129,26 @@ class AdminUserFeatureFlagRequest(BaseModel):
     enabled: bool
 
 
+class AdminSubscriptionUpdateRequest(BaseModel):
+    plan: Optional[str] = Field(None, description="free|basic|professional|enterprise")
+    status: Optional[str] = Field(None, description="active|inactive|cancelled|expired|suspended")
+    current_period_end: Optional[datetime] = None
+    auto_renew: Optional[bool] = None
+
+
+class AdminSubscriptionResponse(BaseModel):
+    subscription_id: int
+    barbershop_id: int
+    plan: str
+    status: str
+    current_period_start: datetime
+    current_period_end: datetime
+    auto_renew: bool
+    max_barbers: Optional[int] = None
+    max_appointments_per_month: Optional[int] = None
+    max_clients: Optional[int] = None
+
+
 class AdminUserItem(BaseModel):
     id: int
     email: str

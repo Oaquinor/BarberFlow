@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 
 from app.core import get_db
+from app.core.constants.enums import SUBSCRIPTION_LIMITS
 from app.core.security.jwt import create_access_token, create_refresh_token, verify_token
 from app.core.security.password import verify_password, hash_password
 from app.models.user import User
@@ -43,6 +44,8 @@ from app.schemas.platform import (
     AdminTenantsResponse,
     AdminUserItem,
     AdminUsersResponse,
+    AdminSubscriptionUpdateRequest,
+    AdminSubscriptionResponse,
     SupportRequest,
     AdminUserSupportToggleRequest,
     AdminUserFeatureFlagRequest,
@@ -791,6 +794,123 @@ def admin_tenants(
         )
 
     return AdminTenantsResponse(items=items)
+
+
+def _apply_plan_limits(sub: Subscription, plan: str) -> None:
+    """Sync max_barbers/max_appointments_per_month/max_clients with the plan's defaults."""
+    limits = next((l for key, l in SUBSCRIPTION_LIMITS.items() if key == plan), None)
+    if limits is None:
+        return
+
+    sub.max_barbers = limits["max_barbers"]
+    sub.max_appointments_per_month = limits["max_appointments_per_month"]
+    sub.max_clients = limits["max_clients"]
+
+
+@router.get("/admin/tenants/{barbershop_id}/subscription", response_model=AdminSubscriptionResponse)
+def admin_get_subscription(
+    barbershop_id: int,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    admin = _get_current_user(db, authorization)
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo super admin")
+
+    shop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+
+    if not shop.subscription_id:
+        raise HTTPException(status_code=404, detail="La barbería no tiene una suscripción asociada")
+
+    sub = db.query(Subscription).filter(Subscription.id == shop.subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Suscripción no encontrada")
+
+    return AdminSubscriptionResponse(
+        subscription_id=sub.id,
+        barbershop_id=shop.id,
+        plan=sub.plan,
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        auto_renew=sub.auto_renew,
+        max_barbers=sub.max_barbers,
+        max_appointments_per_month=sub.max_appointments_per_month,
+        max_clients=sub.max_clients,
+    )
+
+
+@router.put("/admin/tenants/{barbershop_id}/subscription", response_model=AdminSubscriptionResponse)
+def admin_update_subscription(
+    barbershop_id: int,
+    data: AdminSubscriptionUpdateRequest,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Gestiona plan, estado y cobros (mensualidad) de una barbería afiliada."""
+    admin = _get_current_user(db, authorization)
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo super admin")
+
+    shop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+
+    valid_plans = {"free", "basic", "professional", "enterprise"}
+    valid_statuses = {"active", "inactive", "cancelled", "expired", "suspended"}
+
+    if data.plan is not None and data.plan not in valid_plans:
+        raise HTTPException(status_code=400, detail=f"Plan inválido. Use uno de: {sorted(valid_plans)}")
+
+    if data.status is not None and data.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Estado inválido. Use uno de: {sorted(valid_statuses)}")
+
+    sub = None
+    if shop.subscription_id:
+        sub = db.query(Subscription).filter(Subscription.id == shop.subscription_id).first()
+
+    if not sub:
+        # Crear una suscripción nueva si la barbería aún no tenía una asociada.
+        now = datetime.utcnow()
+        sub = Subscription(
+            plan=data.plan or "free",
+            status=data.status or "active",
+            current_period_start=now,
+            current_period_end=data.current_period_end or (now + timedelta(days=30)),
+            auto_renew=data.auto_renew if data.auto_renew is not None else True,
+        )
+        _apply_plan_limits(sub, sub.plan)
+        db.add(sub)
+        db.flush()
+        shop.subscription_id = sub.id
+    else:
+        if data.plan is not None:
+            sub.plan = data.plan
+            _apply_plan_limits(sub, sub.plan)
+        if data.status is not None:
+            sub.status = data.status
+        if data.current_period_end is not None:
+            sub.current_period_end = data.current_period_end
+        if data.auto_renew is not None:
+            sub.auto_renew = data.auto_renew
+
+    db.commit()
+    db.refresh(sub)
+
+    return AdminSubscriptionResponse(
+        subscription_id=sub.id,
+        barbershop_id=shop.id,
+        plan=sub.plan,
+        status=sub.status,
+        current_period_start=sub.current_period_start,
+        current_period_end=sub.current_period_end,
+        auto_renew=sub.auto_renew,
+        max_barbers=sub.max_barbers,
+        max_appointments_per_month=sub.max_appointments_per_month,
+        max_clients=sub.max_clients,
+    )
 
 
 @router.get("/admin/users", response_model=AdminUsersResponse)
