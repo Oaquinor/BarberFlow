@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.api.v1.endpoints.onboarding import _get_tenant_id
 from app.api.v1.endpoints.platform import (
     _business_date_for_appointment,
+    _email_html_lines,
     _local_day_bounds,
     _to_utc_naive,
     _utc_aware,
@@ -28,6 +29,13 @@ from app.schemas.platform import BarberCreateSlotsRequest, PublicCreateAppointme
 def test_onboarding_requires_authentication():
     response = TestClient(app).get("/api/v1/onboarding/profile")
     assert response.status_code == 401
+
+
+def test_transactional_email_lines_escape_untrusted_content():
+    body = _email_html_lines(["<script>alert(1)</script>", "Cliente & servicio"])
+    assert "<script>" not in body
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body
+    assert "Cliente &amp; servicio" in body
 
 
 def test_performance_and_achievement_apis_are_mounted():

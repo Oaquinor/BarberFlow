@@ -8,6 +8,7 @@ Endpoints productivos para:
 
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
+from html import escape as escape_html
 import hashlib
 import os
 import re
@@ -354,7 +355,18 @@ def _prepare_appointment_email(
 
     notifications = NotificationService(db)
     local_scheduled_time = _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop))
-    if event == "confirmation":
+    if event == "booking_received":
+        body = _email_html_lines([
+            f"Hola {client.full_name}",
+            f"Recibimos tu solicitud de cita en {shop.name}.",
+            f"Servicio: {appointment.service_type}",
+            f"Barbero: {barber.full_name}",
+            f"Fecha y hora solicitadas: {local_scheduled_time.strftime('%d/%m/%Y %H:%M')}",
+            f"Duración estimada: {appointment.estimated_duration} minutos",
+            "La cita está pendiente de confirmación por la barbería. Te avisaremos cuando se confirme.",
+        ])
+        subject = f"Solicitud de cita recibida - {shop.name}"
+    elif event == "confirmation":
         body = notifications._get_confirmation_email_template(
             client_name=client.full_name,
             barber_name=barber.full_name,
@@ -375,15 +387,15 @@ def _prepare_appointment_email(
         )
         subject = f"Cita cancelada - {shop.name}"
     elif event == "reschedule":
-        body = (
-            f"Hola {client.full_name},\n\n"
-            f"Tu cita en {shop.name} fue reprogramada.\n"
-            f"Servicio: {appointment.service_type}\n"
-            f"Barbero: {barber.full_name}\n"
-            f"Nueva fecha y hora: {local_scheduled_time.strftime('%d/%m/%Y %H:%M')}\n"
-            f"Duración estimada: {appointment.estimated_duration} minutos\n\n"
-            "Si necesitas cambiarla, usa el enlace de seguimiento que recibiste al reservar."
-        )
+        body = _email_html_lines([
+            f"Hola {client.full_name}",
+            f"Tu cita en {shop.name} fue reprogramada.",
+            f"Servicio: {appointment.service_type}",
+            f"Barbero: {barber.full_name}",
+            f"Nueva fecha y hora: {local_scheduled_time.strftime('%d/%m/%Y %H:%M')}",
+            f"Duración estimada: {appointment.estimated_duration} minutos",
+            "Si necesitas cambiarla, usa el enlace de seguimiento que recibiste al reservar.",
+        ])
         subject = f"Cita reprogramada - {shop.name}"
     elif event == "completion":
         body = notifications._get_completion_email_template(
@@ -395,6 +407,11 @@ def _prepare_appointment_email(
     else:
         raise ValueError(f"Unsupported appointment email event: {event}")
     return client.email, subject, body
+
+
+def _email_html_lines(lines: list[str]) -> str:
+    """Render escaped, readable HTML for concise transactional email messages."""
+    return "<html><body><p>" + "<br>".join(escape_html(line) for line in lines) + "</p></body></html>"
 
 
 def _queue_appointment_email(
@@ -1274,7 +1291,7 @@ def public_create_appointment(
         f"✂️ {service.name}\n"
         f"🔎 Seguimiento: {tracking_link}"
     )
-    _queue_appointment_email(db, appointment, "confirmation")
+    _queue_appointment_email(db, appointment, "booking_received")
     _queue_appointment_whatsapp(db, appointment, phone, wa_message, "confirmation:client")
 
     # Notificación al barbero (WhatsApp)
@@ -2552,6 +2569,20 @@ def barber_update_appointment_status(
             db, appointment, f"appointment_{status}", titles[status],
             f"{appointment.service_type} · {status}", exclude_user_id=user.id,
         )
+    if status == "confirmed":
+        _queue_appointment_email(db, appointment, "confirmation")
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == appointment.barbershop_id,
+            Barbershop.is_deleted == False,
+        ).first()
+        if shop and appointment.client and appointment.client.phone:
+            local_time = _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop))
+            _queue_appointment_whatsapp(
+                db, appointment, appointment.client.phone,
+                f"Tu cita en {shop.name} fue confirmada para "
+                f"{local_time.strftime('%d/%m/%Y %H:%M')} ({appointment.service_type}).",
+                "confirmation:client:status",
+            )
     _audit(db, user, f"appointment.{status}", "appointment", appointment.id,
            appointment.barbershop_id, {"previous_status": previous_status})
     if status == "cancelled":

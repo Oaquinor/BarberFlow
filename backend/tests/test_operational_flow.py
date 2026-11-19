@@ -88,11 +88,28 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
         NotificationDelivery.appointment_id == appointment_id,
     ).all()
     assert {item.channel for item in queued} == {"email", "whatsapp"}
-    assert any(item.event_type == "appointment_confirmation" for item in queued)
+    request_email = next(item for item in queued if item.channel == "email")
+    assert request_email.event_type == "appointment_booking_received"
+    assert "pendiente de confirmación" in request_email.body
+    assert "confirmada exitosamente" not in request_email.body
     tracking_token = parse_qs(urlparse(reservation.json()["tracking_link"]).query)["track_token"][0]
 
     token = create_access_token({"sub": str(barber.id), "role": barber.role})
     headers = {"Authorization": f"Bearer {token}"}
+    confirmed = client.put(
+        f"/api/v1/barber/appointments/{appointment_id}/status",
+        headers=headers, json={"status": "confirmed"},
+    )
+    assert confirmed.status_code == 200
+    confirmation_deliveries = test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == appointment_id,
+        NotificationDelivery.event_type == "appointment_confirmation",
+    ).all()
+    assert {item.channel for item in confirmation_deliveries} == {"email", "whatsapp"}
+    assert "Cita Confirmada" in next(
+        item.body for item in confirmation_deliveries if item.channel == "email"
+    )
+
     agenda = client.get(
         "/api/v1/barber/appointments",
         params={"target_date": local_start.date().isoformat()},
