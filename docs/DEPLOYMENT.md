@@ -180,6 +180,10 @@ sudo systemctl enable certbot.timer
 
 ### Option 3: Cloud Platforms
 
+#### Render preview configuration
+
+The repository's `render.yaml` is a **free preview for the API**, not a production deployment: it uses a free web service, an externally managed MySQL URL, and does not define the notification worker. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and deploy the notification worker with the same MySQL and provider configuration. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+
 #### AWS Deployment
 
 **Services:**
