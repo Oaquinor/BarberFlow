@@ -26,7 +26,7 @@ function setText(id, value) {
     if (el) el.textContent = value;
 }
 
-function updateActiveServiceTimer(startedAt, estimatedMinutes) {
+function updateActiveServiceTimer(startedAt, estimatedMinutes, nextAppointment) {
     if (serviceTimerInterval) clearInterval(serviceTimerInterval);
     serviceTimerInterval = null;
     if (!startedAt) {
@@ -51,9 +51,21 @@ function updateActiveServiceTimer(startedAt, estimatedMinutes) {
         setText('activeServiceProgress', `${progressPct}%`);
         const progressBar = document.getElementById('activeServiceProgressBar');
         if (progressBar) progressBar.style.width = `${progressPct}%`;
-        setText('activeServiceAlert', progressPct >= 100
-            ? '⚠️ El servicio superó su duración estimada.'
-            : `🔥 Servicio en curso · ${progressPct}% del tiempo estimado`);
+        const alerts = [];
+        if (progressPct >= 100) {
+            alerts.push('⚠️ El servicio superó su duración estimada.');
+        } else if (progressPct >= 80) {
+            alerts.push(`⏰ ${Math.ceil(durationSeconds / 60 - elapsedSeconds / 60)} minutos restantes del tiempo estimado`);
+        }
+        const nextAppointmentAt = nextAppointment?.scheduled_time
+            ? new Date(nextAppointment.scheduled_time).getTime()
+            : NaN;
+        if (Number.isFinite(nextAppointmentAt)) {
+            const minutesUntilNext = Math.max(0, Math.ceil((nextAppointmentAt - Date.now()) / 60000));
+            if (minutesUntilNext <= 10) alerts.push(`🚨 Próxima cita en ${minutesUntilNext} minutos`);
+            else if (minutesUntilNext <= 20) alerts.push(`⚠️ Próxima cita en ${minutesUntilNext} minutos`);
+        }
+        setText('activeServiceAlert', alerts.join(' · ') || `🔥 Servicio en curso · ${progressPct}% del tiempo estimado`);
     };
 
     renderElapsed();
@@ -723,7 +735,7 @@ async function loadBarberDashboardData() {
             setText('activeServiceClient', active.client_name || 'Cliente');
             setText('activeServiceType', active.service_type || 'Servicio');
             setText('activeServiceEstimated', `${active.estimated_duration || 0} minutos`);
-            updateActiveServiceTimer(active.actual_start_time, active.estimated_duration);
+            updateActiveServiceTimer(active.actual_start_time, active.estimated_duration, data.next_appointment);
         } else {
             updateActiveServiceTimer(null);
             setText('activeServiceClient', 'Sin servicio activo');

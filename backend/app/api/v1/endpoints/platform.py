@@ -2965,10 +2965,15 @@ def barber_dashboard(
     revenue_delta = revenue_cents - revenue_yesterday
     efficiency_delta = efficiency_percent - efficiency_yesterday
 
-    next_appointment = next((
-        a for a in appointments_today
-        if a.scheduled_time >= now and a.status in {"pending", "confirmed"}
-    ), None)
+    next_appointment_query = db.query(Appointment).filter(
+        Appointment.barbershop_id == shop_id,
+        Appointment.scheduled_time >= now,
+        Appointment.status.in_(["pending", "confirmed"]),
+        Appointment.is_deleted == False,
+    )
+    if user.role == "barber":
+        next_appointment_query = next_appointment_query.filter(Appointment.barber_id == user.id)
+    next_appointment = next_appointment_query.order_by(Appointment.scheduled_time.asc()).first()
 
     weekday_labels = ["L", "M", "X", "J", "V", "S", "D"]
     week_counts_by_day = {i: 0 for i in range(7)}

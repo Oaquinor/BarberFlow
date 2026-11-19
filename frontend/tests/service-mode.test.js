@@ -29,16 +29,20 @@ test('active service timer renders elapsed time and updates estimated progress',
   };
 
   vm.runInNewContext(`let serviceTimerInterval = null;\n${timerSource}`, sandbox);
-  sandbox.updateActiveServiceTimer('2026-11-19T15:00:00Z', 3);
+  sandbox.updateActiveServiceTimer('2026-11-19T15:00:00Z', 3, {
+    scheduled_time: '2026-11-19T15:16:30Z',
+  });
   assert.equal(nodeFor('elapsedTime').textContent, '00:01:30');
   assert.equal(nodeFor('activeServiceProgress').textContent, '50%');
   assert.equal(nodeFor('activeServiceProgressBar').style.width, '50%');
+  assert.match(nodeFor('activeServiceAlert').textContent, /Próxima cita en 15 minutos/);
 
   now += 90_000;
   intervals.get(1)();
   assert.equal(nodeFor('elapsedTime').textContent, '00:03:00');
   assert.equal(nodeFor('activeServiceProgress').textContent, '100%');
   assert.match(nodeFor('activeServiceAlert').textContent, /superó su duración estimada/);
+  assert.match(nodeFor('activeServiceAlert').textContent, /Próxima cita en 14 minutos/);
 
   sandbox.updateActiveServiceTimer(null);
   assert.equal(nodeFor('elapsedTime').textContent, '00:00:00');

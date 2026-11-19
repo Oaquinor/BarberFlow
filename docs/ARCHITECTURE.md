@@ -51,7 +51,7 @@ El pronóstico de demanda usa el historial de citas completadas y las reservas c
 
 ## Módulos desconectados
 
-`backend/app/api/v1/appointments.py` no está incluido en el router v1. Sus handlers dependen de `AsyncSession`, mientras que el backend configurado entrega sesiones síncronas. Por tanto, sus endpoints no están disponibles y no deben usarse como referencia del flujo activo. Lo mismo aplica al `AppointmentService` y repositorios async que solo utiliza ese router desconectado. La fuente vigente de rutas es `docs/API_REFERENCE.md` junto con el registro de routers.
+`backend/app/api/v1/appointments.py` no está incluido en el router v1. Sus handlers dependen de `AsyncSession`, mientras que el backend configurado entrega sesiones síncronas. Por tanto, sus endpoints no están disponibles y no deben usarse como referencia del flujo activo. Lo mismo aplica al `AppointmentService` y repositorios async que solo utiliza ese router desconectado. `backend/app/api/v1/service_mode.py` y `ServiceModeService` tampoco están montados; el panel usa `/barber/dashboard`, `/barber/appointments/{appointment_id}/status` y `/barber/appointments/{appointment_id}/payment`, que conservan límites de tenant, trazabilidad y pago obligatorio. No se debe conectar el endpoint antiguo de finalización, que marca la cita completada sin registrar cobro. La fuente vigente de rutas es `docs/API_REFERENCE.md` junto con el registro de routers.
 
 ## Guías relacionadas
 

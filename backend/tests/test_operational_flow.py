@@ -65,7 +65,7 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
         slot_start=slot_start, slot_end=slot_start + timedelta(hours=1),
         is_active=True, is_booked=False,
     )
-    second_slot_start = slot_start + timedelta(hours=2)
+    second_slot_start = slot_start + timedelta(days=1, hours=2)
     second_slot = BarberAvailability(
         barbershop_id=shop.id, barber_id=barber.id,
         slot_start=second_slot_start, slot_end=second_slot_start + timedelta(hours=1),
@@ -138,6 +138,9 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
     )
     assert second_start.status_code == 409
     assert test_db.get(Appointment, second_appointment_id).status == "pending"
+    next_day_dashboard = client.get("/api/v1/barber/dashboard", headers=headers)
+    assert next_day_dashboard.status_code == 200
+    assert next_day_dashboard.json()["next_appointment"]["id"] == second_appointment_id
 
     monkeypatch.setattr(platform_api, "utc_now_naive", lambda: slot_start + timedelta(minutes=4))
     too_soon_to_charge = client.post(
