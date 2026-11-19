@@ -14,6 +14,7 @@ import os
 import re
 import secrets
 import smtplib
+import time
 import unicodedata
 from typing import Optional
 from urllib.parse import urlencode
@@ -23,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import case, or_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user as authenticate_user
@@ -539,11 +540,14 @@ def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: date
         }
         for key_hash, _ in ordered
     ]).prefix_with("IGNORE")
-    db.execute(statement)
-    attempt_rows = db.query(LoginAttempt).filter(
-        LoginAttempt.key_hash.in_([key_hash for key_hash, _ in ordered]),
-        LoginAttempt.is_deleted == False,
-    ).order_by(LoginAttempt.key_hash.asc()).with_for_update().all()
+    def lock_buckets():
+        db.execute(statement)
+        return db.query(LoginAttempt).filter(
+            LoginAttempt.key_hash.in_([key_hash for key_hash, _ in ordered]),
+            LoginAttempt.is_deleted == False,
+        ).order_by(LoginAttempt.key_hash.asc()).with_for_update().all()
+
+    attempt_rows = _retry_login_deadlock(db, lock_buckets)
     attempts_by_hash = {attempt.key_hash: attempt for attempt in attempt_rows}
     for key_hash, _ in ordered:
         attempt = attempts_by_hash[key_hash]
@@ -551,23 +555,40 @@ def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: date
             raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 15 minutos y vuelve a intentar.")
 
 
+def _retry_login_deadlock(db: Session, operation):
+    """Retry rare InnoDB deadlocks from concurrent first-use bucket inserts."""
+    for retry in range(4):
+        try:
+            return operation()
+        except OperationalError as exc:
+            error_code = exc.orig.args[0] if getattr(exc, "orig", None) and exc.orig.args else None
+            if error_code not in {1205, 1213} or retry == 3:
+                raise
+            db.rollback()
+            time.sleep(0.01 * (retry + 1))
+    raise RuntimeError("No se pudo adquirir el bloqueo de autenticación")
+
+
 def _record_login_failure(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
     # The check already created and locked these rows. Re-entering through an
     # upsert here can deadlock concurrent MySQL inserts for the same bucket set.
-    for key_hash, limit in sorted(buckets):
-        attempt = db.query(LoginAttempt).filter(
-            LoginAttempt.key_hash == key_hash,
-            LoginAttempt.is_deleted == False,
-        ).with_for_update().one()
-        if now - attempt.window_started_at >= LOGIN_FAILURE_WINDOW:
-            attempt.failed_count = 0
-            attempt.window_started_at = now
-            attempt.locked_until = None
-        attempt.failed_count += 1
-        attempt.last_attempt_at = now
-        if attempt.failed_count >= limit:
-            attempt.locked_until = now + LOGIN_FAILURE_WINDOW
-    db.commit()
+    def record_failures():
+        for key_hash, limit in sorted(buckets):
+            attempt = db.query(LoginAttempt).filter(
+                LoginAttempt.key_hash == key_hash,
+                LoginAttempt.is_deleted == False,
+            ).with_for_update().one()
+            if now - attempt.window_started_at >= LOGIN_FAILURE_WINDOW:
+                attempt.failed_count = 0
+                attempt.window_started_at = now
+                attempt.locked_until = None
+            attempt.failed_count += 1
+            attempt.last_attempt_at = now
+            if attempt.failed_count >= limit:
+                attempt.locked_until = now + LOGIN_FAILURE_WINDOW
+        db.commit()
+
+    _retry_login_deadlock(db, record_failures)
 
 
 def _clear_login_failures(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
