@@ -22,7 +22,7 @@ function createWorker(fetchImpl = async () => ({ status: 200 })) {
         async put(request) { writes.push(request.url); },
       };
     },
-      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "other-product-cache", "kingflow-pwa-old"]; },
+      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "other-product-cache", "kingflow-pwa-old"]; },
     async delete(name) { deletedCaches.push(name); return true; },
     async match(request) { return { matched: String(request) }; },
   };
@@ -57,7 +57,7 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let activatePromise;
   worker.listeners.get("activate")({ waitUntil(promise) { activatePromise = promise; } });
   await activatePromise;
-  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-old"]);
+  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-old"]);
 });
 
 test("all app entry pages provide the manifest and register the service worker", () => {

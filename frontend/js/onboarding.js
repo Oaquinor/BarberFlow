@@ -8,6 +8,7 @@ const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/
 const API_BASE = `${API_ROOT}/api/v1`;
 const accessToken = localStorage.getItem('token');
 let currentStep = 1;
+let logoUploadPending = false;
 let onboardingData = {
     barbershopName: '',
     logoFile: null,
@@ -25,6 +26,12 @@ let onboardingData = {
 
 // Step navigation
 function nextStep(stepNumber) {
+    if (currentStep === 2 && logoUploadPending) {
+        const status = document.getElementById('logoUploadStatus');
+        status.textContent = 'Espera a que termine la subida del logo antes de continuar.';
+        return;
+    }
+
     // Validate current step
     if (!validateStep(currentStep)) {
         return;
@@ -234,16 +241,25 @@ function applyPreset(primary, secondary) {
 function previewLogo(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
+        const status = document.getElementById('logoUploadStatus');
+
+        if (logoUploadPending) {
+            status.textContent = 'Espera a que termine la subida actual antes de seleccionar otro logo.';
+            input.value = '';
+            return;
+        }
 
         // Validate file size (5MB max)
         if (file.size > 5 * 1024 * 1024) {
-            alert('El archivo es muy grande. Máximo 5MB.');
+            status.textContent = 'El archivo es muy grande. Máximo 5 MB.';
+            input.value = '';
             return;
         }
 
         // Validate file type
         if (!file.type.match('image/(png|jpeg|jpg)')) {
-            alert('Solo se aceptan archivos PNG o JPG.');
+            status.textContent = 'Solo se aceptan archivos PNG o JPG.';
+            input.value = '';
             return;
         }
 
@@ -267,6 +283,9 @@ function previewLogo(input) {
 async function uploadLogo(file) {
     const formData = new FormData();
     formData.append('file', file);
+    const status = document.getElementById('logoUploadStatus');
+    logoUploadPending = true;
+    status.textContent = 'Subiendo logo…';
 
     try {
         const response = await KingFlowAuth.fetch(`${API_BASE}/onboarding/upload-logo`, {
@@ -278,12 +297,18 @@ async function uploadLogo(file) {
         if (response.ok) {
             const result = await response.json();
             onboardingData.logoUrl = result.logo_url;
+            status.textContent = 'Logo subido correctamente.';
             console.log('✅ Logo uploaded:', result.logo_url);
         } else {
+            const result = await response.json().catch(() => ({}));
+            status.textContent = result.detail || 'No se pudo subir el logo. Puedes intentarlo otra vez o continuar sin logo.';
             console.error('❌ Failed to upload logo');
         }
     } catch (error) {
+        status.textContent = 'No se pudo conectar para subir el logo. Puedes intentarlo otra vez o continuar sin logo.';
         console.error('Error uploading logo:', error);
+    } finally {
+        logoUploadPending = false;
     }
 }
 
