@@ -354,6 +354,17 @@ def _prepare_appointment_email(
             reason=reason or "No especificada",
         )
         subject = f"Cita cancelada - {shop.name}"
+    elif event == "reschedule":
+        body = (
+            f"Hola {client.full_name},\n\n"
+            f"Tu cita en {shop.name} fue reprogramada.\n"
+            f"Servicio: {appointment.service_type}\n"
+            f"Barbero: {barber.full_name}\n"
+            f"Nueva fecha y hora: {local_scheduled_time.strftime('%d/%m/%Y %H:%M')}\n"
+            f"Duración estimada: {appointment.estimated_duration} minutos\n\n"
+            "Si necesitas cambiarla, usa el enlace de seguimiento que recibiste al reservar."
+        )
+        subject = f"Cita reprogramada - {shop.name}"
     elif event == "completion":
         body = notifications._get_completion_email_template(
             client_name=client.full_name,
@@ -1901,6 +1912,7 @@ def public_reschedule_appointment(
             f"{_utc_aware(new_start).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')}.",
             "rescheduled:client",
         )
+    _queue_appointment_email(db, appointment, "reschedule")
     db.commit()
     return {"success": True, "appointment_id": appointment.id, "status": appointment.status,
             "scheduled_time": _utc_aware(new_start), "barber_name": barber.full_name}

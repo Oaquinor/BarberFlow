@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     Appointment, AuditLog, BarberAvailability, BarberAvailabilityBlock,
-    Barbershop, Service, Subscription, User,
+    Barbershop, NotificationDelivery, Service, Subscription, User,
 )
 from app.api.v1.endpoints.platform import _slot_available_for_duration
 from app.core.security import create_access_token
@@ -176,6 +176,8 @@ def test_public_booking_tracking_and_cancel_are_connected(
     )
     assert blocked_reschedule.status_code == 409
 
+    public_client.email = "booking-client@example.com"
+    test_db.commit()
     rescheduled = client.post(
         f"/api/v1/public/{shop.slug}/appointments/reschedule",
         json={"token": tracking_token, "availability_id": replacement_slot.id},
@@ -186,6 +188,14 @@ def test_public_booking_tracking_and_cancel_are_connected(
     test_db.refresh(replacement_slot)
     assert slot.is_booked is False
     assert replacement_slot.is_booked is True
+    reschedule_email = test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == booking["appointment_id"],
+        NotificationDelivery.channel == "email",
+        NotificationDelivery.event_type == "appointment_reschedule",
+    ).one()
+    assert reschedule_email.recipient == "booking-client@example.com"
+    assert reschedule_email.subject == f"Cita reprogramada - {shop.name}"
+    assert reschedule_email.status == "pending"
 
     cancelled = client.post(
         f"/api/v1/public/{shop.slug}/appointments/cancel",
