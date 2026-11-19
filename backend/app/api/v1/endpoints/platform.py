@@ -1413,6 +1413,18 @@ def create_walk_in_appointment(
     ).with_for_update().first()
     if not barber:
         raise HTTPException(status_code=404, detail="Barbero no encontrado o inactivo")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == shop.id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    business_day = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    if _cash_register_closed_for_user(
+        db, barber, shop.id, datetime.combine(business_day, time.min),
+    ):
+        raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se pueden iniciar servicios nuevos")
     if subscription.max_barbers is not None:
         active_barbers = db.query(User.id).filter(
             User.barbershop_id == shop.id,
@@ -2639,6 +2651,17 @@ def barber_update_appointment_status(
             raise HTTPException(status_code=409, detail="Solo se puede iniciar el servicio dentro de los 15 minutos de la hora programada")
         if not assigned_barber.is_active:
             raise HTTPException(status_code=409, detail="El barbero asignado ya no está activo en esta barbería")
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == appointment.barbershop_id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
+        business_day = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+        if _cash_register_closed_for_user(
+            db, assigned_barber, shop.id, datetime.combine(business_day, time.min),
+        ):
+            raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se pueden iniciar servicios nuevos")
         other_active_appointment = db.query(Appointment.id).filter(
             Appointment.barbershop_id == appointment.barbershop_id,
             Appointment.barber_id == appointment.barber_id,
@@ -3004,6 +3027,18 @@ def barber_close_cash_register(
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="La caja de esta fecha ya fue cerrada")
+    open_services = db.query(Appointment.id).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.status == "in_progress",
+        Appointment.is_deleted == False,
+    )
+    if user.role == "barber":
+        open_services = open_services.filter(Appointment.barber_id == user.id)
+    if open_services.first():
+        raise HTTPException(
+            status_code=409,
+            detail="Termina y cobra los servicios en curso antes de cerrar la caja",
+        )
     start = _to_utc_naive(date_key, shop)
     end = _to_utc_naive(datetime.combine(business_date + timedelta(days=1), time.min), shop)
     payment_query = db.query(Payment).filter(

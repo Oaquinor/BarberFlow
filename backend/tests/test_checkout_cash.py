@@ -48,6 +48,12 @@ def test_service_requires_payment_and_cash_close_reconciles(client: TestClient, 
     )
     assert cannot_skip_payment.status_code == 409
 
+    cash_summary = client.get("/api/v1/barber/cash/today", headers=headers)
+    premature_close = client.post("/api/v1/barber/cash/close", headers=headers, json={
+        "business_date": cash_summary.json()["business_date"], "declared_cash_cents": 0,
+    })
+    assert premature_close.status_code == 409
+
     paid = client.post(
         f"/api/v1/barber/appointments/{appointment.id}/payment",
         headers=headers,
@@ -143,6 +149,17 @@ def test_owner_close_blocks_barber_checkout_for_the_same_business_day(
     barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id), 'role': barber.role})}"}
     summary = client.get("/api/v1/barber/cash/today", headers=owner_headers)
     assert summary.status_code == 200
+    premature_close = client.post("/api/v1/barber/cash/close", headers=owner_headers, json={
+        "business_date": summary.json()["business_date"], "declared_cash_cents": 0,
+    })
+    assert premature_close.status_code == 409
+    assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 0
+
+    paid = client.post(
+        f"/api/v1/barber/appointments/{appointment.id}/payment",
+        headers=barber_headers, json={"method": "card", "tip_cents": 0},
+    )
+    assert paid.status_code == 201
     closed = client.post("/api/v1/barber/cash/close", headers=owner_headers, json={
         "business_date": summary.json()["business_date"], "declared_cash_cents": 0,
     })
@@ -153,9 +170,24 @@ def test_owner_close_blocks_barber_checkout_for_the_same_business_day(
         headers=barber_headers, json={"method": "card", "tip_cents": 0},
     )
     assert checkout.status_code == 409
-    assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 0
+    assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 1
     test_db.refresh(appointment)
-    assert appointment.status == "in_progress"
+    assert appointment.status == "completed"
+
+    later_appointment = Appointment(
+        barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
+        scheduled_time=utc_now_naive(), estimated_duration=30, service_type="Corte posterior",
+        service_price=18000, status="confirmed",
+    )
+    test_db.add(later_appointment)
+    test_db.commit()
+    started_after_close = client.put(
+        f"/api/v1/barber/appointments/{later_appointment.id}/status",
+        headers=barber_headers, json={"status": "in_progress"},
+    )
+    assert started_after_close.status_code == 409
+    test_db.refresh(later_appointment)
+    assert later_appointment.status == "confirmed"
 
 
 def test_future_appointment_cannot_be_marked_no_show(client: TestClient, test_db: Session):
