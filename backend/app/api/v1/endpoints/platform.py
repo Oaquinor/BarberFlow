@@ -2455,11 +2455,32 @@ def barber_update_appointment_status(
     if status == "completed":
         raise HTTPException(status_code=409, detail="Registra el pago para finalizar el servicio")
 
+    now = utc_now_naive()
+    if status == "in_progress":
+        if abs((now - appointment.scheduled_time).total_seconds()) > 15 * 60:
+            raise HTTPException(status_code=409, detail="Solo se puede iniciar el servicio dentro de los 15 minutos de la hora programada")
+        assigned_barber = db.query(User).filter(
+            User.id == appointment.barber_id,
+            User.barbershop_id == appointment.barbershop_id,
+            User.is_active == True,
+            User.is_deleted == False,
+        ).with_for_update().first()
+        if not assigned_barber:
+            raise HTTPException(status_code=409, detail="El barbero asignado ya no está activo en esta barbería")
+        other_active_appointment = db.query(Appointment.id).filter(
+            Appointment.barbershop_id == appointment.barbershop_id,
+            Appointment.barber_id == appointment.barber_id,
+            Appointment.status == "in_progress",
+            Appointment.id != appointment.id,
+            Appointment.is_deleted == False,
+        ).with_for_update().first()
+        if other_active_appointment:
+            raise HTTPException(status_code=409, detail="El barbero ya tiene otro servicio en curso")
+
     previous_status = appointment.status
     appointment.status = status
     if status == "cancelled":
         appointment.cancellation_reason = data.reason
-    now = utc_now_naive()
     if status == "in_progress" and not appointment.actual_start_time:
         appointment.actual_start_time = now
     if status == "completed" and not appointment.actual_end_time:
@@ -2543,10 +2564,15 @@ def barber_record_appointment_payment(
         raise HTTPException(status_code=403, detail="Solo puedes cobrar tus propias citas")
     if appointment.status != "in_progress":
         raise HTTPException(status_code=409, detail="Solo se puede cobrar un servicio en curso")
+    now = utc_now_naive()
+    if (
+        not appointment.actual_start_time
+        or now - appointment.actual_start_time < timedelta(minutes=5)
+    ):
+        raise HTTPException(status_code=409, detail="El servicio debe durar al menos 5 minutos antes de cobrar")
     if db.query(Payment.id).filter(Payment.appointment_id == appointment.id, Payment.is_deleted == False).first():
         raise HTTPException(status_code=409, detail="Esta cita ya tiene un pago registrado")
 
-    now = utc_now_naive()
     # A shop row is the shared lock for payment posting and daily cash close.
     # This serializes a checkout against a close so no payment can slip in after it.
     shop = db.query(Barbershop).filter(

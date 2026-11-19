@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.api.v1.endpoints import platform as platform_api
 from app.core.security import create_access_token
 from app.models import (
     Appointment, BarberAvailability, BarberPerformance, Barbershop,
@@ -64,7 +65,13 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
         slot_start=slot_start, slot_end=slot_start + timedelta(hours=1),
         is_active=True, is_booked=False,
     )
-    test_db.add(slot)
+    second_slot_start = slot_start + timedelta(hours=2)
+    second_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id,
+        slot_start=second_slot_start, slot_end=second_slot_start + timedelta(hours=1),
+        is_active=True, is_booked=False,
+    )
+    test_db.add_all([slot, second_slot])
     test_db.commit()
 
     reservation = client.post(
@@ -94,6 +101,14 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
     assert agenda.status_code == 200
     assert any(item["id"] == appointment_id for item in agenda.json()["appointments"])
 
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: slot_start - timedelta(minutes=16))
+    too_early = client.put(
+        f"/api/v1/barber/appointments/{appointment_id}/status",
+        headers=headers, json={"status": "in_progress"},
+    )
+    assert too_early.status_code == 409
+
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: slot_start)
     started = client.put(
         f"/api/v1/barber/appointments/{appointment_id}/status",
         headers=headers, json={"status": "in_progress"},
@@ -106,6 +121,32 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
     assert active_service["actual_start_time"] is not None
     assert active_service["progress_percent"] >= 0
 
+    second_reservation = client.post(
+        f"/api/v1/public/{shop.slug}/appointments",
+        json={
+            "client_name": "Segundo Cliente", "phone": "8095550303",
+            "service_id": service.id,
+            "scheduled_time": second_slot_start.replace(tzinfo=timezone.utc).isoformat(),
+        },
+    )
+    assert second_reservation.status_code == 200
+    second_appointment_id = second_reservation.json()["appointment_id"]
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: second_slot_start)
+    second_start = client.put(
+        f"/api/v1/barber/appointments/{second_appointment_id}/status",
+        headers=headers, json={"status": "in_progress"},
+    )
+    assert second_start.status_code == 409
+    assert test_db.get(Appointment, second_appointment_id).status == "pending"
+
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: slot_start + timedelta(minutes=4))
+    too_soon_to_charge = client.post(
+        f"/api/v1/barber/appointments/{appointment_id}/payment",
+        headers=headers, json={"method": "cash", "tip_cents": 2500},
+    )
+    assert too_soon_to_charge.status_code == 409
+
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: slot_start + timedelta(minutes=5))
     checkout = client.post(
         f"/api/v1/barber/appointments/{appointment_id}/payment",
         headers=headers, json={"method": "cash", "tip_cents": 2500},

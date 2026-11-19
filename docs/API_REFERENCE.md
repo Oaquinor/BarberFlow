@@ -115,6 +115,8 @@ Para iniciar servicio:
 {"status":"in_progress"}
 ```
 
+El inicio solo se acepta dentro de los 15 minutos anteriores o posteriores al turno, y el barbero no puede tener otro servicio en curso. El temporizador usa la hora inicial guardada y sigue visible en el modo de servicio aunque la cita activa quede fuera de la agenda del día actual. Para registrar el cobro y terminar la atención deben haber transcurrido al menos cinco minutos.
+
 Una cita completada exige el endpoint de pago. Ejemplo:
 
 ```json
