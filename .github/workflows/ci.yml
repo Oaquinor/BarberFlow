@@ -80,6 +80,9 @@ jobs:
       - name: Install WhatsApp dependencies
         working-directory: whatsapp-service
         run: npm ci
+      - name: Audit WhatsApp dependencies
+        working-directory: whatsapp-service
+        run: npm audit
       - name: Test WhatsApp service
         working-directory: whatsapp-service
         run: npm test

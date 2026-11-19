@@ -28,11 +28,12 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución autoritativa más reciente de GitHub Actions corresponde al commit `567465a6b8c0092857b3a69d67d948636306cab8` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
+La ejecución autoritativa más reciente de GitHub Actions corresponde al commit `17d6943fed2f22c2e4001a9281e0ddebbff4565b` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
 
-- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→022; `python -m pytest backend/tests -q` — **75 passed**, 157 warnings.
+- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→022; `python -m pytest backend/tests -q` — **75 passed**, 230 warnings.
 - Frontend: `npm test` — **21 passed**. Incluye bloqueo de envíos dobles y manejo de respuestas de red inciertas al reservar, reprogramar o cancelar.
 - WhatsApp: `npm test` — **6 passed**.
+- Dependencias WhatsApp: `npm audit` — **0 vulnerabilidades** después de actualizar Express y dependencias transitivas; CI ejecuta esta auditoría en cada push y pull request.
 - La repetición local anterior del backend fue **28 passed, 47 skipped** porque no había una base MySQL de prueba configurada; no sustituye la ejecución MySQL de CI indicada arriba.
 - Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
 - No se validó Docker Compose en runtime en el equipo local porque Docker no está instalado.
