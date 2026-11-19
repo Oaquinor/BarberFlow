@@ -7,6 +7,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
@@ -153,13 +154,44 @@ async def upload_logo(
 
     shop = _get_barbershop(db, tenant_id)
     directory = UPLOAD_ROOT / str(tenant_id)
-    directory.mkdir(parents=True, exist_ok=True)
     filename = f"{uuid4().hex}{extension}"
     destination = directory / filename
-    destination.write_bytes(contents)
+    previous_logo_url = shop.logo_url
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(contents)
+    except OSError as exc:
+        try:
+            destination.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise HTTPException(status_code=500, detail="No se pudo guardar el logo") from exc
+
     logo_url = f"/uploads/barbershops/{tenant_id}/{filename}"
     shop.logo_url = logo_url
-    db.commit()
+    record_audit(
+        db,
+        current_user,
+        "barbershop.logo_updated",
+        "barbershop",
+        shop.id,
+        shop.id,
+        {"previous_logo_url": previous_logo_url, "logo_url": logo_url},
+    )
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=503, detail="No se pudo actualizar el logo") from exc
+
+    # Remove only an older file managed under this tenant's upload directory.
+    tenant_prefix = f"/uploads/barbershops/{tenant_id}/"
+    if previous_logo_url and previous_logo_url.startswith(tenant_prefix):
+        previous_name = previous_logo_url[len(tenant_prefix):]
+        previous_path = (directory / previous_name).resolve()
+        if previous_path.parent == directory.resolve() and previous_path != destination.resolve():
+            previous_path.unlink(missing_ok=True)
     return {"success": True, "logo_url": logo_url, "message": "Logo subido correctamente"}
 
 
