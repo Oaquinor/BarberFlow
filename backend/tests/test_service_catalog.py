@@ -127,3 +127,62 @@ def test_superadmin_can_suspend_tenant_and_cannot_disable_self(client: TestClien
         f"/api/v1/admin/users/{admin.id}/status", headers=admin_headers, json={"is_active": False}
     )
     assert self_disable.status_code == 409
+
+
+def test_superadmin_user_status_change_revokes_tokens_and_refresh_sessions(client: TestClient, test_db: Session):
+    shop = Barbershop(
+        name="User Suspension", slug="user-suspend-test", email="user-suspend@example.com",
+        phone="8095550201", address_line1="Calle 3", city="Santo Domingo", state="DN",
+        postal_code="10102", country="DO", timezone="America/Santo_Domingo",
+    )
+    test_db.add(shop)
+    test_db.flush()
+    target = User(
+        email="target-user@example.com", password_hash=hash_password("StrongPassword123"),
+        first_name="Target", last_name="User", role="barber", is_active=True,
+        barbershop_id=shop.id,
+    )
+    admin = User(
+        email="status-admin@example.com", password_hash="unused", first_name="Admin",
+        last_name="Status", role="super_admin", is_active=True,
+    )
+    test_db.add_all([target, admin])
+    test_db.commit()
+
+    admin_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': admin.role})}"}
+    login = client.post("/api/v1/auth/login", json={
+        "email": target.email, "password": "StrongPassword123",
+    })
+    assert login.status_code == 200
+    tokens = login.json()
+
+    suspended = client.put(
+        f"/api/v1/admin/users/{target.id}/status", headers=admin_headers,
+        json={"is_active": False},
+    )
+    assert suspended.status_code == 200
+    test_db.refresh(target)
+    assert target.auth_version == 1
+    assert test_db.query(RefreshSession).filter(
+        RefreshSession.user_id == target.id, RefreshSession.revoked_at.is_(None),
+    ).count() == 0
+    assert client.get("/api/v1/services/", headers={
+        "Authorization": f"Bearer {tokens['access_token']}",
+    }).status_code == 401
+    assert client.post("/api/v1/auth/refresh", json={
+        "refresh_token": tokens["refresh_token"],
+    }).status_code == 401
+
+    reactivated = client.put(
+        f"/api/v1/admin/users/{target.id}/status", headers=admin_headers,
+        json={"is_active": True},
+    )
+    assert reactivated.status_code == 200
+    test_db.refresh(target)
+    assert target.auth_version == 2
+    assert client.get("/api/v1/services/", headers={
+        "Authorization": f"Bearer {tokens['access_token']}",
+    }).status_code == 401
+    assert client.post("/api/v1/auth/login", json={
+        "email": target.email, "password": "StrongPassword123",
+    }).status_code == 200

@@ -3877,9 +3877,18 @@ def admin_update_user_status(
     if not data.is_active and user.role == "super_admin":
         if len(active_admin_ids) <= 1:
             raise HTTPException(status_code=409, detail="No se puede desactivar el último super administrador")
+    previous_status = user.is_active
+    if previous_status != data.is_active:
+        now = utc_now_naive()
+        user.auth_version += 1
+        db.query(RefreshSession).filter(
+            RefreshSession.user_id == user.id,
+            RefreshSession.revoked_at.is_(None),
+            RefreshSession.is_deleted == False,
+        ).update({RefreshSession.revoked_at: now}, synchronize_session=False)
     user.is_active = data.is_active
     _audit(db, admin, "user.status_changed", "user", user.id, user.barbershop_id,
-           {"is_active": data.is_active})
+           {"previous_is_active": previous_status, "is_active": data.is_active})
     db.commit()
     return {"success": True, "user_id": user.id, "is_active": user.is_active}
 
