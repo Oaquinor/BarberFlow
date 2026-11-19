@@ -52,7 +52,7 @@ function updateActiveServiceTimer(startedAt, estimatedMinutes, nextAppointment) 
         const progressBar = document.getElementById('activeServiceProgressBar');
         if (progressBar) progressBar.style.width = `${progressPct}%`;
         const alerts = [];
-        if (progressPct >= 100) {
+        if (elapsedSeconds > durationSeconds) {
             alerts.push('⚠️ El servicio superó su duración estimada.');
         } else if (progressPct >= 80) {
             alerts.push(`⏰ ${Math.ceil(durationSeconds / 60 - elapsedSeconds / 60)} minutos restantes del tiempo estimado`);

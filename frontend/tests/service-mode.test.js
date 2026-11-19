@@ -41,6 +41,11 @@ test('active service timer renders elapsed time and updates estimated progress',
   intervals.get(1)();
   assert.equal(nodeFor('elapsedTime').textContent, '00:03:00');
   assert.equal(nodeFor('activeServiceProgress').textContent, '100%');
+  assert.match(nodeFor('activeServiceAlert').textContent, /0 minutos restantes/);
+
+  now += 1_000;
+  intervals.get(1)();
+  assert.equal(nodeFor('elapsedTime').textContent, '00:03:01');
   assert.match(nodeFor('activeServiceAlert').textContent, /superó su duración estimada/);
   assert.match(nodeFor('activeServiceAlert').textContent, /Próxima cita en 14 minutos/);
 
