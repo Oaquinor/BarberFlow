@@ -323,15 +323,18 @@ def test_public_slots_match_service_duration_absences_and_existing_appointments(
 
     response = client.get(f"/api/v1/public/{shop.slug}/slots?duration_minutes=30")
     assert response.status_code == 200
-    assert [item["slot_start"] for item in response.json()] == [
-        (start + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat(),
-        (start + timedelta(hours=3)).replace(tzinfo=timezone.utc).isoformat(),
+    assert [datetime.fromisoformat(item["slot_start"]).replace(tzinfo=None) for item in response.json()] == [
+        start + timedelta(hours=2),
+        start + timedelta(hours=3),
     ]
 
     long_service_slots = client.get(
         f"/api/v1/public/{shop.slug}/slots?duration_minutes=60",
     )
     assert long_service_slots.status_code == 200
-    assert [item["slot_start"] for item in long_service_slots.json()] == [
-        (start + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat(),
+    assert [
+        datetime.fromisoformat(item["slot_start"]).replace(tzinfo=None)
+        for item in long_service_slots.json()
+    ] == [
+        start + timedelta(hours=2),
     ]

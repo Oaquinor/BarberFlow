@@ -165,6 +165,15 @@ def test_support_contact_is_rate_limited_per_hashed_client_ip(
     from app.models import LoginAttempt
 
     monkeypatch.setattr(platform, "_send_email", lambda *_args, **_kwargs: True)
+    original_bucket_hash = platform._login_bucket_hash
+    observed_buckets = []
+
+    def capture_bucket_hash(kind, value):
+        digest = original_bucket_hash(kind, value)
+        observed_buckets.append((kind, value, digest))
+        return digest
+
+    monkeypatch.setattr(platform, "_login_bucket_hash", capture_bucket_hash)
     recipient = User(
         email="support-admin@example.com", password_hash="unused", first_name="Support",
         last_name="Admin", role="super_admin", is_active=True,
@@ -179,8 +188,10 @@ def test_support_contact_is_rate_limited_per_hashed_client_ip(
     blocked = client.post("/api/v1/support/contact", json=payload)
     assert blocked.status_code == 429
 
-    bucket = platform._login_bucket_hash("support-ip", "testclient")
-    assert bucket not in "testclient"
+    support_buckets = [row for row in observed_buckets if row[0] == "support-ip"]
+    assert support_buckets
+    bucket = support_buckets[0][2]
+    assert bucket not in support_buckets[0][1]
     assert test_db.query(LoginAttempt).filter(LoginAttempt.key_hash == bucket).count() == 1
 
 
