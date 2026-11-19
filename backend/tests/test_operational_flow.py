@@ -99,6 +99,11 @@ def test_booking_to_checkout_updates_agenda_performance_and_cash(
         headers=headers, json={"status": "in_progress"},
     )
     assert started.status_code == 200
+    dashboard = client.get("/api/v1/barber/dashboard", headers=headers)
+    assert dashboard.status_code == 200
+    active_service = next(item for item in dashboard.json()["appointments"] if item["id"] == appointment_id)
+    assert active_service["actual_start_time"] is not None
+    assert active_service["progress_percent"] >= 0
 
     checkout = client.post(
         f"/api/v1/barber/appointments/{appointment_id}/payment",

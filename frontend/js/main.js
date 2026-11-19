@@ -11,6 +11,7 @@ let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
+let serviceTimerInterval = null;
 const ownerClientCache = new Map();
 const ownerBarberCache = new Map();
 
@@ -23,6 +24,40 @@ function escapeHtml(value) {
 function setText(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
+}
+
+function updateActiveServiceTimer(startedAt, estimatedMinutes) {
+    if (serviceTimerInterval) clearInterval(serviceTimerInterval);
+    serviceTimerInterval = null;
+    if (!startedAt) {
+        setText('elapsedTime', '00:00:00');
+        return;
+    }
+
+    const startedAtMs = new Date(startedAt).getTime();
+    if (!Number.isFinite(startedAtMs)) {
+        setText('elapsedTime', '00:00:00');
+        return;
+    }
+
+    const renderElapsed = () => {
+        const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+        const hours = Math.floor(elapsedSeconds / 3600);
+        const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+        const seconds = elapsedSeconds % 60;
+        setText('elapsedTime', [hours, minutes, seconds].map(value => String(value).padStart(2, '0')).join(':'));
+        const durationSeconds = Math.max(1, Number(estimatedMinutes) || 0) * 60;
+        const progressPct = Math.min(100, Math.floor((elapsedSeconds / durationSeconds) * 100));
+        setText('activeServiceProgress', `${progressPct}%`);
+        const progressBar = document.getElementById('activeServiceProgressBar');
+        if (progressBar) progressBar.style.width = `${progressPct}%`;
+        setText('activeServiceAlert', progressPct >= 100
+            ? '⚠️ El servicio superó su duración estimada.'
+            : `🔥 Servicio en curso · ${progressPct}% del tiempo estimado`);
+    };
+
+    renderElapsed();
+    serviceTimerInterval = setInterval(renderElapsed, 1000);
 }
 
 function setTrend(id, delta, suffix, currency = false) {
@@ -687,15 +722,9 @@ async function loadBarberDashboardData() {
             setText('activeServiceClient', active.client_name || 'Cliente');
             setText('activeServiceType', active.service_type || 'Servicio');
             setText('activeServiceEstimated', `${active.estimated_duration || 0} minutos`);
-
-            const progressPct = Math.min(100, Math.max(0, Number(active.progress_percent) || 0));
-            setText('activeServiceProgress', `${progressPct}%`);
-            const progressBar = document.getElementById('activeServiceProgressBar');
-            if (progressBar) progressBar.style.width = `${progressPct}%`;
-            setText('activeServiceAlert', progressPct >= 100
-                ? '⚠️ El servicio superó su duración estimada.'
-                : `🔥 Servicio en curso · ${progressPct}% del tiempo estimado`);
+            updateActiveServiceTimer(active.actual_start_time, active.estimated_duration);
         } else {
+            updateActiveServiceTimer(null);
             setText('activeServiceClient', 'Sin servicio activo');
             setText('activeServiceType', 'Esperando próximas citas');
             setText('activeServiceEstimated', '-- minutos');
@@ -1389,6 +1418,8 @@ function logout() {
     KingFlowAuth.logout();
     if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
     notificationRefreshTimer = null;
+    if (serviceTimerInterval) clearInterval(serviceTimerInterval);
+    serviceTimerInterval = null;
     localStorage.removeItem('userEmail');
     accessToken = null;
     currentUser = null;

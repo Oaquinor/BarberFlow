@@ -3033,6 +3033,7 @@ def barber_dashboard(
                 "service_type": a.service_type,
                 "scheduled_time": _utc_aware(a.scheduled_time),
                 "estimated_duration": a.estimated_duration,
+                "actual_start_time": _utc_aware(a.actual_start_time) if a.actual_start_time else None,
                 "progress_percent": _service_progress_percent(a, now) if a.status == "in_progress" else 0,
                 "service_price": a.service_price,
                 "status": a.status,
