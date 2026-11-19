@@ -18,7 +18,7 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 - Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión. El checkout persiste pago, cita, notificaciones, rendimiento y logros en una sola transacción MySQL.
 - Disponibilidad y ausencias: el barbero genera turnos y registra bloqueos futuros; el backend protege los rangos contra citas existentes y nuevas reservas.
 - Operación de negocio: equipo (alta, perfil, estado y comisiones), clientes (alta manual, edición y estado con historial conservado), servicios, caja diaria y cierre.
-- Configuración del negocio: owner edita nombre, horarios, zona horaria, logo y marca; los cambios de perfil y logo se auditan y se reflejan en el perfil público.
+- Configuración del negocio: owner edita nombre, horarios, zona horaria, logo y marca; los cambios de perfil, logo y onboarding se auditan y se reflejan en el perfil público.
 - Superadministración: overview global, tenants, usuarios, suscripciones, parámetros de registro y periodo inicial, pagos externos registrados, afiliados, comisiones, bandeja MySQL de soporte y auditoría.
 - El owner puede consultar el estado efectivo del periodo de suscripción y el uso real de límites por barbería.
 - Notificaciones internas y entregas durables SMTP/WhatsApp con recordatorios programados.
@@ -28,9 +28,9 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución de GitHub Actions que validó estos cambios corresponde al commit `8fac9738aa18a58cc760553ce97804f293b92ac9` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
+La ejecución de GitHub Actions que validó estos cambios corresponde al commit `cd19b61930973e3a8a74be40af41c060a2437198` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
 
-- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→023; `python -m pytest backend/tests -q` — **81 passed**, 1 warning. Incluye atomicidad del checkout ante fallos de rendimiento/logros, carga y reemplazo de logo auditado, alta manual de clientes con límites del plan y aislamiento multitenant.
+- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→023; `python -m pytest backend/tests -q` — **81 passed**, 1 warning. Incluye atomicidad del checkout ante fallos de rendimiento/logros, auditoría de onboarding, carga y reemplazo de logo, alta manual de clientes con límites del plan y aislamiento multitenant.
 - Dependencias Python: `pip-audit -r backend/requirements.txt` — **no known vulnerabilities**; CI ejecuta esta auditoría en cada push y pull request.
 - Frontend: `npm test` — **25 passed**. Incluye bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
 - WhatsApp: `npm test` — **6 passed**.
@@ -87,4 +87,4 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 - Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
 - Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo y estado de carga del onboarding y atomicidad del checkout quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
+Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo, auditoría de onboarding, estado de carga y atomicidad del checkout quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.

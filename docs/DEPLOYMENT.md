@@ -330,13 +330,40 @@ jobs:
 ```bash
 # Daily backup script
 #!/bin/bash
+set -euo pipefail
 BACKUP_DIR="/backups/kingflow"
-DATE=$(date +%Y%m%d_%H%M%S)
+MYSQL_CNF="/etc/kingflow/backup.cnf"
+DATE="$(date +%Y%m%d_%H%M%S)"
+umask 077
+mkdir -p "$BACKUP_DIR"
+TEMP_BACKUP="$BACKUP_DIR/db_$DATE.sql.gz.tmp"
+trap 'rm -f "$TEMP_BACKUP"' EXIT
 
-pg_dump -U kingflow kingflow_barber | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+# backup.cnf must be readable only by the backup account (chmod 600).
+# Store its MySQL host, user, password, and port in a [client] section.
+mysqldump --defaults-extra-file="$MYSQL_CNF" \
+  --single-transaction --routines --triggers --events \
+  --databases kingflow_barber | gzip -c > "$TEMP_BACKUP"
+gzip -t "$TEMP_BACKUP"
+mv "$TEMP_BACKUP" "$BACKUP_DIR/db_$DATE.sql.gz"
+trap - EXIT
 
 # Keep only last 30 days
-find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
+find "$BACKUP_DIR" -type f -name "db_*.sql.gz" -mtime +30 -delete
+```
+
+Configure the MySQL backup account with only the privileges required by `mysqldump`; do not put its password on the command line. Back up uploaded logos under `frontend/uploads` as a separate persistent asset set. Periodically restore a backup to an isolated MySQL server and verify application reads before relying on the backup procedure. Never test a restore against the live production database.
+
+### Restore rehearsal
+
+Point the protected client file at a disposable recovery server first. The dump includes `CREATE DATABASE` and `USE` statements for `kingflow_barber`.
+
+```bash
+set -euo pipefail
+BACKUP_FILE="/backups/kingflow/db_YYYYMMDD_HHMMSS.sql.gz"
+MYSQL_CNF="/etc/kingflow/recovery.cnf"
+gzip -t "$BACKUP_FILE"
+gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$MYSQL_CNF"
 ```
 
 ### Automated Backups
