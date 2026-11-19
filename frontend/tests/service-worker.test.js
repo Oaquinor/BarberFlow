@@ -286,6 +286,8 @@ test("platform registration settings are administered and enforced by signup flo
 test("owner client actions are wired to scoped edit and status endpoints", () => {
   const page = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const script = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");
+  assert.match(page, /id="ownerClientCreateForm"/);
+  assert.match(script, /ownerFetch\('\/owner\/clients'/);
   assert.match(page, /id="ownerClientEditForm"/);
   assert.match(page, /id="ownerClientFirstName"/);
   assert.match(script, /\/owner\/clients\/\$\{clientId\}/);

@@ -86,6 +86,7 @@ from app.schemas.platform import (
     AdminUserSupportToggleRequest,
     AdminStatusUpdateRequest,
     OwnerCreateBarberRequest,
+    OwnerClientCreateRequest,
     OwnerClientUpdateRequest,
     AdminAffiliateCreateRequest,
     AdminCommissionPaymentRequest,
@@ -2184,6 +2185,74 @@ def owner_list_clients(
         "last_visit": appointments.get(client.id, {}).get("last_visit"),
         "total_paid_cents": payments.get(client.id, 0),
     } for client in clients], "limit": limit, "offset": offset}
+
+
+@router.post("/owner/clients", status_code=201)
+def owner_create_client(
+    data: OwnerClientCreateRequest,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    owner = _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el propietario puede gestionar sus clientes")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == owner.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=403, detail="Barbería inactiva")
+    subscription = _require_active_subscription(db, shop, lock=True)
+    phone = _normalize_phone(data.phone)
+    existing = db.query(User).filter(
+        User.phone == phone,
+        User.barbershop_id == shop.id,
+        User.role == "client",
+        User.is_deleted == False,
+    ).with_for_update().first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un cliente con ese teléfono en esta barbería",
+        )
+    if subscription.max_clients is not None:
+        client_count = db.query(User.id).filter(
+            User.barbershop_id == shop.id,
+            User.role == "client",
+            User.is_deleted == False,
+        ).count()
+        if client_count >= subscription.max_clients:
+            raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de clientes de su plan")
+
+    client = User(
+        email=f"client-{shop.id}-{secrets.token_hex(16)}@client.invalid",
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        first_name=data.first_name,
+        last_name=data.last_name,
+        phone=phone,
+        role="client",
+        is_active=True,
+        is_verified=True,
+        barbershop_id=shop.id,
+    )
+    db.add(client)
+    try:
+        db.flush()
+        _audit(db, owner, "client.created", "user", client.id, shop.id,
+               {"phone_last4": phone[-4:], "source": "owner_manual"})
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="No se pudo registrar el cliente") from exc
+    return {
+        "id": client.id,
+        "full_name": client.full_name,
+        "first_name": client.first_name,
+        "last_name": client.last_name,
+        "phone": client.phone,
+        "is_active": client.is_active,
+    }
 
 
 @router.put("/owner/clients/{client_id}")

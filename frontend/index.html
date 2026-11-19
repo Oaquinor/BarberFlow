@@ -743,8 +743,15 @@
                     <p id="ownerCommissionsResult" role="status"></p>
                 </section>
                 <section class="card">
-                    <h3>Clientes registrados</h3>
+                    <div class="services-header"><h3>Clientes registrados</h3><button id="showOwnerClientCreate" class="btn-primary" type="button">Agregar cliente</button></div>
                     <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Citas</th><th>Completadas</th><th>Última visita</th><th>Total pagado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerClientsBody"></tbody></table></div>
+                    <form id="ownerClientCreateForm" class="grid" hidden style="margin-top:16px;">
+                        <div class="field"><label for="ownerClientCreateFirstName">Nombre</label><input id="ownerClientCreateFirstName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerClientCreateLastName">Apellido</label><input id="ownerClientCreateLastName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerClientCreatePhone">Teléfono</label><input id="ownerClientCreatePhone" type="tel" required minlength="6" maxlength="20" autocomplete="tel"></div>
+                        <div class="field"><button class="btn-primary" type="submit">Registrar cliente</button><button id="cancelOwnerClientCreate" class="btn-secondary" type="button">Cancelar</button></div>
+                        <p>El cliente quedará asociado a esta barbería. El alta manual no crea acceso de cuenta ni una cita.</p>
+                    </form>
                     <form id="ownerClientEditForm" class="grid" hidden style="margin-top:16px;">
                         <input id="ownerClientEditId" type="hidden">
                         <div class="field"><label for="ownerClientFirstName">Nombre</label><input id="ownerClientFirstName" required minlength="2" maxlength="100"></div>

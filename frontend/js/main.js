@@ -886,6 +886,42 @@ document.getElementById('ownerClientsBody')?.addEventListener('click', async (ev
     }
 });
 
+document.getElementById('showOwnerClientCreate')?.addEventListener('click', () => {
+    if (currentUser?.role !== 'barbershop_owner') return;
+    document.getElementById('ownerClientCreateForm').hidden = false;
+    document.getElementById('ownerClientCreateFirstName').focus();
+    document.getElementById('ownerClientsResult').textContent = '';
+});
+
+document.getElementById('cancelOwnerClientCreate')?.addEventListener('click', () => {
+    const form = document.getElementById('ownerClientCreateForm');
+    form.reset();
+    form.hidden = true;
+});
+
+document.getElementById('ownerClientCreateForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (currentUser?.role !== 'barbershop_owner') return;
+    const form = document.getElementById('ownerClientCreateForm');
+    const result = document.getElementById('ownerClientsResult');
+    try {
+        const created = await ownerFetch('/owner/clients', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                first_name: document.getElementById('ownerClientCreateFirstName').value.trim(),
+                last_name: document.getElementById('ownerClientCreateLastName').value.trim(),
+                phone: document.getElementById('ownerClientCreatePhone').value.trim(),
+            }),
+        });
+        form.reset();
+        form.hidden = true;
+        await loadOwnerManagement();
+        result.textContent = `Cliente ${created.full_name} registrado.`;
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo registrar el cliente.';
+    }
+});
+
 document.getElementById('ownerClientEditForm')?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (currentUser?.role !== 'barbershop_owner') return;

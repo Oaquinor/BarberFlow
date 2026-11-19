@@ -224,3 +224,83 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
         AuditLog.action.in_(["client.profile_updated", "client.status_changed"]),
         AuditLog.entity_id == customer.id, AuditLog.barbershop_id == shop.id,
     ).count() == 2
+
+
+def test_owner_can_manually_register_clients_with_tenant_limits(client: TestClient, test_db: Session):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="free", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=1,
+        max_appointments_per_month=50, max_clients=1, auto_renew=False,
+    )
+    foreign_subscription = Subscription(
+        plan="free", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=1,
+        max_appointments_per_month=50, max_clients=1, auto_renew=False,
+    )
+    test_db.add_all([subscription, foreign_subscription])
+    test_db.flush()
+    shop = Barbershop(
+        name="Manual Clients", slug="manual-clients-test", email="manual-clients@example.com",
+        phone="8095553040", address_line1="Calle 40", city="Santo Domingo", state="DN",
+        postal_code="10105", country="DO", timezone="America/Santo_Domingo", currency="DOP",
+        subscription_id=subscription.id,
+    )
+    foreign_shop = Barbershop(
+        name="Manual Clients Other", slug="manual-clients-other-test",
+        email="manual-clients-other@example.com", phone="8095553041", address_line1="Calle 41",
+        city="Santo Domingo", state="DN", postal_code="10106", country="DO",
+        timezone="America/Santo_Domingo", currency="DOP", subscription_id=foreign_subscription.id,
+    )
+    test_db.add_all([shop, foreign_shop])
+    test_db.flush()
+    owner = User(
+        email="manual-clients-owner@example.com", password_hash="unused", first_name="Owner",
+        last_name="Clients", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
+    )
+    barber = User(
+        email="manual-clients-barber@example.com", password_hash="unused", first_name="Barber",
+        last_name="Clients", role="barber", is_active=True, barbershop_id=shop.id,
+    )
+    foreign_owner = User(
+        email="manual-clients-foreign-owner@example.com", password_hash="unused",
+        first_name="Foreign", last_name="Owner", role="barbershop_owner", is_active=True,
+        barbershop_id=foreign_shop.id,
+    )
+    test_db.add_all([owner, barber, foreign_owner])
+    test_db.commit()
+
+    owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id)})}"}
+    foreign_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(foreign_owner.id)})}"}
+    payload = {"first_name": "  Ana ", "last_name": "  García ", "phone": "+1 (809) 555-3042"}
+
+    created = client.post("/api/v1/owner/clients", headers=owner_headers, json=payload)
+    assert created.status_code == 201
+    assert created.json()["full_name"] == "Ana García"
+    assert created.json()["phone"] == "18095553042"
+    record = test_db.get(User, created.json()["id"])
+    assert record.role == "client"
+    assert record.barbershop_id == shop.id
+    assert record.email.endswith("@client.invalid")
+    audit = test_db.query(AuditLog).filter_by(
+        action="client.created", entity_id=record.id, barbershop_id=shop.id,
+    ).one()
+    assert audit.actor_user_id == owner.id
+    assert audit.details == {"phone_last4": "3042", "source": "owner_manual"}
+
+    assert client.post("/api/v1/owner/clients", headers=owner_headers, json=payload).status_code == 409
+    over_limit = client.post("/api/v1/owner/clients", headers=owner_headers, json={
+        "first_name": "Second", "last_name": "Client", "phone": "8095553043",
+    })
+    assert over_limit.status_code == 402
+    assert client.post(
+        "/api/v1/owner/clients", headers=barber_headers,
+        json={"first_name": "Other", "last_name": "Client", "phone": "8095553044"},
+    ).status_code == 403
+    foreign_created = client.post(
+        "/api/v1/owner/clients", headers=foreign_headers,
+        json={"first_name": "Tenant", "last_name": "Client", "phone": "8095553044"},
+    )
+    assert foreign_created.status_code == 201
+    assert test_db.get(User, foreign_created.json()["id"]).barbershop_id == foreign_shop.id

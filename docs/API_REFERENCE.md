@@ -85,8 +85,11 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `POST` | `/owner/barbers` | Crea acceso con contraseña inicial y aplica el límite del plan |
 | `PUT` | `/owner/barbers/{barber_id}/status` | Activa o desactiva un barbero del mismo tenant |
 | `GET` | `/owner/clients?limit=50&offset=0` | Lista clientes con citas y total efectivamente pagado |
+| `POST` | `/owner/clients` | Registra un cliente manual en el tenant, aplica el límite del plan y audita el alta |
 | `PUT` | `/owner/clients/{client_id}` | Actualiza nombre y teléfono de un cliente del tenant, con auditoría |
 | `PUT` | `/owner/clients/{client_id}/status` | Activa o desactiva el acceso del cliente sin borrar su historial |
+
+El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y rechaza duplicados del mismo tenant. Crea una ficha sin acceso de cuenta ni cita asociada.
 | `GET` | `/onboarding/profile` | Lee el perfil, horario y zona horaria de la barbería autenticada |
 | `PUT` | `/onboarding/business-settings` | Actualiza nombre, horario, zona horaria y colores; registra auditoría |
 
