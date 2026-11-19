@@ -214,7 +214,9 @@ La bandera disponible `branding_auto` controla si el portal autenticado aplica l
 
 ## Soporte y errores
 
-`POST /support/contact` recibe nombre, email o teléfono, mensaje y slug opcional. El envío de correo se reporta como exitoso solo si SMTP está configurado y acepta el mensaje. El formulario limita a cinco solicitudes por IP y hora y persiste solo un hash de la dirección.
+`POST /support/contact` recibe nombre, email o teléfono, mensaje y slug opcional. Cada solicitud se conserva en MySQL aunque SMTP esté caído; la respuesta incluye `ticket_id` y `notification_sent`. El formulario limita a cinco solicitudes por IP y hora y persiste solo un hash de la dirección.
+
+El superadministrador puede consultar `GET /admin/support/tickets?status=open&limit=50&offset=0` (incluye total para paginar) y cambiar su estado con `PUT /admin/support/tickets/{ticket_id}/status` (`open`, `in_progress`, `resolved` o `closed`). Solo el rol `super_admin` puede ver o gestionar la bandeja; cada cambio de estado genera auditoría.
 
 Errores usan JSON `{"detail":"..."}`. Códigos usados: `401` autenticación, `403` permiso, `404` recurso del tenant, `409` conflicto/transición, `422` validación y `402` límite o suscripción inactiva.
 

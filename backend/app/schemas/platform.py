@@ -277,6 +277,31 @@ class SupportRequest(BaseModel):
     message: str = Field(..., min_length=5, max_length=5000)
     barbershop_slug: Optional[str] = Field(None, max_length=100)
 
+    @field_validator("name")
+    @classmethod
+    def validate_support_name(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("El nombre debe tener al menos dos caracteres")
+        return value
+
+    @field_validator("message")
+    @classmethod
+    def validate_support_message(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 5:
+            raise ValueError("El mensaje debe tener al menos cinco caracteres")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_support_phone(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None:
+            value = value.strip()
+            if value and sum(character.isdigit() for character in value) < 6:
+                raise ValueError("El teléfono debe tener al menos seis dígitos")
+        return value or None
+
 
 class AdminUserSupportToggleRequest(BaseModel):
     support_contact_enabled: bool
@@ -284,6 +309,10 @@ class AdminUserSupportToggleRequest(BaseModel):
 
 class AdminStatusUpdateRequest(BaseModel):
     is_active: bool
+
+
+class AdminSupportTicketStatusRequest(BaseModel):
+    status: str = Field(..., pattern=r"^(open|in_progress|resolved|closed)$")
 
 
 class OwnerCreateBarberRequest(BaseModel):

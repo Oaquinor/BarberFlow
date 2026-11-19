@@ -1250,7 +1250,9 @@ async function sendLoginSupportRequest() {
             return;
         }
 
-        result.textContent = `✅ Soporte enviado a ${data.sent_to} usuario(s).`;
+        result.textContent = data.notification_sent
+            ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+            : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
     } catch (error) {
         console.error('Error sending login support:', error);
         result.textContent = 'Error de conexión al enviar soporte.';

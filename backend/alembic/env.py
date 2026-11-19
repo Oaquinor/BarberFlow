@@ -7,7 +7,7 @@ from alembic import context
 # Import your models here
 from app.core.database import Base
 from app.core.config.settings import get_settings
-from app.models import User, Barbershop, Appointment, Subscription
+from app.models import User, Barbershop, Appointment, Subscription, SupportTicket
 
 # this is the Alembic Config object
 config = context.config

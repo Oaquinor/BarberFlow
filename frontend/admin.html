@@ -251,6 +251,29 @@
             </div>
         </div>
         <div class="card">
+            <div class="title">🎧 Bandeja de soporte</div>
+            <div class="toolbar">
+                <label for="supportTicketFilter">Estado</label>
+                <select id="supportTicketFilter">
+                    <option value="">Todos</option>
+                    <option value="open">Abiertos</option>
+                    <option value="in_progress">En curso</option>
+                    <option value="resolved">Resueltos</option>
+                    <option value="closed">Cerrados</option>
+                </select>
+                <button id="refreshSupportTicketsBtn" type="button">🔄 Actualizar</button>
+                <span id="supportTicketsResult" role="status" style="color:var(--text-secondary);"></span>
+                <button id="previousSupportTicketsBtn" type="button" disabled>← Anterior</button>
+                <button id="nextSupportTicketsBtn" type="button" disabled>Siguiente →</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Fecha</th><th>Barbería</th><th>Contacto</th><th>Mensaje</th><th>Aviso por correo</th><th>Estado</th><th>Acción</th></tr></thead>
+                    <tbody id="supportTicketsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
             <div class="title">🧾 Auditoría de operaciones</div>
             <div class="toolbar">
                 <select id="auditTenantFilter"><option value="">Todas las barberías</option></select>

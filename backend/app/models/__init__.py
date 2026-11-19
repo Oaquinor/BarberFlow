@@ -22,6 +22,7 @@ from app.models.in_app_notification import InAppNotification
 from app.models.notification_delivery import NotificationDelivery
 from app.models.platform_settings import PlatformSettings
 from app.models.password_reset_token import PasswordResetToken
+from app.models.support_ticket import SupportTicket
 
 __all__ = [
     "BaseModel",
@@ -51,4 +52,5 @@ __all__ = [
     "NotificationDelivery",
     "PlatformSettings",
     "PasswordResetToken",
+    "SupportTicket",
 ]

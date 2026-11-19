@@ -9,6 +9,8 @@ const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/
 
 let accessToken = localStorage.getItem('token');
 let currentTenants = [];
+let supportTicketsOffset = 0;
+const SUPPORT_TICKETS_PAGE_SIZE = 50;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -208,6 +210,65 @@ async function loadAuditLogs() {
         result.textContent = error.message;
     }
 }
+
+async function loadSupportTickets() {
+    const result = document.getElementById('supportTicketsResult');
+    const body = document.getElementById('supportTicketsBody');
+    if (!result || !body) return;
+    result.textContent = 'Cargando…';
+    const status = document.getElementById('supportTicketFilter').value;
+    const query = new URLSearchParams({
+        limit: String(SUPPORT_TICKETS_PAGE_SIZE), offset: String(supportTicketsOffset),
+    });
+    if (status) query.set('status', status);
+    try {
+        const data = await fetchJson(`/api/v1/admin/support/tickets?${query.toString()}`);
+        const items = data.items || [];
+        if (!items.length && supportTicketsOffset > 0 && supportTicketsOffset >= Number(data.total || 0)) {
+            supportTicketsOffset = Math.max(0, Math.ceil(Number(data.total || 0) / SUPPORT_TICKETS_PAGE_SIZE - 1) * SUPPORT_TICKETS_PAGE_SIZE);
+            return loadSupportTickets();
+        }
+        const statusLabels = { open: 'Abierto', in_progress: 'En curso', resolved: 'Resuelto', closed: 'Cerrado' };
+        body.innerHTML = items.map((ticket) => `
+            <tr><td data-label="Fecha">${escapeHtml(new Date(ticket.created_at).toLocaleString('es-DO'))}</td>
+                <td data-label="Barbería">${escapeHtml(ticket.barbershop_name)}</td>
+                <td data-label="Contacto">${escapeHtml(ticket.name)}<br>${escapeHtml(ticket.email || '—')}<br>${escapeHtml(ticket.phone || '—')}</td>
+                <td data-label="Mensaje"><details><summary>Ver solicitud</summary><p>${escapeHtml(ticket.message).replace(/\n/g, '<br>')}</p></details></td>
+                <td data-label="Aviso por correo">${ticket.notification_sent ? 'Enviado' : 'No enviado'}</td>
+                <td data-label="Estado">${escapeHtml(statusLabels[ticket.status] || ticket.status)}</td>
+                <td data-label="Acción"><select class="support-ticket-next-status" data-id="${Number(ticket.id)}" aria-label="Nuevo estado de solicitud">
+                    ${Object.entries(statusLabels).map(([value, label]) => `<option value="${value}" ${ticket.status === value ? 'selected' : ''}>${label}</option>`).join('')}
+                </select><button class="save-support-ticket-status" type="button" data-id="${Number(ticket.id)}">Guardar</button></td></tr>
+        `).join('');
+        result.textContent = `${items.length} de ${Number(data.total || 0)} solicitud(es)`;
+        document.getElementById('previousSupportTicketsBtn').disabled = supportTicketsOffset === 0;
+        document.getElementById('nextSupportTicketsBtn').disabled = supportTicketsOffset + items.length >= Number(data.total || 0);
+    } catch (error) {
+        body.textContent = '';
+        result.textContent = error.message;
+        document.getElementById('previousSupportTicketsBtn').disabled = true;
+        document.getElementById('nextSupportTicketsBtn').disabled = true;
+    }
+}
+
+document.getElementById('supportTicketsBody')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('.save-support-ticket-status');
+    if (!button) return;
+    const ticketId = Number(button.dataset.id);
+    const status = document.querySelector(`.support-ticket-next-status[data-id="${ticketId}"]`)?.value;
+    button.disabled = true;
+    const result = document.getElementById('supportTicketsResult');
+    try {
+        await fetchJson(`/api/v1/admin/support/tickets/${ticketId}/status`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        });
+        await loadSupportTickets();
+    } catch (error) {
+        result.textContent = error.message;
+        button.disabled = false;
+    }
+});
 
 function formatAffiliateMoney(cents, currency) {
     try {
@@ -554,6 +615,19 @@ document.getElementById('refreshOverviewBtn')?.addEventListener('click', loadOve
 document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
 document.getElementById('loadAuditBtn')?.addEventListener('click', loadAuditLogs);
 document.getElementById('tenantFilter')?.addEventListener('change', loadUsers);
+document.getElementById('refreshSupportTicketsBtn')?.addEventListener('click', loadSupportTickets);
+document.getElementById('previousSupportTicketsBtn')?.addEventListener('click', () => {
+    supportTicketsOffset = Math.max(0, supportTicketsOffset - SUPPORT_TICKETS_PAGE_SIZE);
+    loadSupportTickets();
+});
+document.getElementById('nextSupportTicketsBtn')?.addEventListener('click', () => {
+    supportTicketsOffset += SUPPORT_TICKETS_PAGE_SIZE;
+    loadSupportTickets();
+});
+document.getElementById('supportTicketFilter')?.addEventListener('change', () => {
+    supportTicketsOffset = 0;
+    loadSupportTickets();
+});
 
 document.getElementById('logoutBtn')?.addEventListener('click', () => {
     KingFlowAuth.logout();
@@ -579,6 +653,7 @@ async function init() {
         await loadTenants();
         await loadUsers();
         await loadAffiliates();
+        await loadSupportTickets();
     } catch (error) {
         console.error(error);
         showGate();

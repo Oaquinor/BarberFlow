@@ -304,6 +304,23 @@ test("owner can edit a barber profile through the tenant-scoped API", () => {
   assert.match(script, /barber\.last_name/);
 });
 
+test("platform support inbox uses authenticated ticket and status APIs", () => {
+  const page = fs.readFileSync(path.join(__dirname, "..", "admin.html"), "utf8");
+  const script = fs.readFileSync(path.join(__dirname, "..", "js", "admin.js"), "utf8");
+  assert.match(page, /id="supportTicketsBody"/);
+  assert.ok(script.includes("/api/v1/admin/support/tickets?"));
+  assert.match(script, /escapeHtml\(ticket\.message\)/);
+  assert.match(script, /offset: String\(supportTicketsOffset\)/);
+  assert.match(script, /admin\/support\/tickets\/\$\{ticketId\}\/status/);
+});
+
+test("support forms confirm the saved ticket even when email notice is unavailable", () => {
+  const clientScript = fs.readFileSync(path.join(__dirname, "..", "js", "client.js"), "utf8");
+  const mainScript = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");
+  assert.match(clientScript, /Solicitud #\$\{Number\(data\.ticket_id\)\} recibida y guardada/);
+  assert.match(mainScript, /Solicitud #\$\{Number\(data\.ticket_id\)\} recibida y guardada/);
+});
+
 test("owner subscription panel reads period status and plan usage from the API", () => {
   const page = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const script = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");

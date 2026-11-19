@@ -53,6 +53,7 @@ from app.models.affiliate import Affiliate
 from app.models.commission import Commission
 from app.models.subscription_payment import SubscriptionPayment
 from app.models.platform_settings import PlatformSettings
+from app.models.support_ticket import SupportTicket
 from app.core.constants import CommissionStatus
 from app.models.achievement import Achievement, UserAchievement
 from app.models.barber_performance import BarberPerformance
@@ -85,6 +86,7 @@ from app.schemas.platform import (
     SupportRequest,
     AdminUserSupportToggleRequest,
     AdminStatusUpdateRequest,
+    AdminSupportTicketStatusRequest,
     OwnerCreateBarberRequest,
     OwnerBarberUpdateRequest,
     OwnerClientCreateRequest,
@@ -806,14 +808,25 @@ def support_contact(data: SupportRequest, request: Request, db: Session = Depend
             User.role.in_(["barbershop_owner", "barber"]),
         )
     else:
+        shop = None
         recipient_query = recipient_query.filter(User.role == "super_admin")
     recipients = recipient_query.order_by(User.id.asc()).all()
 
-    if not recipients:
-        raise HTTPException(status_code=400, detail="No hay usuarios configurados para soporte")
+    ticket = SupportTicket(
+        barbershop_id=shop.id if shop else None,
+        sender_name=data.name.strip(),
+        sender_email=str(data.email).strip().lower() if data.email else None,
+        sender_phone=data.phone.strip() if data.phone else None,
+        message=data.message.strip(),
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
 
-    subject = "Solicitud de soporte desde plataforma"
+    subject = f"Solicitud de soporte #{ticket.id}"
     body = (
+        f"Solicitud #{ticket.id}\n"
+        f"Barbería: {shop.name if shop else 'Plataforma'}\n"
         f"Nombre: {data.name}\n"
         f"Email: {data.email or '-'}\n"
         f"Teléfono: {data.phone or '-'}\n"
@@ -821,10 +834,76 @@ def support_contact(data: SupportRequest, request: Request, db: Session = Depend
     )
 
     sent = sum(1 for user in recipients if user.email and _send_email(user.email, subject, body))
-    if sent == 0:
-        raise HTTPException(status_code=503, detail="El servicio de correo de soporte no está disponible")
+    if sent:
+        ticket.notification_sent = True
+        db.commit()
 
-    return {"success": True, "sent_to": sent}
+    return {
+        "success": True,
+        "ticket_id": ticket.id,
+        "notification_sent": ticket.notification_sent,
+        "sent_to": sent,
+    }
+
+
+@router.get("/admin/support/tickets")
+def admin_list_support_tickets(
+    status: Optional[str] = Query(None, pattern=r"^(open|in_progress|resolved|closed)$"),
+    barbershop_id: Optional[int] = Query(None, gt=0),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    admin = _get_current_user(db, authorization)
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo el superadministrador puede consultar soporte")
+    query = db.query(SupportTicket).filter(SupportTicket.is_deleted == False)
+    if status:
+        query = query.filter(SupportTicket.status == status)
+    if barbershop_id is not None:
+        query = query.filter(SupportTicket.barbershop_id == barbershop_id)
+    total = query.order_by(None).count()
+    tickets = (
+        query.order_by(SupportTicket.created_at.desc(), SupportTicket.id.desc())
+        .offset(offset).limit(limit).all()
+    )
+    return {"items": [{
+        "id": ticket.id,
+        "barbershop_id": ticket.barbershop_id,
+        "barbershop_name": ticket.barbershop.name if ticket.barbershop else "Plataforma",
+        "name": ticket.sender_name,
+        "email": ticket.sender_email,
+        "phone": ticket.sender_phone,
+        "message": ticket.message,
+        "status": ticket.status,
+        "notification_sent": ticket.notification_sent,
+        "created_at": ticket.created_at.isoformat(),
+    } for ticket in tickets], "total": total, "limit": limit, "offset": offset}
+
+
+@router.put("/admin/support/tickets/{ticket_id}/status")
+def admin_update_support_ticket_status(
+    ticket_id: int,
+    data: AdminSupportTicketStatusRequest,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    admin = _get_current_user(db, authorization)
+    if admin.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo el superadministrador puede gestionar soporte")
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.id == ticket_id,
+        SupportTicket.is_deleted == False,
+    ).with_for_update().first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Solicitud de soporte no encontrada")
+    previous = ticket.status
+    ticket.status = data.status
+    _audit(db, admin, "support.ticket_status_changed", "support_ticket", ticket.id,
+           ticket.barbershop_id, {"previous": previous, "status": ticket.status})
+    db.commit()
+    return {"success": True, "ticket_id": ticket.id, "status": ticket.status}
 
 
 @router.get("/auth/me", response_model=AuthUserResponse)

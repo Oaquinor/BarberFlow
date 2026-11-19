@@ -226,7 +226,7 @@ All tables include:
 
 ## Operación MySQL agregada por migraciones
 
-La cadena vigente termina en `022_auth_record_retention_index` y todas las conexiones de la aplicación usan `mysql+pymysql`.
+La cadena vigente termina en `023_persist_support_tickets` y todas las conexiones de la aplicación usan `mysql+pymysql`.
 
 | Revisión | Cambio |
 |---|---|
@@ -247,6 +247,9 @@ La cadena vigente termina en `022_auth_record_retention_index` y todas las conex
 | `020_password_reset_tokens` | Tokens hash de recuperación de un solo uso con expiración y revocación |
 | `021_user_auth_version` | Versión de credenciales para invalidar access tokens tras cambio/recuperación de contraseña |
 | `022_auth_record_retention_index` | Índice para depurar en lotes acotados los buckets de autenticación vencidos |
+| `023_persist_support_tickets` | Bandeja MySQL de solicitudes de soporte, estado y vínculo opcional a barbería; downgrade protegido si existen tickets |
+
+`support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 
 Los importes operativos se guardan en centavos enteros. Las fechas de cita y pago se guardan como UTC sin zona en MySQL; el negocio las convierte usando su zona IANA para presentación y cierres diarios. Las migraciones son aditivas y no borran datos operativos al actualizar.
 

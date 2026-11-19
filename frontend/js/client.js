@@ -345,7 +345,9 @@ async function sendSupport() {
     return;
   }
 
-  result.textContent = `✅ Soporte enviado a ${data.sent_to} usuario(s).`;
+  result.textContent = data.notification_sent
+    ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+    : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
 }
 
 bookBtn.addEventListener('click', bookAppointment);

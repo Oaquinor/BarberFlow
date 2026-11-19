@@ -185,6 +185,7 @@ def test_support_contact_is_rate_limited_per_hashed_client_ip(
 
     for _ in range(platform.SUPPORT_MESSAGE_LIMIT):
         assert client.post("/api/v1/support/contact", json=payload).status_code == 200
+    assert test_db.query(platform.SupportTicket).count() == platform.SUPPORT_MESSAGE_LIMIT
     blocked = client.post("/api/v1/support/contact", json=payload)
     assert blocked.status_code == 429
 
