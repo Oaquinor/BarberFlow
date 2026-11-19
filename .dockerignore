@@ -1,0 +1,16 @@
+# Keep credentials and local environment files out of image build contexts.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+
+# Exclude local runtime data and developer tooling.
+**/.git
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.venv
+**/venv
+**/logs
+**/uploads
+.git

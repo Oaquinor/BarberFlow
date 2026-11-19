@@ -6,7 +6,7 @@
 
 ## 🚀 Deployment Options
 
-### Option 1: Docker Compose (Recommended for Small/Medium Scale)
+### Option 1: Docker Compose for Production
 
 The easiest way to deploy the entire stack.
 
@@ -23,33 +23,32 @@ git clone <repository-url>
 cd kingflow-barber
 ```
 
-2. **Configure environment**
+2. **Configure production environment**
 ```bash
-cp backend/.env.example backend/.env
-# Edit backend/.env with production values
+cp .env.production.example .env
+# Edit .env and replace every placeholder with a strong production value.
+# URL-encode reserved characters in MYSQL_PASSWORD inside DATABASE_URL.
 ```
 
-3. **Update docker-compose.yml for production**
-```yaml
-# Set DEBUG=False
-# Use production database credentials
-# Configure proper volumes for persistence
+Generate a strong application secret, for example:
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-4. **Start services**
+3. **Validate and start the production stack**
 ```bash
-docker-compose up -d
+docker compose -f docker-compose.prod.yml config --quiet
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-5. **Run migrations**
+Alembic migrations run as part of backend startup. The production Compose file rejects missing database credentials, JWT secret, HTTPS origins and WhatsApp token. Put secrets in the root `.env` file consumed by Compose; never put production credentials in `backend/.env` or an image build context. `.dockerignore` excludes environment files, local uploads, logs, dependency folders and Git metadata from builds. The development `docker-compose.yml` contains local defaults and `DEBUG=True`; do not use it for production.
+
+4. **Create the first platform admin**
 ```bash
-docker-compose exec backend alembic upgrade head
+docker compose -f docker-compose.prod.yml exec backend python scripts/create_admin.py
 ```
 
-6. **Create admin user**
-```bash
-docker-compose exec backend python scripts/create_admin.py
-```
+Terminate TLS at a trusted HTTPS reverse proxy or managed load balancer, restrict direct access to port 8000 to that proxy, and configure backups for the MySQL volume and `frontend/uploads`. The Compose stack does not configure a TLS proxy or automated backups by itself.
 
 ---
 
