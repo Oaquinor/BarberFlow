@@ -523,10 +523,30 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
 
 
 def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
-    # Lock or create each bucket before password verification. Without this,
-    # parallel requests can all pass the read before any failure is recorded.
-    for key_hash, _ in sorted(buckets):
-        attempt = _lock_or_create_login_attempt(db, key_hash, now)
+    # Insert and lock both rows as one ordered MySQL operation. Separate
+    # first-use inserts can deadlock when many identical logins race to create
+    # the email and IP buckets at the same time.
+    ordered = sorted(buckets)
+    statement = mysql_insert(LoginAttempt).values([
+        {
+            "key_hash": key_hash,
+            "failed_count": 0,
+            "window_started_at": now,
+            "last_attempt_at": now,
+            "created_at": now,
+            "updated_at": now,
+            "is_deleted": False,
+        }
+        for key_hash, _ in ordered
+    ]).prefix_with("IGNORE")
+    db.execute(statement)
+    attempt_rows = db.query(LoginAttempt).filter(
+        LoginAttempt.key_hash.in_([key_hash for key_hash, _ in ordered]),
+        LoginAttempt.is_deleted == False,
+    ).order_by(LoginAttempt.key_hash.asc()).with_for_update().all()
+    attempts_by_hash = {attempt.key_hash: attempt for attempt in attempt_rows}
+    for key_hash, _ in ordered:
+        attempt = attempts_by_hash[key_hash]
         if attempt and attempt.locked_until and attempt.locked_until > now:
             raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 15 minutos y vuelve a intentar.")
 
