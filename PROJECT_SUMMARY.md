@@ -15,7 +15,7 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 - Registro de barbería y owner, login, renovación/revocación de sesiones, cambio de contraseña desde los portales de owner/barbero y superadmin, y recuperación por correo con token de un solo uso.
 - Autorización por rol y aislamiento por `barbershop_id` en rutas de negocio.
 - Página pública: catálogo, turnos calculados para la duración del servicio y filtrados por citas/ausencias, reserva sin cuenta, seguimiento mediante token, reprogramación y cancelación.
-- Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión.
+- Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión. El checkout persiste pago, cita, notificaciones, rendimiento y logros en una sola transacción MySQL.
 - Disponibilidad y ausencias: el barbero genera turnos y registra bloqueos futuros; el backend protege los rangos contra citas existentes y nuevas reservas.
 - Operación de negocio: equipo (alta, perfil, estado y comisiones), clientes (alta manual, edición y estado con historial conservado), servicios, caja diaria y cierre.
 - Configuración del negocio: owner edita nombre, horarios, zona horaria, logo y marca; los cambios de perfil y logo se auditan y se reflejan en el perfil público.
@@ -28,15 +28,15 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución de GitHub Actions que validó estos cambios corresponde al commit `040bcf6c1de47c052ec9c801fd862409e934387c` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
+La ejecución de GitHub Actions que validó estos cambios corresponde al commit `8fac9738aa18a58cc760553ce97804f293b92ac9` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
 
-- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→023; `python -m pytest backend/tests -q` — **79 passed**, 1 warning. Incluye carga/reemplazo de logo auditado, alta manual de clientes con límites del plan y aislamiento multitenant.
+- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→023; `python -m pytest backend/tests -q` — **81 passed**, 1 warning. Incluye atomicidad del checkout ante fallos de rendimiento/logros, carga y reemplazo de logo auditado, alta manual de clientes con límites del plan y aislamiento multitenant.
 - Dependencias Python: `pip-audit -r backend/requirements.txt` — **no known vulnerabilities**; CI ejecuta esta auditoría en cada push y pull request.
 - Frontend: `npm test` — **25 passed**. Incluye bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
 - WhatsApp: `npm test` — **6 passed**.
 - Dependencias WhatsApp: `npm audit` — **0 vulnerabilidades** después de actualizar Express y dependencias transitivas; CI ejecuta esta auditoría en cada push y pull request.
 - Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT` y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
-- La suite local, sin base MySQL de prueba configurada, fue **28 passed, 51 skipped**; no sustituye la ejecución MySQL de CI indicada arriba.
+- La suite local, sin base MySQL de prueba configurada, fue **28 passed, 53 skipped**; no sustituye la ejecución MySQL de CI indicada arriba.
 - Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
 - No se validó Docker Compose en runtime en el equipo local porque Docker no está instalado.
 - No se verificó entrega real de SMTP/WhatsApp porque requiere credenciales SMTP y una sesión WhatsApp autorizada.
@@ -87,4 +87,4 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 - Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
 - Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo y estado de carga del onboarding quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
+Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo y estado de carga del onboarding y atomicidad del checkout quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
