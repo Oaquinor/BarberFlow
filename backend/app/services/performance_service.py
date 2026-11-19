@@ -35,7 +35,8 @@ class PerformanceService:
         db: Session,
         barbershop_id: int,
         barber_id: int,
-        target_date: date
+        target_date: date,
+        commit: bool = True,
     ) -> BarberPerformance:
         """
         Calculate and save daily performance metrics for a barber.
@@ -118,8 +119,11 @@ class PerformanceService:
         # Update streaks
         PerformanceService._update_streaks(db, barbershop_id, barber_id, target_date, performance)
 
-        db.commit()
-        db.refresh(performance)
+        if commit:
+            db.commit()
+            db.refresh(performance)
+        else:
+            db.flush()
 
         return performance
 

@@ -129,7 +129,8 @@ class AchievementService:
         user_id: int,
         barbershop_id: int,
         trigger_type: str,
-        context_data: Optional[Dict[str, Any]] = None
+        context_data: Optional[Dict[str, Any]] = None,
+        commit: bool = True,
     ) -> List[UserAchievement]:
         """
         Check if user has earned new achievements and award them.
@@ -190,9 +191,12 @@ class AchievementService:
                 newly_earned.append(user_achievement)
 
         if newly_earned:
-            db.commit()
-            for ua in newly_earned:
-                db.refresh(ua)
+            if commit:
+                db.commit()
+                for ua in newly_earned:
+                    db.refresh(ua)
+            else:
+                db.flush()
 
         return newly_earned
 

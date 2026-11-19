@@ -2646,11 +2646,6 @@ def barber_record_appointment_payment(
             "completion:client",
         )
     try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="El pago de esta cita ya fue registrado") from exc
-    try:
         from app.services.performance_service import PerformanceService
         from app.services.achievement_service import AchievementService
 
@@ -2659,6 +2654,7 @@ def barber_record_appointment_payment(
             barbershop_id=appointment.barbershop_id,
             barber_id=appointment.barber_id,
             target_date=_business_date_for_appointment(appointment, shop),
+            commit=False,
         )
         AchievementService.check_and_award_achievements(
             db=db,
@@ -2666,9 +2662,17 @@ def barber_record_appointment_payment(
             barbershop_id=appointment.barbershop_id,
             trigger_type="appointment_completed",
             context_data={"appointment_id": appointment.id},
+            commit=False,
         )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        logger.exception("Checkout transaction conflicted", extra={"appointment_id": appointment_id})
+        raise HTTPException(status_code=409, detail="El cobro entró en conflicto con otra operación; verifica el estado de la cita") from exc
     except Exception:
-        logger.exception("Post-checkout performance update failed", extra={"appointment_id": appointment.id})
+        db.rollback()
+        logger.exception("Checkout consequences could not be persisted", extra={"appointment_id": appointment_id})
+        raise HTTPException(status_code=503, detail="No se pudo registrar el cobro y sus resultados; vuelve a consultar la cita antes de reintentar")
     return {
         "success": True,
         "appointment_id": appointment.id,
