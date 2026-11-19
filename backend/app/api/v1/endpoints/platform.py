@@ -2384,6 +2384,13 @@ def owner_update_client(
     owner = _get_current_user(db, authorization)
     if owner.role != "barbershop_owner" or not owner.barbershop_id:
         raise HTTPException(status_code=403, detail="Solo el propietario puede gestionar sus clientes")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == owner.barbershop_id,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    phone = _normalize_phone(data.phone or "") or None
     client = db.query(User).filter(
         User.id == client_id,
         User.barbershop_id == owner.barbershop_id,
@@ -2392,9 +2399,17 @@ def owner_update_client(
     ).with_for_update().first()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    if phone and db.query(User.id).filter(
+        User.barbershop_id == owner.barbershop_id,
+        User.role == "client",
+        User.phone == phone,
+        User.id != client.id,
+        User.is_deleted == False,
+    ).with_for_update().first():
+        raise HTTPException(status_code=409, detail="Ya existe un cliente con ese teléfono en esta barbería")
     client.first_name = data.first_name
     client.last_name = data.last_name
-    client.phone = data.phone
+    client.phone = phone
     _audit(db, owner, "client.profile_updated", "user", client.id, owner.barbershop_id,
            {"updated_fields": ["first_name", "last_name", "phone"]})
     db.commit()

@@ -242,11 +242,15 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
         email="client-management-customer@example.com", password_hash="unused", first_name="Old",
         last_name="Name", phone="8095553022", role="client", is_active=True, barbershop_id=shop.id,
     )
+    duplicate_candidate = User(
+        email="client-management-duplicate@example.com", password_hash="unused", first_name="Second",
+        last_name="Client", phone="8095553034", role="client", is_active=True, barbershop_id=shop.id,
+    )
     foreign_customer = User(
         email="client-management-foreign@example.com", password_hash="unused", first_name="Foreign",
         last_name="Client", role="client", is_active=True, barbershop_id=foreign_shop.id,
     )
-    test_db.add_all([owner, barber, customer, foreign_customer])
+    test_db.add_all([owner, barber, customer, duplicate_candidate, foreign_customer])
     test_db.flush()
     appointment = Appointment(
         barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
@@ -266,11 +270,16 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
     barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id), 'role': barber.role})}"}
     update = client.put(
         f"/api/v1/owner/clients/{customer.id}", headers=owner_headers,
-        json={"first_name": "New", "last_name": "Name", "phone": "8095553033"},
+        json={"first_name": "New", "last_name": "Name", "phone": "809-555-3033"},
     )
     assert update.status_code == 200
     assert update.json()["full_name"] == "New Name"
     assert update.json()["phone"] == "8095553033"
+    duplicate_phone = client.put(
+        f"/api/v1/owner/clients/{duplicate_candidate.id}", headers=owner_headers,
+        json={"first_name": "Second", "last_name": "Client", "phone": "(809) 555-3033"},
+    )
+    assert duplicate_phone.status_code == 409
     assert client.put(
         f"/api/v1/owner/clients/{foreign_customer.id}", headers=owner_headers,
         json={"first_name": "Changed", "last_name": "Elsewhere", "phone": None},
