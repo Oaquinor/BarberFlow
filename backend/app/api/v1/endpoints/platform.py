@@ -24,6 +24,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user as authenticate_user
 from app.core import get_db
 from app.core.constants.enums import (
     MAX_ADVANCE_BOOKING_DAYS,
@@ -421,36 +422,8 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
 
 
 def _get_current_user(db: Session, authorization: Optional[str]) -> User:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Token requerido")
-
-    token = authorization.split(" ", 1)[1].strip()
-    try:
-        payload = verify_token(token, token_type="access")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
-
-    user_id = payload.get("sub")
-    if not isinstance(user_id, str) or not user_id.isdecimal():
-        raise HTTPException(status_code=401, detail="Token inválido")
-
-    user = db.query(User).filter(User.id == int(user_id), User.is_deleted == False).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    if payload.get("auth_version", 0) != user.auth_version:
-        raise HTTPException(status_code=401, detail="Sesión revocada")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Usuario inactivo")
-    if user.barbershop_id and user.role != "super_admin":
-        active_shop = db.query(Barbershop.id).filter(
-            Barbershop.id == user.barbershop_id,
-            Barbershop.is_active == True,
-            Barbershop.is_deleted == False,
-        ).first()
-        if not active_shop:
-            raise HTTPException(status_code=403, detail="La barbería está desactivada")
-
-    return user
+    """Use the shared authentication checks for every platform route."""
+    return authenticate_user(authorization, db)
 
 
 def _save_refresh_session(db: Session, user_id: int, token: str) -> RefreshSession:
