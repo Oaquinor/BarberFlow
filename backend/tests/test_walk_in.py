@@ -5,15 +5,17 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.api.v1.endpoints import platform as platform_api
 from app.core.security import create_access_token
 from app.models import Appointment, Barbershop, Payment, Service, Subscription, User
 from app.utils.datetime import utc_now_naive
 
 
 def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
-    client: TestClient, test_db: Session
+    client: TestClient, test_db: Session, monkeypatch
 ):
     now = utc_now_naive()
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now)
     subscription = Subscription(
         plan="free", status="active", current_period_start=now - timedelta(days=1),
         current_period_end=now + timedelta(days=29), max_barbers=2,
@@ -61,6 +63,7 @@ def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     )
     assert duplicate.status_code == 409
 
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now + timedelta(minutes=5))
     paid = client.post(
         f"/api/v1/barber/appointments/{appointment.id}/payment",
         headers=headers,

@@ -30,10 +30,11 @@ def test_service_requires_payment_and_cash_close_reconciles(client: TestClient, 
     )
     test_db.add_all([barber, client_user])
     test_db.flush()
+    now = utc_now_naive()
     appointment = Appointment(
         barbershop_id=shop.id, client_id=client_user.id, barber_id=barber.id,
-        scheduled_time=utc_now_naive(), estimated_duration=30, service_type="haircut",
-        service_price=25000, status="in_progress",
+        scheduled_time=now, estimated_duration=30, service_type="haircut",
+        service_price=25000, status="in_progress", actual_start_time=now - timedelta(minutes=5),
     )
     test_db.add(appointment)
     test_db.commit()
@@ -80,6 +81,7 @@ def test_service_requires_payment_and_cash_close_reconciles(client: TestClient, 
         barbershop_id=shop.id, client_id=client_user.id, barber_id=barber.id,
         scheduled_time=utc_now_naive(), estimated_duration=30, service_type="beard",
         service_price=12000, status="in_progress",
+        actual_start_time=utc_now_naive() - timedelta(minutes=5),
     )
     test_db.add(later_appointment)
     test_db.commit()
@@ -164,10 +166,11 @@ def test_checkout_rolls_back_if_performance_or_achievements_cannot_be_persisted(
     )
     test_db.add_all([barber, customer])
     test_db.flush()
+    now = utc_now_naive()
     appointment = Appointment(
         barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
-        scheduled_time=utc_now_naive(), estimated_duration=30, service_type="haircut",
-        service_price=20000, status="in_progress",
+        scheduled_time=now, estimated_duration=30, service_type="haircut",
+        service_price=20000, status="in_progress", actual_start_time=now - timedelta(minutes=5),
     )
     test_db.add(appointment)
     test_db.commit()
