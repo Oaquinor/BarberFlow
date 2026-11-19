@@ -1855,13 +1855,48 @@ def public_reschedule_appointment(
     _require_active_subscription(db, shop, lock=True)
 
     token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
+    appointment_ref = db.query(Appointment.id, Appointment.barber_id).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.tracking_token_hash == token_hash,
+        Appointment.is_deleted == False,
+    ).first()
+    if not appointment_ref:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+    slot_ref = db.query(BarberAvailability.barber_id).filter(
+        BarberAvailability.id == data.availability_id,
+        BarberAvailability.barbershop_id == shop.id,
+        BarberAvailability.is_deleted == False,
+    ).first()
+    if not slot_ref:
+        raise HTTPException(status_code=409, detail="El nuevo turno ya no está disponible")
+
+    # Public bookings and service transitions lock barber rows before appointments.
+    # Lock both barber rows in primary-key order before taking the appointment lock.
+    barber_ids = sorted({appointment_ref.barber_id, slot_ref.barber_id})
+    barbers_by_id = {}
+    for barber_id in barber_ids:
+        barber = db.query(User).filter(
+            User.id == barber_id,
+            User.barbershop_id == shop.id,
+            User.role == "barber",
+            User.is_deleted == False,
+        ).with_for_update().first()
+        if barber:
+            barbers_by_id[barber.id] = barber
+    if len(barbers_by_id) != len(barber_ids):
+        raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
+
     appointment = db.query(Appointment).filter(
+        Appointment.id == appointment_ref.id,
         Appointment.barbershop_id == shop.id,
         Appointment.tracking_token_hash == token_hash,
         Appointment.is_deleted == False,
     ).with_for_update().first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if appointment.barber_id != appointment_ref.barber_id:
+        raise HTTPException(status_code=409, detail="La asignación de la cita cambió; vuelve a consultar")
     if appointment.status not in {"pending", "confirmed"} or appointment.scheduled_time <= utc_now_naive():
         raise HTTPException(status_code=409, detail="La cita ya no se puede reprogramar")
 
@@ -1876,17 +1911,13 @@ def public_reschedule_appointment(
     ).with_for_update().first()
     if not new_slot:
         raise HTTPException(status_code=409, detail="El nuevo turno ya no está disponible")
+    if new_slot.barber_id != slot_ref.barber_id:
+        raise HTTPException(status_code=409, detail="El nuevo turno cambió; vuelve a consultar")
     if new_slot.slot_end - new_slot.slot_start < timedelta(minutes=appointment.estimated_duration):
         raise HTTPException(status_code=409, detail="El nuevo turno no tiene duración suficiente")
 
-    barber = db.query(User).filter(
-        User.id == new_slot.barber_id,
-        User.barbershop_id == shop.id,
-        User.role == "barber",
-        User.is_active == True,
-        User.is_deleted == False,
-    ).with_for_update().first()
-    if not barber:
+    barber = barbers_by_id[new_slot.barber_id]
+    if not barber.is_active:
         raise HTTPException(status_code=409, detail="El nuevo barbero no está disponible")
 
     new_start = new_slot.slot_start
@@ -2477,6 +2508,22 @@ def barber_update_appointment_status(
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail="Estado no válido")
 
+    assignment = db.query(Appointment.barber_id).filter(
+        Appointment.id == appointment_id,
+        Appointment.barbershop_id == user.barbershop_id,
+        Appointment.is_deleted == False,
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    assigned_barber = db.query(User).filter(
+        User.id == assignment.barber_id,
+        User.barbershop_id == user.barbershop_id,
+        User.role == "barber",
+        User.is_deleted == False,
+    ).with_for_update().first()
+    if not assigned_barber:
+        raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
+
     appointment = (
         db.query(Appointment)
         .filter(
@@ -2489,6 +2536,8 @@ def barber_update_appointment_status(
     )
     if not appointment:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if appointment.barber_id != assigned_barber.id:
+        raise HTTPException(status_code=409, detail="La asignación de la cita cambió; vuelve a consultar")
 
     if user.role == "barber" and appointment.barber_id != user.id:
         raise HTTPException(status_code=403, detail="Solo puedes actualizar tus propias citas")
@@ -2519,13 +2568,7 @@ def barber_update_appointment_status(
     if status == "in_progress":
         if abs((now - appointment.scheduled_time).total_seconds()) > 15 * 60:
             raise HTTPException(status_code=409, detail="Solo se puede iniciar el servicio dentro de los 15 minutos de la hora programada")
-        assigned_barber = db.query(User).filter(
-            User.id == appointment.barber_id,
-            User.barbershop_id == appointment.barbershop_id,
-            User.is_active == True,
-            User.is_deleted == False,
-        ).with_for_update().first()
-        if not assigned_barber:
+        if not assigned_barber.is_active:
             raise HTTPException(status_code=409, detail="El barbero asignado ya no está activo en esta barbería")
         other_active_appointment = db.query(Appointment.id).filter(
             Appointment.barbershop_id == appointment.barbershop_id,
@@ -2647,6 +2690,24 @@ def barber_record_appointment_payment(
     if user.role not in ["barber", "barbershop_owner", "super_admin"] or not user.barbershop_id:
         raise HTTPException(status_code=403, detail="No autorizado")
 
+    assignment = db.query(Appointment.barber_id).filter(
+        Appointment.id == appointment_id,
+        Appointment.barbershop_id == user.barbershop_id,
+        Appointment.is_deleted == False,
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if user.role == "barber" and assignment.barber_id != user.id:
+        raise HTTPException(status_code=403, detail="Solo puedes cobrar tus propias citas")
+    barber = db.query(User).filter(
+        User.id == assignment.barber_id,
+        User.barbershop_id == user.barbershop_id,
+        User.role == "barber",
+        User.is_deleted == False,
+    ).with_for_update().first()
+    if not barber:
+        raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
+
     appointment = db.query(Appointment).filter(
         Appointment.id == appointment_id,
         Appointment.barbershop_id == user.barbershop_id,
@@ -2654,6 +2715,8 @@ def barber_record_appointment_payment(
     ).with_for_update().first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if appointment.barber_id != barber.id:
+        raise HTTPException(status_code=409, detail="La asignación de la cita cambió; vuelve a consultar")
     if user.role == "barber" and appointment.barber_id != user.id:
         raise HTTPException(status_code=403, detail="Solo puedes cobrar tus propias citas")
     if appointment.status != "in_progress":
@@ -2699,12 +2762,6 @@ def barber_record_appointment_payment(
     db.add(payment)
     db.flush()
     commission = None
-    barber = db.query(User).filter(
-        User.id == appointment.barber_id,
-        User.barbershop_id == shop.id,
-        User.role == "barber",
-        User.is_deleted == False,
-    ).with_for_update().first()
     if barber and barber.commission_rate_basis_points > 0:
         rate = barber.commission_rate_basis_points
         commission_amount = (amount_cents * rate + 5000) // 10000
