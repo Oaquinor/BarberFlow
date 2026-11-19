@@ -90,7 +90,21 @@ def test_owner_can_manage_only_plan_limited_staff(client: TestClient, test_db: S
         "email": "owner-created-barber2@example.com", "password": "SecureBarber2027",
         "first_name": "Barber", "last_name": "Two",
     })
-    assert over_limit.status_code == 402
+    assert over_limit.status_code == 201
+    assert client.put(
+        f"/api/v1/owner/barbers/{barber_id}/status",
+        headers=headers, json={"is_active": True},
+    ).status_code == 402
+    assert client.put(
+        f"/api/v1/owner/barbers/{over_limit.json()['id']}/status",
+        headers=headers, json={"is_active": False},
+    ).status_code == 200
+    reactivated = client.put(
+        f"/api/v1/owner/barbers/{barber_id}/status",
+        headers=headers, json={"is_active": True},
+    )
+    assert reactivated.status_code == 200
+    assert reactivated.json()["is_active"] is True
 
     clients = client.get("/api/v1/owner/clients", headers=headers)
     assert clients.status_code == 200

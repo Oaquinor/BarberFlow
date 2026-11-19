@@ -2055,6 +2055,7 @@ def owner_create_barber(
     barber_count = db.query(User.id).filter(
         User.barbershop_id == shop.id,
         User.role == "barber",
+        User.is_active == True,
         User.is_deleted == False,
     ).count()
     if subscription.max_barbers is not None and barber_count >= subscription.max_barbers:
@@ -2095,6 +2096,17 @@ def owner_update_barber_status(
     owner = _get_current_user(db, authorization)
     if owner.role != "barbershop_owner" or not owner.barbershop_id:
         raise HTTPException(status_code=403, detail="Solo el propietario puede gestionar su equipo")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == owner.barbershop_id,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    # Serialize activations with barber creation so simultaneous changes cannot
+    # exceed the subscription's seat limit.
+    subscription = None
+    if data.is_active:
+        subscription = _require_active_subscription(db, shop, lock=True)
     barber = db.query(User).filter(
         User.id == barber_id,
         User.barbershop_id == owner.barbershop_id,
@@ -2103,6 +2115,15 @@ def owner_update_barber_status(
     ).with_for_update().first()
     if not barber:
         raise HTTPException(status_code=404, detail="Barbero no encontrado")
+    if data.is_active and not barber.is_active:
+        active_count = db.query(User.id).filter(
+            User.barbershop_id == shop.id,
+            User.role == "barber",
+            User.is_active == True,
+            User.is_deleted == False,
+        ).count()
+        if subscription.max_barbers is not None and active_count >= subscription.max_barbers:
+            raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de barberos de su plan")
     barber.is_active = data.is_active
     _audit(db, owner, "barber.status_changed", "user", barber.id, owner.barbershop_id,
            {"is_active": data.is_active})
