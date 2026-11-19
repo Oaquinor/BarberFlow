@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const clientScript = fs.readFileSync(path.join(__dirname, '..', 'js', 'client.js'), 'utf8');
 const onboardingScript = fs.readFileSync(path.join(__dirname, '..', 'js', 'onboarding.js'), 'utf8');
@@ -16,6 +17,45 @@ test('public booking loads slots for the selected service duration', () => {
 test('appointment tracking requests replacement slots for each appointment duration', () => {
   assert.match(clientScript, /const duration = Number\(item\.estimated_duration\)/);
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);
+});
+
+test('appointment tracking escapes untrusted customer, service, barber, and status values', async () => {
+  const nodes = new Map();
+  const nodeFor = (id) => {
+    if (!nodes.has(id)) nodes.set(id, { value: '', textContent: '', innerHTML: '', addEventListener() {} });
+    return nodes.get(id);
+  };
+  nodeFor('trackToken').value = 'private-tracking-token';
+  const payload = {
+    items: [{
+      appointment_id: 7,
+      client_name: '<img src=x onerror=alert(1)>',
+      service_type: '<svg onload=alert(2)>',
+      barber_name: '<script>alert(3)</script>',
+      status: '<iframe srcdoc=alert(4)>',
+      scheduled_time: '2026-11-19T15:00:00Z',
+      estimated_duration: 30,
+    }],
+  };
+  const sandbox = {
+    URL,
+    URLSearchParams,
+    Date,
+    Intl,
+    document: { getElementById: nodeFor },
+    window: { location: { origin: 'https://kingflow.test', search: '?shop=valid-shop' }, addEventListener() {}, alert() {} },
+    fetch: async () => ({ ok: true, status: 200, json: async () => payload }),
+  };
+
+  vm.runInNewContext(clientScript, sandbox, { filename: 'client.js' });
+  await sandbox.trackAppointments();
+
+  const rendered = nodeFor('trackList').innerHTML;
+  assert.doesNotMatch(rendered, /onerror=alert\(1\)/);
+  assert.match(rendered, /&lt;svg onload=alert\(2\)&gt;/);
+  assert.match(rendered, /&lt;script&gt;alert\(3\)&lt;\/script&gt;/);
+  assert.match(rendered, /&lt;iframe srcdoc=alert\(4\)&gt;/);
+  assert.doesNotMatch(rendered, /<\/?(?:img|svg|script|iframe)\b/i);
 });
 
 test('booking prevents duplicate submissions and explains an uncertain network result', () => {
