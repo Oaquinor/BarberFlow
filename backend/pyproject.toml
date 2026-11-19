@@ -6,25 +6,28 @@ authors = ["NOVENTIA GROUP"]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = "^0.109.0"
+fastapi = "^0.165.0"
 uvicorn = {extras = ["standard"], version = "^0.27.0"}
-sqlalchemy = "^2.0.25"
+gunicorn = "^27.0.1"
+python-multipart = "^0.0.34"
+sqlalchemy = "^2.0.58"
 pymysql = ">=1.1,<2"
 alembic = "^1.13.1"
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+pyjwt = "^2.15.1"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-pydantic = {extras = ["email"], version = "^2.5.3"}
-pydantic-settings = "^2.1.0"
-python-dotenv = "^1.0.0"
-tzdata = ">=2024.1,<2027"
+pydantic = {extras = ["email"], version = "^2.14.4"}
+pydantic-settings = "^2.16.3"
+python-dotenv = "^1.2.4"
+tzdata = ">=2024.1,<2028"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.4.4"
-pytest-asyncio = "^0.23.3"
-black = "^23.12.1"
+pytest = "^9.2.0"
+pytest-asyncio = "^1.5.0"
+httpx = "^0.28.1"
+black = "^26.10.1"
 isort = "^5.13.2"
-flake8 = "^7.0.0"
-mypy = "^1.8.0"
+flake8 = "^7.5.0"
+mypy = "^2.4.1"
 
 [tool.black]
 line-length = 100

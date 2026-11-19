@@ -88,4 +88,4 @@ def test_production_accepts_explicit_https_frontend_and_cors(monkeypatch):
     ))
 
     application = main.create_application()
-    assert any(route.path == "/api/v1/auth/password-reset/request" for route in application.routes)
+    assert "/api/v1/auth/password-reset/request" in application.openapi()["paths"]

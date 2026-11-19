@@ -31,7 +31,7 @@ def test_onboarding_requires_authentication():
 
 
 def test_performance_and_achievement_apis_are_mounted():
-    paths = {route.path for route in app.routes}
+    paths = app.openapi()["paths"]
     assert "/api/v1/performance/daily/{barber_id}" in paths
     assert "/api/v1/performance/weekly/{barber_id}" in paths
     assert "/api/v1/performance/monthly/{barber_id}" in paths
