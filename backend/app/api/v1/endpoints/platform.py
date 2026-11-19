@@ -2595,19 +2595,39 @@ def barber_update_appointment_status(
                 f"{_utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')} fue cancelada.",
                 "cancellation:client",
             )
-    db.commit()
     if status in {"cancelled", "no_show"}:
         try:
             from app.services.performance_service import PerformanceService
 
             shop = db.query(Barbershop).filter(Barbershop.id == appointment.barbershop_id).first()
+            if not shop:
+                raise ValueError("Barbershop not found while updating appointment performance")
             business_day = _business_date_for_appointment(appointment, shop)
             PerformanceService.calculate_daily_performance(
                 db=db, barbershop_id=appointment.barbershop_id,
-                barber_id=appointment.barber_id, target_date=business_day,
+                barber_id=appointment.barber_id, target_date=business_day, commit=False,
             )
-        except Exception:
-            logger.exception("Post-status performance update failed", extra={"appointment_id": appointment.id})
+        except Exception as exc:
+            db.rollback()
+            logger.exception("Appointment status consequences could not be persisted",
+                             extra={"appointment_id": appointment.id, "status": status})
+            raise HTTPException(
+                status_code=503,
+                detail="No se pudo guardar el cambio y actualizar el rendimiento; vuelve a consultar la cita",
+            ) from exc
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="El cambio de estado entró en conflicto; verifica la cita") from exc
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Appointment status transaction failed",
+                         extra={"appointment_id": appointment.id, "status": status})
+        raise HTTPException(
+            status_code=503,
+            detail="No se pudo guardar el cambio de estado; vuelve a consultar la cita",
+        ) from exc
     return {
         "success": True,
         "appointment_id": appointment.id,
