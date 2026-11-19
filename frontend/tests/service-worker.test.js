@@ -327,6 +327,8 @@ test("owner subscription panel reads period status and plan usage from the API",
   assert.match(page, /id="ownerSubscriptionSummary"/);
   assert.ok(script.includes("ownerFetch('/billing/subscription')"));
   assert.match(script, /loadOwnerSubscription/);
+  assert.match(script, /Renovación automática configurada/);
+  assert.match(script, /Los cobros de suscripción se registran manualmente; el sistema no procesa cargos automáticos\./);
 });
 
 test("does not persist navigations whose query carries a tracking token", async () => {
