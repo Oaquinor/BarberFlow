@@ -16,6 +16,8 @@ The root route serves the PWA from `frontend/`. Swagger and ReDoc are enabled on
 
 Integration tests require a dedicated, disposable MySQL database whose name ends in `_test`. Set `TEST_DATABASE_URL=mysql+pymysql://...` and run `python -m pytest tests -q` from this directory. The fixture refuses non-MySQL URLs and database names without the `_test` suffix, then recreates that test schema.
 
+CI validates a fresh migration to `head`, rolls the separate disposable migration database back to `base`, then migrates it to `head` again. Data-preserving downgrade guards can intentionally refuse rollback when the affected tables contain records.
+
 ## Worker
 
 Run `python scripts/notification_worker.py` to process the MySQL notification outbox and due appointment reminders. SMTP and the WhatsApp gateway are optional providers; failed or unconfigured deliveries are recorded in the queue. No Celery or Redis service is used.

@@ -253,6 +253,8 @@ La cadena vigente termina en `023_persist_support_tickets` y todas las conexione
 
 Los importes operativos se guardan en centavos enteros. Las fechas de cita y pago se guardan como UTC sin zona en MySQL; el negocio las convierte usando su zona IANA para presentación y cierres diarios. Las migraciones son aditivas y no borran datos operativos al actualizar.
 
+CI valida el avance desde una base vacía hasta `head`, el retroceso de la base descartable de migraciones hasta `base` y una nueva aplicación hasta `head`. Algunas migraciones protegen los datos y se niegan intencionalmente a retroceder si borrarían historial existente; realiza cualquier reversión de producción solo después de respaldar y revisar esos datos.
+
 Los modelos `affiliates` y `commissions` registran el programa de referidos SaaS. `barber_commissions` es independiente: se origina en pagos de servicios, se guarda en la moneda del tenant y se liquida por su propietario. Los cobros SaaS externos se registran en `subscription_payments` y solo después se calculan comisiones de afiliados. `in_app_notifications` es la bandeja del usuario; `notification_deliveries` conserva entregas SMTP/WhatsApp pendientes, enviadas o fallidas, con clave idempotente y reintentos.
 
 ---

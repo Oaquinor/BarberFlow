@@ -65,6 +65,11 @@ jobs:
       - name: Verify fresh MySQL migrations
         working-directory: backend
         run: python -m alembic upgrade head
+      - name: Verify MySQL migration rollback and recovery
+        working-directory: backend
+        run: |
+          python -m alembic downgrade base
+          python -m alembic upgrade head
       - name: Run backend unit and MySQL integration tests
         run: python -m pytest backend/tests -q
 
