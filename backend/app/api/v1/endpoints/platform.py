@@ -523,11 +523,10 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
 
 
 def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
+    # Lock or create each bucket before password verification. Without this,
+    # parallel requests can all pass the read before any failure is recorded.
     for key_hash, _ in buckets:
-        attempt = db.query(LoginAttempt).filter(
-            LoginAttempt.key_hash == key_hash,
-            LoginAttempt.is_deleted == False,
-        ).first()
+        attempt = _lock_or_create_login_attempt(db, key_hash, now)
         if attempt and attempt.locked_until and attempt.locked_until > now:
             raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 15 minutos y vuelve a intentar.")
 
