@@ -717,7 +717,8 @@ async function loadBarberDashboardData() {
         dashboardBusinessDate = businessDate;
         if (!selectedAppointmentsDate) selectedAppointmentsDate = businessDate;
 
-        const active = (Array.isArray(data.appointments) ? data.appointments : []).find((a) => a.status === 'in_progress') || null;
+        const active = data.active_appointment ||
+            (Array.isArray(data.appointments) ? data.appointments : []).find((a) => a.status === 'in_progress') || null;
         if (active) {
             setText('activeServiceClient', active.client_name || 'Cliente');
             setText('activeServiceType', active.service_type || 'Servicio');

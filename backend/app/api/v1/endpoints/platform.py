@@ -2883,6 +2883,15 @@ def barber_dashboard(
         today_query = today_query.filter(Appointment.barber_id == user.id)
     appointments_today = today_query.order_by(Appointment.scheduled_time.asc()).all()
 
+    active_query = db.query(Appointment).filter(
+        Appointment.barbershop_id == shop_id,
+        Appointment.status == "in_progress",
+        Appointment.is_deleted == False,
+    )
+    if user.role == "barber":
+        active_query = active_query.filter(Appointment.barber_id == user.id)
+    active_appointment = active_query.order_by(Appointment.actual_start_time.asc()).first()
+
     completed_count = len([a for a in appointments_today if a.status == "completed"])
     in_progress_count = len([a for a in appointments_today if a.status == "in_progress"])
     pending_count = len([a for a in appointments_today if a.status in ["pending", "confirmed"]])
@@ -2930,7 +2939,10 @@ def barber_dashboard(
     revenue_delta = revenue_cents - revenue_yesterday
     efficiency_delta = efficiency_percent - efficiency_yesterday
 
-    next_appointment = next((a for a in appointments_today if a.scheduled_time >= now), None)
+    next_appointment = next((
+        a for a in appointments_today
+        if a.scheduled_time >= now and a.status in {"pending", "confirmed"}
+    ), None)
 
     weekday_labels = ["L", "M", "X", "J", "V", "S", "D"]
     week_counts_by_day = {i: 0 for i in range(7)}
@@ -3025,6 +3037,23 @@ def barber_dashboard(
             }
             if next_appointment
             else None
+        ),
+        "active_appointment": (
+            {
+                "id": active_appointment.id,
+                "client_name": active_appointment.client.full_name if active_appointment.client else "Cliente",
+                "service_type": active_appointment.service_type,
+                "scheduled_time": _utc_aware(active_appointment.scheduled_time),
+                "estimated_duration": active_appointment.estimated_duration,
+                "actual_start_time": (
+                    _utc_aware(active_appointment.actual_start_time)
+                    if active_appointment.actual_start_time else None
+                ),
+                "progress_percent": _service_progress_percent(active_appointment, now),
+                "service_price": active_appointment.service_price,
+                "status": active_appointment.status,
+            }
+            if active_appointment else None
         ),
         "appointments": [
             {
