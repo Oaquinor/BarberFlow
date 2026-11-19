@@ -57,6 +57,8 @@ Esto instalará:
 
 Antes de iniciar el servicio, configura un secreto largo y aleatorio en `WHATSAPP_API_TOKEN` tanto en el proceso Node.js como en `backend/.env`. FastAPI lo envía como `Authorization: Bearer ...`. Los endpoints de envío, consulta de número, información de la sesión y desconexión responden `401` sin el token; si falta la configuración responden `503`. `/health` permanece disponible sin autenticación y no revela el número vinculado. El servicio escucha en `127.0.0.1` por defecto; define `WHATSAPP_BIND_HOST` solo si necesitas otro enlace de red y protege esa red.
 
+Las solicitudes JSON están limitadas a 16 KB. Los cuerpos demasiado grandes reciben `413`; el JSON malformado recibe `400`. Los errores internos se registran en el servicio y la API devuelve mensajes genéricos sin detalles de la excepción.
+
 Ejemplo PowerShell (usa el mismo valor en ambas consolas):
 
 ```powershell

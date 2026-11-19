@@ -26,7 +26,8 @@ app.use(cors({
         return callback(null, false);
     }
 }));
-app.use(express.json());
+// Keep payloads bounded; message validation runs after JSON parsing.
+app.use(express.json({ limit: '16kb' }));
 
 function requireApiToken(req, res, next) {
     if (!API_TOKEN) {
@@ -216,7 +217,7 @@ app.post('/send', async (req, res) => {
         logger.error('Error sending message:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send message'
         });
     }
 });
@@ -264,7 +265,7 @@ app.post('/send-formatted', async (req, res) => {
         logger.error('Error sending formatted message:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send formatted message'
         });
     }
 });
@@ -320,7 +321,7 @@ app.post('/send-image', async (req, res) => {
         logger.error('Error sending image:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send image'
         });
     }
 });
@@ -355,7 +356,7 @@ app.get('/check/:phone', async (req, res) => {
         logger.error('Error checking number:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to check number'
         });
     }
 });
@@ -404,9 +405,19 @@ app.post('/disconnect', async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to disconnect WhatsApp'
         });
     }
+});
+
+// Keep parser failures bounded and JSON-shaped without exposing stack traces.
+app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    const tooLarge = error?.type === 'entity.too.large';
+    return res.status(tooLarge ? 413 : 400).json({
+        success: false,
+        error: tooLarge ? 'Request body too large' : 'Invalid request body'
+    });
 });
 
 // ==================== INICIALIZAR SERVIDOR ====================
