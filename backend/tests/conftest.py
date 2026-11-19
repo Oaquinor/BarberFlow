@@ -1,75 +1,71 @@
-"""
-Pytest configuration and fixtures.
+"""Fixtures for integration tests against an explicitly named MySQL test database."""
 
-Shared test fixtures and configuration for all tests.
-"""
+import os
+from collections.abc import Generator
 
 import pytest
-import asyncio
-from typing import AsyncGenerator
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from httpx import AsyncClient
-
-from app.main import app
+import app.models  # noqa: F401 - register all mapped tables with Base.metadata
 from app.core.database import Base, get_db
-from app.core.config import get_settings
-
-settings = get_settings()
-
-# Test database URL (use separate test database)
-TEST_DATABASE_URL = "postgresql+asyncpg://kingflow:kingflow123@localhost:5432/kingflow_barber_test"
+from app.main import app
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+def mysql_test_engine():
+    url = os.environ.get("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Set TEST_DATABASE_URL to a dedicated MySQL database ending in _test")
+    if not url.startswith("mysql+pymysql://"):
+        pytest.fail("TEST_DATABASE_URL must use mysql+pymysql")
+    if not url.partition("/")[2].split("?", 1)[0].endswith("_test"):
+        pytest.fail("Refusing to create or drop schema unless the MySQL database name ends in _test")
 
+    engine = create_engine(url, connect_args={"connect_timeout": 3}, pool_pre_ping=True)
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        engine.dispose()
+        pytest.skip("The configured MySQL test database is unavailable")
 
-@pytest.fixture(scope="function")
-async def test_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Create test database session.
-
-    Creates tables before each test and drops them after.
-    """
-    # Create test engine
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Create session
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async with async_session() as session:
-        yield session
-
-    # Drop tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-    await engine.dispose()
+    # This URL is explicitly guarded as a disposable test database above.
+    # Recreate its schema so a previous interrupted run cannot contaminate this one.
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
+    yield engine
+    Base.metadata.drop_all(engine)
+    engine.dispose()
 
 
 @pytest.fixture
-async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """
-    Create test HTTP client.
+def test_db(mysql_test_engine) -> Generator[Session, None, None]:
+    connection = mysql_test_engine.connect()
+    outer_transaction = connection.begin()
+    session_factory = sessionmaker(
+        bind=connection,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+    session = session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
+        outer_transaction.rollback()
+        connection.close()
 
-    Overrides database dependency to use test database.
-    """
-    async def override_get_db():
+
+@pytest.fixture
+def client(test_db: Session) -> Generator[TestClient, None, None]:
+    def override_get_db():
         yield test_db
 
     app.dependency_overrides[get_db] = override_get_db
-
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
-
-    app.dependency_overrides.clear()
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.clear()

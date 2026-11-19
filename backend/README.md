@@ -1,92 +1,23 @@
-# KingFlow Barber - Backend
+# KingFlow Barber API
 
-FastAPI backend for KingFlow Barber SaaS platform.
+FastAPI backend for the KingFlow Barber SaaS. The production database engine is **MySQL 8** through SQLAlchemy's `mysql+pymysql` driver. SQLite is not supported.
 
-## Quick Start
+## Local setup
 
-### 1. Install Dependencies
+1. Create a MySQL database and account.
+2. Copy `.env.example` to `.env`; configure `DATABASE_URL`, `SECRET_KEY`, CORS origins, and optional SMTP/WhatsApp credentials.
+3. Install dependencies with `pip install -r requirements.txt`.
+4. Apply migrations using `alembic upgrade head`.
+5. Start the API with `uvicorn app.main:app --reload`.
 
-```bash
-# Using pip
-pip install -r requirements.txt
+The root route serves the PWA from `frontend/`. Swagger and ReDoc are enabled only when `DEBUG=True`.
 
-# Or using poetry
-poetry install
-```
+## Tests
 
-### 2. Setup Environment
+Integration tests require a dedicated, disposable MySQL database whose name ends in `_test`. Set `TEST_DATABASE_URL=mysql+pymysql://...` and run `python -m pytest tests -q` from this directory. The fixture refuses non-MySQL URLs and database names without the `_test` suffix, then recreates that test schema.
 
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+## Worker
 
-### 3. Initialize Database
+Run `python scripts/notification_worker.py` to process the MySQL notification outbox and due appointment reminders. SMTP and the WhatsApp gateway are optional providers; failed or unconfigured deliveries are recorded in the queue. No Celery or Redis service is used.
 
-```bash
-# Run migrations
-alembic upgrade head
-
-# Optional: Seed database
-python scripts/seed_db.py
-```
-
-### 4. Run Server
-
-```bash
-# Development
-uvicorn app.main:app --reload
-
-# Production
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-### 5. Access API Documentation
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## Project Structure
-
-```
-backend/
-├── app/
-│   ├── api/              # API endpoints
-│   ├── core/             # Core functionality
-│   ├── models/           # Database models
-│   ├── repositories/     # Data access layer
-│   ├── services/         # Business logic
-│   ├── schemas/          # Pydantic schemas
-│   └── main.py           # Application entry
-├── alembic/              # Database migrations
-├── tests/                # Test suite
-└── requirements.txt      # Dependencies
-```
-
-## Development
-
-### Run Tests
-
-```bash
-pytest
-```
-
-### Code Formatting
-
-```bash
-black app/
-isort app/
-```
-
-### Type Checking
-
-```bash
-mypy app/
-```
-
-## Documentation
-
-See [docs/](../docs/) for complete documentation:
-- [ARCHITECTURE.md](../docs/ARCHITECTURE.md)
-- [STANDARDS.md](../docs/STANDARDS.md)
-- [API_GUIDELINES.md](../docs/API_GUIDELINES.md)
+See [API reference](../docs/API_REFERENCE.md), [database guide](../docs/DATABASE.md), [deployment notes](../docs/DEPLOYMENT.md), and [notification operations](../docs/NOTIFICATIONS_SYSTEM.md).

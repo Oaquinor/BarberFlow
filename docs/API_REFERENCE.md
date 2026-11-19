@@ -1,406 +1,219 @@
-# 📖 API Reference - KingFlow Barber
+# API de KingFlow Barber
 
-**Documentación completa de endpoints REST API**
+Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las rutas montadas por FastAPI. Los ejemplos usan centavos y la hora ISO 8601.
 
-Base URL: `http://127.0.0.1:8000/api/v1`
+## Autenticación y SaaS
 
----
+| Método | Ruta | Acceso |
+|---|---|---|
+| `POST` | `/auth/login` | Público; aplica límite de intentos |
+| `POST` | `/saas/register` | Público; crea owner, barbería y periodo gratuito |
+| `POST` | `/auth/refresh` | Token refresh vigente |
+| `POST` | `/auth/logout` | Token refresh |
+| `POST` | `/auth/change-password` | Usuario autenticado |
+| `POST` | `/auth/password-reset/request` | Público; responde sin revelar si la cuenta existe y limita solicitudes por correo/IP |
+| `POST` | `/auth/password-reset/confirm` | Público; requiere token de un solo uso vigente y contraseña robusta |
+| `GET` | `/auth/me` | Usuario autenticado |
 
-## 🔐 Autenticación
+El registro de barbería recibe `owner_email`, `owner_password`, `owner_first_name`, `owner_last_name`, `owner_phone`, `barbershop_name`, `barbershop_email`, `barbershop_phone`, `address_line1`, `city`, `state`, `postal_code`, `country`, `timezone`, `currency` y un `affiliate_code` opcional. Un código inválido se rechaza; uno válido registra el referido con el owner, barbería y suscripción en una sola transacción. La contraseña requiere 12 caracteres, una mayúscula y un número. El registro no cobra ni simula un pago.
 
-Todos los endpoints (excepto login/register) requieren autenticación JWT.
+Usa `Authorization: Bearer <access_token>` en las rutas protegidas. Los tokens refresh son rotativos y revocables. Cambiar o recuperar la contraseña incrementa `auth_version`, invalidando access tokens ya emitidos y todas las sesiones refresh.
 
-**Header requerido:**
-```
-Authorization: Bearer <token>
-```
+La solicitud de recuperación devuelve el mismo mensaje para correos registrados y desconocidos. Limita a cinco solicitudes por correo/IP y treinta por IP en una hora. Si la cuenta está activa y SMTP entrega el mensaje, el enlace vence en 30 minutos y se consume una sola vez. Configura `FRONTEND_BASE_URL` con el origen HTTPS público en producción.
 
-### Endpoints
+## Portal público del cliente
 
-#### `POST /auth/register`
-Registrar nuevo usuario.
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/public/{slug}` | Perfil público, moneda y zona horaria |
+| `GET` | `/public/{slug}/services` | Catálogo activo |
+| `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
+| `POST` | `/public/{slug}/appointments` | Crea reserva sin cuenta |
+| `POST` | `/public/{slug}/track` | Consulta con token privado |
+| `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado |
+| `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
 
-**Body:**
+Reserva:
+
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword",
-  "first_name": "John",
-  "last_name": "Doe",
-  "role": "barber"
+  "client_name": "Ana Cliente",
+  "phone": "8095550202",
+  "service_id": 12,
+  "scheduled_time": "2026-11-20T15:00:00-04:00",
+  "notes": "Corte clásico"
 }
 ```
 
-#### `POST /auth/login`
-Iniciar sesión.
+El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su hash. No se acepta un ID de cita como sustituto de autorización. Para reprogramar envía `{"token":"<token privado>","availability_id":45}`; el sistema bloquea el nuevo turno, valida duración y conflictos, libera el anterior y registra el cambio atómicamente. Cancelación acepta `token` y `reason` opcional. Email/WhatsApp depende de configuración real del proveedor.
 
-**Body:**
+Las rutas de consulta, servicios, disponibilidad y reserva requieren una suscripción activa. Cancelar una reserva futura no requiere iniciar sesión.
+
+## Bandeja autenticada
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/notifications?limit=50&unread_only=false` | Lista notificaciones del usuario autenticado y su contador de no leídas |
+| `POST` | `/notifications/{notification_id}/read` | Marca una notificación propia como leída |
+
+El inbox guarda eventos operativos de cita para el barbero asignado y los propietarios activos de la barbería. La consulta y lectura requieren identidad autenticada y filtran por destinatario y tenant. Las filas se crean junto con la operación de negocio; claves únicas por evento y destinatario evitan duplicados.
+
+## Agenda, servicio, cobros y caja
+
+| Método | Ruta | Función |
+|---|---|---|
+| `POST` | `/barber/slots` | El barbero configura sus turnos |
+| `GET` | `/barber/absences` | Lista las ausencias futuras del barbero autenticado |
+| `POST` | `/barber/absences` | Bloquea un rango futuro propio; rechaza rangos con citas activas |
+| `DELETE` | `/barber/absences/{absence_id}` | Cancela una ausencia propia y vuelve a publicar los turnos originales |
+| `GET` | `/barber/dashboard` | Agenda del día y métricas operativas |
+| `GET` | `/barber/appointments?target_date=YYYY-MM-DD` | Citas de un día local del negocio |
+| `GET` | `/barber/appointments/calendar?view=week&anchor_date=YYYY-MM-DD` | Citas por día para una semana o mes local |
+| `PUT` | `/barber/appointments/{appointment_id}/status` | Confirma, inicia, cancela o marca no presentado |
+| `POST` | `/barber/appointments/{appointment_id}/payment` | Registra el pago y finaliza el servicio |
+| `POST` | `/barber/appointments/walk-in` | Inicia una atención presencial sin reserva |
+| `GET` | `/barber/commissions` | El barbero consulta sus comisiones y saldos por moneda |
+| `GET` | `/barber/cash/today` | Cobros del día local y conciliación |
+| `POST` | `/barber/cash/close` | Registra cierre diario |
+| `GET` | `/barber/share-link` | Enlace público del negocio |
+
+## Gestión del negocio (owner)
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/owner/barbers` | Lista los barberos de la barbería |
+| `POST` | `/owner/barbers` | Crea acceso con contraseña inicial y aplica el límite del plan |
+| `PUT` | `/owner/barbers/{barber_id}/status` | Activa o desactiva un barbero del mismo tenant |
+| `GET` | `/owner/clients?limit=50&offset=0` | Lista clientes con citas y total efectivamente pagado |
+| `PUT` | `/owner/clients/{client_id}` | Actualiza nombre y teléfono de un cliente del tenant, con auditoría |
+| `PUT` | `/owner/clients/{client_id}/status` | Activa o desactiva el acceso del cliente sin borrar su historial |
+| `GET` | `/onboarding/profile` | Lee el perfil, horario y zona horaria de la barbería autenticada |
+| `PUT` | `/onboarding/business-settings` | Actualiza nombre, horario, zona horaria y colores; registra auditoría |
+
+La actualización de configuración requiere rol owner, valida horas y zona horaria IANA, y deriva el tenant del usuario autenticado. Un administrador general debe indicar explícitamente la barbería autorizada.
+
+`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer.
+
+## Analítica de demanda
+
+| Método | Ruta | Acceso | Función |
+|---|---|---|---|
+| `GET` | `/analytics/demand-forecast` | Owner autenticado | Estima el volumen de servicios por día y hora para los próximos siete días |
+| `GET` | `/analytics/financial-report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Owner autenticado | Resume pagos realmente recibidos, separados por día comercial, método y barbero |
+
+El pronóstico usa el promedio histórico de citas completadas por día de la semana y hora durante las 12 semanas anteriores, y lo combina con las reservas próximas conocidas. Es una referencia estadística explicable, no un modelo de aprendizaje automático. La respuesta incluye el periodo y tamaño de la muestra, reservas conocidas, horas pico y nivel de confianza; con poco historial se indica esa limitación y solo sirven de referencia las reservas existentes. Todos los datos se filtran por la barbería del owner autenticado.
+
+El reporte financiero exige un rango de fechas de hasta 366 días y lo interpreta en la zona horaria IANA del negocio. Se basa en cobros guardados, separa precio del servicio y propina, y expresa todos los importes en centavos y la moneda del tenant. No estima ingresos de citas aún no cobradas.
+
+Para iniciar servicio:
+
 ```json
-{
-  "email": "user@example.com",
-  "password": "securepassword"
-}
+{"status":"in_progress"}
 ```
 
-**Response:**
+Una cita completada exige el endpoint de pago. Ejemplo:
+
 ```json
-{
-  "access_token": "eyJ...",
-  "refresh_token": "eyJ...",
-  "token_type": "bearer"
-}
+{"method":"cash","tip_cents":5000}
 ```
 
----
+Métodos aceptados: `cash`, `card`, `transfer`, `other`. Cada cita admite un solo pago. La operación guarda el pago y completa la cita dentro de la misma transacción. No se confunde el precio de lista con ingresos cobrados.
 
-## 🔥 Modo En Servicio (CRÍTICO)
+Cierre:
 
-### `POST /service-mode/start`
-
-Inicia el modo de servicio para una cita.
-
-**Body:**
 ```json
-{
-  "appointment_id": 123
-}
+{"business_date":"2026-11-19","declared_cash_cents":30000,"notes":"Conteo revisado"}
 ```
 
-**Response:**
-```json
-{
-  "appointment": {
-    "id": 123,
-    "client_name": "Juan Pérez",
-    "service_type": "haircut",
-    "estimated_duration": 30,
-    "actual_start_time": "2024-05-30T14:30:00",
-    "status": "in_progress"
-  },
-  "timer": {
-    "started_at": "2024-05-30T14:30:00",
-    "estimated_duration_minutes": 30
-  },
-  "next_appointment": {
-    "id": 124,
-    "client_name": "María González",
-    "scheduled_time": "2024-05-30T15:00:00",
-    "minutes_until": 30
-  },
-  "alerts": [
-    "📅 Próxima cita en 30 minutos"
-  ]
-}
-```
-
-### `POST /service-mode/finish`
-
-Finaliza el servicio activo.
-
-**Body:**
-```json
-{
-  "appointment_id": 123,
-  "barber_notes": "Cliente satisfecho"
-}
-```
-
-**Response:**
-```json
-{
-  "appointment": {
-    "id": 123,
-    "status": "completed",
-    "actual_start_time": "2024-05-30T14:30:00",
-    "actual_end_time": "2024-05-30T14:55:00",
-    "actual_duration_minutes": 25
-  },
-  "performance": {
-    "estimated_duration": 30,
-    "actual_duration": 25,
-    "time_difference": -5,
-    "efficiency_percentage": 120.0,
-    "status": "on_time"
-  },
-  "achievements": [
-    {
-      "name": "Primer Día",
-      "icon": "🎉",
-      "description": "Completa tu primera jornada"
-    }
-  ],
-  "message": "🎯 ¡Excelente! Completaste el servicio antes del tiempo estimado."
-}
-```
-
-### `GET /service-mode/active`
-
-Obtiene el servicio activo actual.
-
-**Response:**
-```json
-{
-  "active": true,
-  "appointment": {
-    "id": 123,
-    "client_name": "Juan Pérez",
-    "service_type": "haircut",
-    "estimated_duration": 30
-  },
-  "timer": {
-    "elapsed_minutes": 15,
-    "remaining_minutes": 15,
-    "is_exceeded": false,
-    "exceeded_by_minutes": 0,
-    "progress_percentage": 50.0
-  },
-  "alerts": []
-}
-```
-
-### `GET /service-mode/next`
-
-Obtiene la próxima cita programada.
-
-### `GET /service-mode/schedule/today`
-
-Obtiene la agenda completa del día.
-
-**Response:**
-```json
-{
-  "date": "2024-05-30",
-  "summary": {
-    "total": 8,
-    "completed": 3,
-    "in_progress": 1,
-    "upcoming": 4,
-    "cancelled": 0
-  },
-  "appointments": [...]
-}
-```
-
----
-
-## 📊 Rendimiento
-
-### `GET /performance/daily/{barber_id}`
-
-Métricas diarias de un barbero.
-
-**Query params:**
-- `target_date` (opcional): YYYY-MM-DD
-
-**Response:**
-```json
-{
-  "date": "2024-05-30",
-  "appointments_completed": 8,
-  "appointments_cancelled": 1,
-  "appointments_no_show": 0,
-  "total_revenue": 24000,
-  "total_service_time_minutes": 240,
-  "average_service_time_minutes": 30.0,
-  "time_efficiency_percentage": 95.5,
-  "current_streak": 5,
-  "best_streak": 12
-}
-```
-
-### `GET /performance/weekly/{barber_id}`
-
-Resumen semanal.
-
-**Query params:**
-- `start_date` (opcional): YYYY-MM-DD
-
-### `GET /performance/monthly/{barber_id}`
-
-Resumen mensual.
-
-**Query params:**
-- `year` (opcional)
-- `month` (opcional)
-
-### `GET /performance/insights/{barber_id}`
-
-Insights y recomendaciones.
-
-**Response:**
-```json
-{
-  "insights": [
-    "🔥 Llevas 5 días consecutivos trabajando.",
-    "⭐ Tu mejor día fue el 28/05: 10 citas completadas.",
-    "🎯 Tu eficiencia de tiempo es excelente.",
-    "💰 Has generado $720.00 en los últimos 30 días."
-  ]
-}
-```
-
----
-
-## 🎮 Logros
-
-### `GET /achievements/`
-
-Obtiene todos los logros del usuario.
-
-**Response:**
-```json
-{
-  "total_achievements": 10,
-  "earned_achievements": 3,
-  "total_points": 90,
-  "earned": [
-    {
-      "achievement": {
-        "code": "FIRST_DAY",
-        "name": "Primer Día",
-        "description": "Completa tu primera jornada",
-        "icon": "🎉",
-        "rarity": "common",
-        "points": 10
-      },
-      "earned_at": "2024-05-25T18:30:00",
-      "is_viewed": true
-    }
-  ],
-  "available": [...]
-}
-```
-
-### `POST /achievements/check`
-
-Verifica y otorga nuevos logros.
-
-### `POST /achievements/mark-viewed/{achievement_id}`
-
-Marca un logro como visto.
+Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva esperado, declarado y diferencia. Una segunda conciliación de la misma fecha y usuario se rechaza.
 
----
+## Catálogo de servicios
 
-## 🛠️ Servicios
+| Método | Ruta | Acceso |
+|---|---|---|
+| `GET` | `/services/` | Roles autenticados de la barbería |
+| `GET` | `/services/{service_id}` | Tenant propietario del registro |
+| `POST` | `/services/` | Owner |
+| `PUT` | `/services/{service_id}` | Owner |
+| `DELETE` | `/services/{service_id}` | Owner; baja lógica |
 
-### `GET /services/`
-
-Lista todos los servicios activos.
+`price` es entero en centavos; todos los registros se restringen al tenant autenticado.
 
-**Query params:**
-- `category` (opcional): filtrar por categoría
-
-**Response:**
-```json
-{
-  "total": 6,
-  "services": [
-    {
-      "id": 1,
-      "name": "Corte de Cabello",
-      "description": "Corte moderno y profesional",
-      "duration_minutes": 30,
-      "price": 1500,
-      "price_formatted": "$15.00",
-      "category": "haircut",
-      "icon": "✂️",
-      "is_active": true
-    }
-  ]
-}
-```
+## Rendimiento y logros
 
-### `POST /services/`
+| Método | Ruta | Acceso |
+|---|---|---|
+| `GET` | `/performance/daily/{barber_id}` | Barbero propio u owner del mismo tenant |
+| `GET` | `/performance/weekly/{barber_id}` | Barbero propio u owner del mismo tenant |
+| `GET` | `/performance/monthly/{barber_id}` | Barbero propio u owner del mismo tenant |
+| `GET` | `/performance/insights/{barber_id}` | Barbero propio u owner del mismo tenant |
+| `GET` | `/achievements/` | Barbero autenticado |
+| `POST` | `/achievements/check` | Barbero autenticado |
+| `POST` | `/achievements/mark-viewed/{achievement_id}` | Dueño del logro |
 
-Crea un nuevo servicio.
+La fecha predeterminada de rendimiento usa la zona horaria de la barbería. Ingresos se derivan de pagos efectivamente registrados. Los logros disponibles se insertan con la migración MySQL `011_seed_achievements`; el pago completado actualiza el rendimiento y evalúa logros compatibles.
 
-**Body:**
-```json
-{
-  "name": "Corte Premium",
-  "description": "Corte + Lavado + Styling",
-  "duration_minutes": 45,
-  "price": 2500,
-  "category": "combo",
-  "icon": "👑"
-}
-```
+## Onboarding y personalización
 
-### `PUT /services/{id}`
+Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `GET /greeting`; `POST /complete`, `/motivational-message`, `/step/1`, `/step/3` a `/step/9`, `/upload-logo`; `PUT /brand-colors`. El tenant se deriva del usuario autenticado. Las recomendaciones del layout son consejos generales; el mensaje motivacional calcula el conteo de citas de los últimos 30 días y no confía en el contexto enviado por el cliente.
 
-Actualiza un servicio.
+## Equipo y clientes del negocio
 
-### `DELETE /services/{id}`
+| Método | Ruta | Acceso |
+|---|---|---|
+| `GET` / `POST` | `/owner/barbers` | Owner del tenant; listado y alta con límites del plan |
+| `PUT` | `/owner/barbers/{barber_id}/status` | Owner del tenant; activar o desactivar |
+| `PUT` | `/owner/barbers/{barber_id}/commission-rate` | Configurar tasa del barbero (puntos base; 0 a 10 000) |
+| `GET` | `/owner/barber-commissions` | Consultar comisiones generadas por cobros del tenant |
+| `POST` | `/owner/barber-commissions/{commission_id}/pay` | Registrar liquidación de comisión con método y referencia |
+| `GET` | `/owner/clients` | Owner del tenant; historial agregado, paginado y de solo lectura |
+| `POST` | `/barber/slots` | Barbero propio; turnos dentro del horario configurado |
+| `GET` | `/barber/dashboard` | Barbero propio u owner; agenda operativa del día |
 
-Elimina un servicio (soft delete).
+La gestión de clientes permite editar nombre y teléfono y desactivar el acceso conservando citas y cobros. La gestión de barberos permite alta, activación y tasa de comisión, pero no edición de perfil ni eliminación. Los turnos creados se serializan por barbero en MySQL para evitar solapamientos concurrentes.
 
----
+El portal público envía la duración seleccionada al consultar turnos. Si no se indica `duration_minutes`, el endpoint usa la duración del servicio activo más corto. El servidor vuelve a validar el turno al reservar y reprogramar.
 
-## 📅 Citas
+El propietario define la tasa porcentual por barbero. Al registrar un pago de cita, el backend crea la comisión pendiente en la misma transacción usando el importe del servicio, sin incluir propina. El barbero solo ve sus registros; el propietario solo puede consultar y liquidar los de su barbería. La liquidación queda auditada y no se puede repetir. Los pagos de comisión en efectivo se registran como salidas en el efectivo esperado del cierre diario del propietario; no se aceptan después de cerrar esa caja.
 
-### `GET /appointments/`
+La ruta de calendario acepta `view=week` o `view=month`. Sus límites de fecha se calculan en la zona horaria del tenant; los resultados quedan filtrados por barbería y, para el rol barbero, por su usuario. La vista de día conserva operaciones para iniciar, cancelar y cobrar citas; las vistas agrupadas permiten abrir el día seleccionado.
 
-Lista citas.
+## Administración de plataforma
 
-**Query params:**
-- `status`: filtrar por estado
-- `barber_id`: filtrar por barbero
-- `date`: filtrar por fecha
+Todas las rutas `/admin/*` requieren rol `super_admin`.
 
-### `POST /appointments/`
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/admin/overview` | Métricas globales de tenants, usuarios, suscripciones, citas y cobros por moneda |
+| `GET` | `/admin/tenants` | Barberías y suscripciones |
+| `PUT` | `/admin/tenants/{barbershop_id}/status` | Activar o suspender barbería |
+| `GET` | `/admin/tenants/{barbershop_id}/subscription` | Consultar suscripción |
+| `PUT` | `/admin/tenants/{barbershop_id}/subscription` | Administrar plan y periodo |
+| `GET` | `/admin/users` | Buscar usuarios |
+| `PUT` | `/admin/users/{user_id}/status` | Activar o suspender usuario |
+| `PUT` | `/admin/users/{user_id}/support` | Configurar contacto de soporte |
+| `PUT` | `/admin/users/{user_id}/features` | Cambiar feature flag |
+| `GET` | `/admin/audit-logs` | Leer historial paginado y filtrable |
+| `GET` / `PUT` | `/admin/settings` | Consultar y cambiar estado de registro y duración inicial del periodo gratuito |
+| `GET` / `POST` | `/admin/affiliates` | Consultar o crear afiliados y sus códigos |
+| `PUT` | `/admin/affiliates/{affiliate_id}/status` | Activar o desactivar un código para nuevos referidos |
+| `GET` | `/admin/affiliates/{affiliate_id}/commissions` | Consultar comisiones por moneda |
+| `POST` | `/admin/commissions/{commission_id}/approve` | Aprobar una comisión pendiente |
+| `POST` | `/admin/commissions/{commission_id}/pay` | Registrar el pago externo de una comisión aprobada |
+| `POST` | `/admin/tenants/{barbershop_id}/subscription/payments` | Registrar un cobro SaaS externo ya recibido y crear su comisión afiliada |
 
-Crea una cita.
+El último superadministrador no se puede desactivar. El historial guarda eventos sensibles junto con la operación y omite tokens y contraseñas. El resumen global cuenta cobros de citas por separado para cada moneda; no suma monedas distintas. El registro SaaS de cobro requiere importe positivo, periodo vigente y confirmación administrativa de un pago ya recibido; no se conecta a una pasarela ni procesa tarjetas. Las comisiones guardan la moneda de origen. El pago de afiliados requiere aprobar la comisión y registrar método y referencia externa.
 
-**Body:**
-```json
-{
-  "client_id": 10,
-  "barber_id": 5,
-  "scheduled_time": "2024-05-30T15:00:00",
-  "service_type": "haircut",
-  "estimated_duration": 30,
-  "client_notes": "Corte bajo en los lados"
-}
-```
+`GET /saas/registration-status` expone solo si el registro está habilitado. Si se desactiva, el formulario de alta se bloquea y el endpoint de registro lo rechaza de nuevo en servidor. Los cambios de estos parámetros se guardan en MySQL y generan auditoría; los secretos siguen en variables de entorno.
 
-### `GET /appointments/{id}`
+La bandera disponible `branding_auto` controla si el portal autenticado aplica los colores de marca de la barbería. Solo se activa para un usuario owner/barbero con onboarding completado; su estado forma parte de `/auth/me` y del listado de usuarios. Los cambios se reflejan al volver a iniciar sesión.
 
-Obtiene una cita específica.
+## Soporte y errores
 
-### `PUT /appointments/{id}`
+`POST /support/contact` recibe nombre, email o teléfono, mensaje y slug opcional. El envío de correo se reporta como exitoso solo si SMTP está configurado y acepta el mensaje. El formulario limita a cinco solicitudes por IP y hora y persiste solo un hash de la dirección.
 
-Actualiza una cita.
+Errores usan JSON `{"detail":"..."}`. Códigos usados: `401` autenticación, `403` permiso, `404` recurso del tenant, `409` conflicto/transición, `422` validación y `402` límite o suscripción inactiva.
 
-### `DELETE /appointments/{id}`
+Las respuestas incluyen `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` y una `Permissions-Policy` que bloquea cámara, micrófono y geolocalización. En producción también incluyen HSTS. Las rutas bajo `/api/` añaden `Cache-Control: no-store` y `Pragma: no-cache` para impedir que el navegador almacene respuestas operativas o datos personales.
 
-Cancela una cita.
-
----
-
-## 🔴 Códigos de Error
-
-- `400` - Bad Request (validación fallida)
-- `401` - Unauthorized (token inválido o expirado)
-- `403` - Forbidden (permisos insuficientes)
-- `404` - Not Found (recurso no encontrado)
-- `500` - Internal Server Error
-
-**Formato de error:**
-```json
-{
-  "detail": "Descripción del error"
-}
-```
-
----
-
-## 📝 Notas
-
-- Todas las fechas están en formato ISO 8601
-- Los precios están en centavos (ej: 1500 = $15.00)
-- Los tiempos están en minutos
-- Las respuestas incluyen códigos HTTP estándar
-
----
-
-**Última actualización:** 2024-05-30
+La API no implementa actualmente cobro automatizado de suscripciones, creación/eliminación manual de clientes o edición/eliminación de perfil de barberos, ni notificaciones push. Los recordatorios se encolan y procesan mediante el worker MySQL configurado.

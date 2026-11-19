@@ -6,10 +6,16 @@ from alembic import context
 
 # Import your models here
 from app.core.database import Base
+from app.core.config.settings import get_settings
 from app.models import User, Barbershop, Appointment, Subscription
 
 # this is the Alembic Config object
 config = context.config
+
+# Use the same environment-configured database as the application instead of
+# always migrating the developer's local MySQL database from alembic.ini.
+database_url = get_settings().DATABASE_URL
+config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:

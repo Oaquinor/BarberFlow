@@ -1,168 +1,77 @@
-"""
-Database seeding script.
+"""Seed disposable demo records. This command refuses to run outside development."""
 
-Creates initial data for development and testing.
-"""
-
-import asyncio
+import argparse
 from datetime import datetime, timedelta
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-
 from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.core.security import hash_password
-from app.models import User, Barbershop, Subscription
-from app.core.constants import UserRole, SubscriptionPlan, SubscriptionStatus
-
-settings = get_settings()
+from app.models import Barbershop, Service, Subscription, User
 
 
-async def seed_database():
-    """Seed database with initial data."""
+DEMO_SHOP = "kings-barbershop-demo"
 
-    print("🌱 Starting database seeding...")
 
-    # Create async engine
-    engine = create_async_engine(settings.DATABASE_URL, echo=True)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+def seed_database() -> int:
+    settings = get_settings()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--allow-demo-data", action="store_true")
+    args = parser.parse_args()
+    if settings.ENVIRONMENT.lower() != "development" or not args.allow_demo_data:
+        parser.error("Demo seeding requires ENVIRONMENT=development and --allow-demo-data")
+    if input(f"Type {DEMO_SHOP} to create disposable demo accounts: ").strip() != DEMO_SHOP:
+        print("Cancelled.")
+        return 1
 
-    async with async_session() as session:
-        try:
-            # Create subscription
-            subscription = Subscription(
-                plan=SubscriptionPlan.PROFESSIONAL,
-                status=SubscriptionStatus.ACTIVE,
-                current_period_start=datetime.utcnow(),
-                current_period_end=datetime.utcnow() + timedelta(days=30),
-                max_barbers=10,
-                max_appointments_per_month=1000,
-                max_clients=2000
-            )
-            session.add(subscription)
-            await session.flush()
+    db = SessionLocal()
+    try:
+        if db.query(Barbershop.id).filter(Barbershop.slug == DEMO_SHOP).first():
+            print("Demo barber shop already exists; refusing to modify existing records.")
+            return 1
 
-            # Create barbershop
-            barbershop = Barbershop(
-                name="King's Barbershop",
-                slug="kings-barbershop",
-                description="Premium barbershop in the city center",
-                email="info@kingsbarbershop.com",
-                phone="+1234567890",
-                address_line1="123 Main Street",
-                city="New York",
-                state="NY",
-                postal_code="10001",
-                country="USA",
-                is_active=True,
-                is_verified=True,
-                subscription_id=subscription.id
-            )
-            session.add(barbershop)
-            await session.flush()
+        now = datetime.utcnow()
+        subscription = Subscription(
+            plan="professional", status="active", current_period_start=now,
+            current_period_end=now + timedelta(days=30), max_barbers=10,
+            max_appointments_per_month=1000, max_clients=2000, auto_renew=False,
+        )
+        db.add(subscription)
+        db.flush()
+        shop = Barbershop(
+            name="King's Barbershop Demo", slug=DEMO_SHOP,
+            email="demo-shop@example.invalid", phone="8095550100",
+            address_line1="Calle Demo 1", city="Santo Domingo", state="Distrito Nacional",
+            postal_code="10101", country="DO", timezone="America/Santo_Domingo",
+            currency="DOP", subscription_id=subscription.id, is_active=True,
+        )
+        db.add(shop)
+        db.flush()
 
-            # Create super admin
-            super_admin = User(
-                email="admin@kingflow.com",
-                password_hash=hash_password("Admin123!"),
-                first_name="Super",
-                last_name="Admin",
-                phone="+1234567890",
-                role=UserRole.SUPER_ADMIN,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(super_admin)
-
-            # Create barbershop owner
-            owner = User(
-                email="owner@kingsbarbershop.com",
-                password_hash=hash_password("Owner123!"),
-                first_name="John",
-                last_name="Owner",
-                phone="+1234567891",
-                role=UserRole.BARBERSHOP_OWNER,
-                barbershop_id=barbershop.id,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(owner)
-
-            # Create barbers
-            barber1 = User(
-                email="mike@kingsbarbershop.com",
-                password_hash=hash_password("Barber123!"),
-                first_name="Mike",
-                last_name="Smith",
-                phone="+1234567892",
-                role=UserRole.BARBER,
-                barbershop_id=barbershop.id,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(barber1)
-
-            barber2 = User(
-                email="david@kingsbarbershop.com",
-                password_hash=hash_password("Barber123!"),
-                first_name="David",
-                last_name="Johnson",
-                phone="+1234567893",
-                role=UserRole.BARBER,
-                barbershop_id=barbershop.id,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(barber2)
-
-            # Create test clients
-            client1 = User(
-                email="client1@example.com",
-                password_hash=hash_password("Client123!"),
-                first_name="James",
-                last_name="Brown",
-                phone="+1234567894",
-                role=UserRole.CLIENT,
-                barbershop_id=barbershop.id,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(client1)
-
-            client2 = User(
-                email="client2@example.com",
-                password_hash=hash_password("Client123!"),
-                first_name="Robert",
-                last_name="Davis",
-                phone="+1234567895",
-                role=UserRole.CLIENT,
-                barbershop_id=barbershop.id,
-                is_active=True,
-                is_verified=True
-            )
-            session.add(client2)
-
-            # Commit all changes
-            await session.commit()
-
-            print("✅ Database seeded successfully!")
-            print("\n📋 Test Accounts:")
-            print("=" * 50)
-            print(f"Super Admin: admin@kingflow.com / Admin123!")
-            print(f"Owner: owner@kingsbarbershop.com / Owner123!")
-            print(f"Barber 1: mike@kingsbarbershop.com / Barber123!")
-            print(f"Barber 2: david@kingsbarbershop.com / Barber123!")
-            print(f"Client 1: client1@example.com / Client123!")
-            print(f"Client 2: client2@example.com / Client123!")
-            print("=" * 50)
-
-        except Exception as e:
-            print(f"❌ Error seeding database: {e}")
-            await session.rollback()
-            raise
-        finally:
-            await engine.dispose()
+        users = [
+            User(email="admin-demo@example.invalid", first_name="Demo", last_name="Admin", role="super_admin"),
+            User(email="owner-demo@example.invalid", first_name="Demo", last_name="Owner", role="barbershop_owner", barbershop_id=shop.id),
+            User(email="barber-demo@example.invalid", first_name="Demo", last_name="Barber", role="barber", barbershop_id=shop.id),
+        ]
+        for user in users:
+            user.password_hash = hash_password("DemoOnlyChangeMe123")
+            user.is_active = True
+            user.is_verified = True
+        db.add_all(users)
+        db.add(Service(
+            barbershop_id=shop.id, name="Corte Demo", description="Servicio de ejemplo",
+            duration_minutes=30, price=20000, category="haircut", is_active=True,
+        ))
+        db.commit()
+        print("Created disposable demo records in the configured development MySQL database.")
+        print("Demo account password: DemoOnlyChangeMe123 (change it before any shared use).")
+        return 0
+    except Exception as exc:
+        db.rollback()
+        print(f"Demo seeding failed ({type(exc).__name__}). Check the development MySQL database.")
+        return 1
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_database())
+    raise SystemExit(seed_database())

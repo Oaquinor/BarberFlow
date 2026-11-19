@@ -1,5 +1,7 @@
 # ⚠️ INSTALACIÓN DE NODE.JS REQUERIDA
 
+> **Nota de vigencia:** este archivo registra el estado de una sesión antigua. Comprueba `node --version` y consulta [README.md](README.md) para los requisitos actuales.
+
 ## 📥 Estado Actual
 
 ❌ Node.js NO está instalado en tu sistema  

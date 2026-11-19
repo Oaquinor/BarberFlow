@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (MySQL 8.4)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: kingflow-ci-root
+          MYSQL_DATABASE: kingflow_migrations_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD}"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
+      FRONTEND_BASE_URL: http://localhost:8000
+      DATABASE_URL: mysql+pymysql://root:kingflow-ci-root@127.0.0.1:3306/kingflow_migrations_test
+      TEST_DATABASE_URL: mysql+pymysql://root:kingflow-ci-root@127.0.0.1:3306/kingflow_barber_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Create isolated integration-test database
+        run: |
+          python - <<'PY'
+          import pymysql
+
+          connection = pymysql.connect(
+              host="127.0.0.1",
+              user="root",
+              password="kingflow-ci-root",
+              autocommit=True,
+          )
+          try:
+              with connection.cursor() as cursor:
+                  cursor.execute(
+                      "CREATE DATABASE kingflow_barber_test "
+                      "CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"
+                  )
+          finally:
+              connection.close()
+          PY
+      - name: Verify fresh MySQL migrations
+        working-directory: backend
+        run: python -m alembic upgrade head
+      - name: Run backend unit and MySQL integration tests
+        run: python -m pytest backend/tests -q
+
+  javascript:
+    name: Frontend and WhatsApp tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: whatsapp-service/package-lock.json
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
+      - name: Install WhatsApp dependencies
+        working-directory: whatsapp-service
+        run: npm ci
+      - name: Test WhatsApp service
+        working-directory: whatsapp-service
+        run: npm test

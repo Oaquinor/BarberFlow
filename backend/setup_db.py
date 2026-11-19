@@ -1,56 +1,61 @@
-import pymysql
+"""Create the KingFlow MySQL database and a least-privilege application user."""
+
+import getpass
 import sys
+import pymysql
 
-def test_connection(host, port, user, password):
-    try:
-        connection = pymysql.connect(host=host, port=port, user=user, password=password, charset='utf8mb4', connect_timeout=5)
-        connection.close()
-        return True, "OK"
-    except Exception as e:
-        return False, str(e)
 
-def setup_database():
-    print("Probando configuraciones...\n")
-    configs = [
-        {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'password': ''},
-        {'host': 'localhost', 'port': 3306, 'user': 'root', 'password': ''},
-        {'host': '127.0.0.1', 'port': 3306, 'user': 'root', 'password': 'root'},
-    ]
-    working_config = None
-    for i, config in enumerate(configs, 1):
-        print(f"{i}. {config['host']}:{config['port']} user={config['user']}", end='')
-        success, message = test_connection(**config)
-        if success:
-            print(f" -> OK")
-            working_config = config
-            break
-        else:
-            print(f" -> FAIL")
-    if not working_config:
-        print("\nNo se pudo conectar. Verifica que MySQL este corriendo en Laragon.")
+def setup_database() -> bool:
+    host = input("MySQL host [127.0.0.1]: ").strip() or "127.0.0.1"
+    port_text = input("MySQL port [3307]: ").strip() or "3307"
+    admin_user = input("MySQL administrator user [root]: ").strip() or "root"
+    admin_password = getpass.getpass("MySQL administrator password: ")
+    app_password = getpass.getpass("New password for the KingFlow database user: ")
+    if len(app_password) < 20:
+        print("Use a randomly generated database password with at least 20 characters.")
         return False
+
+    connection = None
     try:
-        print(f"\nConectando con {working_config['host']}...")
-        connection = pymysql.connect(**working_config, charset='utf8mb4')
-        cursor = connection.cursor()
-        print("Creando base de datos...")
-        cursor.execute("CREATE DATABASE IF NOT EXISTS kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        print("Creando usuario...")
-        cursor.execute("DROP USER IF EXISTS 'kingflow'@'localhost'")
-        cursor.execute("CREATE USER 'kingflow'@'localhost' IDENTIFIED BY 'kingflow123'")
-        cursor.execute("GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'localhost'")
-        cursor.execute("FLUSH PRIVILEGES")
-        cursor.execute("USE kingflow_barber")
-        print("\nCONFIGURACION COMPLETADA!")
-        print(f"Host: {working_config['host']}")
-        print(f"DATABASE_URL=mysql+pymysql://kingflow:kingflow123@{working_config['host']}:3306/kingflow_barber")
-        cursor.close()
-        connection.close()
+        connection = pymysql.connect(
+            host=host,
+            port=int(port_text),
+            user=admin_user,
+            password=admin_password,
+            charset="utf8mb4",
+            connect_timeout=5,
+            autocommit=True,
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "CREATE DATABASE IF NOT EXISTS kingflow_barber "
+                "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+            escaped_password = connection.escape(app_password)
+            cursor.execute(
+                f"CREATE USER IF NOT EXISTS 'kingflow'@'%' IDENTIFIED BY {escaped_password}"
+            )
+            cursor.execute(
+                f"ALTER USER 'kingflow'@'%' IDENTIFIED BY {escaped_password}"
+            )
+            cursor.execute(
+                "GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'%'"
+            )
+        print("Created/verified the kingflow_barber database and application user.")
+        print("Set DATABASE_URL in backend/.env using the password you entered.")
+        print(
+            "URL template: mysql+pymysql://kingflow:<URL-ENCODED-PASSWORD>@"
+            f"{host}:{int(port_text)}/kingflow_barber"
+        )
+        print("URL-encode special characters in the password before placing it in DATABASE_URL.")
         return True
-    except Exception as e:
-        print(f"\nError: {e}")
+    except Exception as exc:
+        print(f"MySQL setup failed ({type(exc).__name__}). Check the host and administrator access.")
         return False
+    finally:
+        if connection:
+            connection.close()
+
 
 if __name__ == "__main__":
-    success = setup_database()
-    sys.exit(0 if success else 1)
+    sys.exit(0 if setup_database() else 1)

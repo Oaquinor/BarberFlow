@@ -18,8 +18,8 @@
 ## 🔐 Credenciales de Prueba
 
 ```
-Email:    admin@test.com
-Password: admin123
+Email:    <YOUR_SUPER_ADMIN_EMAIL>
+Password: <YOUR_SUPER_ADMIN_PASSWORD>
 ```
 
 > **Nota:** Estas credenciales ya están pre-cargadas en el formulario de login del frontend
@@ -226,7 +226,7 @@ frontend/
 ### Datos Inicializados
 
 - ✅ 10 achievements con emojis y descripciones
-- ✅ Usuario admin de prueba: `admin@test.com`
+- ✅ Usuario admin de prueba: `<YOUR_SUPER_ADMIN_EMAIL>`
 
 ---
 
@@ -291,8 +291,8 @@ Abre: http://127.0.0.1:8000/docs
 3. Usar credenciales:
    ```json
    {
-     "username": "admin@test.com",
-     "password": "admin123"
+     "username": "<YOUR_SUPER_ADMIN_EMAIL>",
+     "password": "<YOUR_SUPER_ADMIN_PASSWORD>"
    }
    ```
 4. Verificar respuesta 200 con token

@@ -33,7 +33,8 @@ def get_current_user(
     token = credentials.credentials
 
     # Verify token
-    if not verify_token(token):
+    payload = verify_token(token)
+    if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -65,6 +66,13 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User is inactive"
+        )
+
+    if payload.get("auth_version", 0) != user.auth_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session was revoked",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     return user

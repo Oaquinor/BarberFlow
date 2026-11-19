@@ -46,6 +46,7 @@ class Appointment(BaseModel):
 
     # Check-in
     checked_in_at = Column(DateTime, nullable=True)
+    tracking_token_hash = Column(String(64), nullable=True, unique=True, index=True)
 
     # Relationships
     barbershop = relationship("Barbershop", back_populates="appointments")

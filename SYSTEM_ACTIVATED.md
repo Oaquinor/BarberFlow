@@ -1,7 +1,9 @@
 # 🎉 SISTEMA ACTIVADO EXITOSAMENTE
 
+> **Nota de vigencia:** este registro describe una sesión local de 2024; los procesos de aquel momento no implican que el sistema siga ejecutándose o esté listo para producción. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) para el estado actual.
+
 **Fecha:** 2024-05-30  
-**Estado:** ✅ OPERACIONAL
+**Estado registrado en aquella sesión:** ✅ OPERACIONAL (no es una comprobación del estado actual)
 
 ---
 
@@ -72,8 +74,8 @@ http://localhost:3000
 ```
 
 ### 2. Login
-- **Email:** admin@test.com
-- **Password:** admin123
+- **Email:** <YOUR_SUPER_ADMIN_EMAIL>
+- **Password:** <YOUR_SUPER_ADMIN_PASSWORD>
 
 ### 3. Crear Cita de Prueba
 1. Ve a la pestaña **"Citas"**
@@ -328,7 +330,7 @@ Cierra las 3 ventanas de terminal o presiona `Ctrl+C` en cada una.
 
 ## 🎉 Conclusión
 
-**¡EL SISTEMA ESTÁ 100% OPERACIONAL!**
+**Estado reportado en 2024: operativo en aquella sesión local.** Esto no confirma el funcionamiento ni la preparación de producción actuales.
 
 - ✅ WhatsApp GRATIS e ilimitado funcionando
 - ✅ Backend API con 11 modelos
@@ -345,6 +347,6 @@ Cierra las 3 ventanas de terminal o presiona `Ctrl+C` en cada una.
 
 **Sistema:** KingFlow Barber  
 **Versión:** 1.0.0  
-**Estado:** ✅ Producción Ready  
+**Estado reportado entonces:** ✅ Producción Ready (afirmación histórica no verificada)
 **Fecha:** 2024-05-30  
 **Activado por:** GitHub Copilot

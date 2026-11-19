@@ -64,30 +64,31 @@ pip list | grep alembic
 
 ## 🗄️ Database Verification
 
-### Step 1: Check PostgreSQL
+### Step 1: Check MySQL
 
 ```bash
-# Check if PostgreSQL is running
+# Check if MySQL is running
 # Windows:
-Get-Service -Name postgresql*
+Get-Service -Name '*mysql*'
 
 # Linux:
-sudo systemctl status postgresql
+sudo systemctl status mysql
 
 # Mac:
-brew services list
+brew services list | grep mysql
 ```
 
 ### Step 2: Create Database
 
 ```bash
-# Using psql
-psql -U postgres
+# Open a MySQL shell as an administrator
+mysql -u root -p
 
-CREATE DATABASE kingflow_barber;
-CREATE USER kingflow WITH PASSWORD 'kingflow123';
-GRANT ALL PRIVILEGES ON DATABASE kingflow_barber TO kingflow;
-\q
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'kingflow'@'%' IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'%';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 ### Step 3: Test Connection
@@ -245,8 +246,8 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@kingflow.com",
-    "password": "Admin123!"
+    "email": "<YOUR_SUPER_ADMIN_EMAIL>",
+    "password": "<YOUR_SUPER_ADMIN_PASSWORD>"
   }'
 
 # Should return: {"access_token":"...", "refresh_token":"...", ...}
@@ -260,7 +261,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 curl -X GET http://localhost:8000/api/v1/auth/me \
   -H "Authorization: Bearer <TOKEN>"
 
-# Should return: {"success":true,"data":{"id":1,"email":"admin@kingflow.com",...}}
+# Should return the authenticated administrator profile
 ```
 
 ### Test 4: Create Appointment
@@ -324,10 +325,11 @@ pytest --cov=app
 ```bash
 docker-compose up -d
 
-# Should start:
-# - kingflow_db (PostgreSQL)
-# - kingflow_redis (Redis)
-# - kingflow_backend (FastAPI)
+# Expected services:
+# - db (MySQL 8.4)
+# - backend (FastAPI)
+# - notification-worker (MySQL outbox worker)
+# - whatsapp (Baileys gateway)
 ```
 
 ### Check Containers
@@ -335,7 +337,7 @@ docker-compose up -d
 ```bash
 docker ps
 
-# Should show 3 running containers
+# Should show four application services
 ```
 
 ### Test Backend Container
@@ -396,7 +398,7 @@ Run through this checklist:
 - [ ] Python 3.12+ installed
 - [ ] Virtual environment created and activated
 - [ ] All dependencies installed (`pip list` shows packages)
-- [ ] PostgreSQL running
+- [ ] MySQL running
 - [ ] Database created (`kingflow_barber`)
 - [ ] .env file configured
 - [ ] Migrations run successfully
@@ -418,11 +420,11 @@ Run through this checklist:
 
 **Solution:**
 ```bash
-# Check PostgreSQL is running
-sudo systemctl start postgresql
+# Check MySQL is running
+sudo systemctl start mysql
 
 # Verify credentials in .env
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@localhost:5432/kingflow_barber
+DATABASE_URL=mysql+pymysql://USER:PASSWORD@localhost:3307/kingflow_barber
 ```
 
 ### Issue: Module not found

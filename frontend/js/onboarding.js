@@ -4,8 +4,9 @@
  */
 
 const APP_CONFIG = window.KINGFLOW_CONFIG || {};
-const API_ROOT = (APP_CONFIG.apiBaseUrl || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/, '');
 const API_BASE = `${API_ROOT}/api/v1`;
+const accessToken = localStorage.getItem('token');
 let currentStep = 1;
 let onboardingData = {
     barbershopName: '',
@@ -140,11 +141,11 @@ async function sendStepToBackend(step) {
     if (!data) return;
 
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
-            headers: {
+            headers: authHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(data)
         });
 
@@ -268,8 +269,9 @@ async function uploadLogo(file) {
     formData.append('file', file);
 
     try {
-        const response = await fetch(`${API_BASE}/onboarding/upload-logo`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}/onboarding/upload-logo`, {
             method: 'POST',
+            headers: authHeaders(),
             body: formData
         });
 
@@ -338,11 +340,11 @@ async function completeOnboarding() {
 
     try {
         // Send complete onboarding data
-        const response = await fetch(`${API_BASE}/onboarding/complete`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}/onboarding/complete`, {
             method: 'POST',
-            headers: {
+            headers: authHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(completeData)
         });
 
@@ -373,4 +375,12 @@ function goToDashboard() {
 }
 
 // Initialize
+if (!accessToken) {
+    window.location.replace('/');
+}
+
+function authHeaders(extra = {}) {
+    return { ...extra, Authorization: `Bearer ${accessToken}` };
+}
+
 console.log('🚀 Onboarding initialized');

@@ -5,6 +5,7 @@ Handles affiliate program, referrals, and commissions.
 """
 
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
@@ -13,6 +14,7 @@ import string
 
 from app.models import Affiliate, Commission, Barbershop, Subscription
 from app.core.constants import CommissionStatus
+from app.utils.datetime import utc_now_naive
 
 
 class AffiliateService:
@@ -34,6 +36,8 @@ class AffiliateService:
         commission_rate: float = 0.15
     ) -> Affiliate:
         """Create a new affiliate."""
+        if not 0 < commission_rate <= 1:
+            raise ValueError("commission_rate must be greater than 0 and at most 1")
         # Generate unique code
         code = AffiliateService.generate_affiliate_code()
 
@@ -48,7 +52,7 @@ class AffiliateService:
             phone=phone,
             code=code,
             commission_rate=commission_rate,
-            joined_at=datetime.utcnow()
+            joined_at=utc_now_naive()
         )
 
         db.add(affiliate)
@@ -115,29 +119,52 @@ class AffiliateService:
         barbershop_id: int,
         subscription_id: int,
         period_start: datetime,
-        period_end: datetime
+        period_end: datetime,
+        subscription_amount_cents: int,
+        commit: bool = True,
     ) -> Optional[Commission]:
-        """Calculate and create commission for a subscription period."""
+        """Calculate commission from the actual collected subscription amount."""
+        if subscription_amount_cents <= 0 or period_end <= period_start:
+            raise ValueError("A positive collected amount and valid billing period are required")
+
         barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
 
         if not barbershop or not barbershop.referred_by_affiliate_id:
             return None
 
-        affiliate = db.query(Affiliate).filter(Affiliate.id == barbershop.referred_by_affiliate_id).first()
+        affiliate = db.query(Affiliate).filter(
+            Affiliate.id == barbershop.referred_by_affiliate_id,
+            Affiliate.is_active == True,
+            Affiliate.is_deleted == False,
+        ).with_for_update().first()
 
         if not affiliate:
             return None
 
-        subscription = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+        subscription = db.query(Subscription).filter(
+            Subscription.id == subscription_id,
+            Subscription.is_deleted == False,
+        ).with_for_update().first()
 
-        if not subscription:
+        if not subscription or barbershop.subscription_id != subscription.id:
             return None
 
-        # Get subscription amount (you'll need to add pricing logic)
-        # For now, using placeholder
-        subscription_amount = 30000  # $300.00 in cents (example)
+        existing = db.query(Commission).filter(
+            Commission.subscription_id == subscription.id,
+            Commission.period_start == period_start,
+            Commission.period_end == period_end,
+            Commission.is_deleted == False,
+        ).first()
+        if existing:
+            return existing
 
-        commission_amount = int(subscription_amount * affiliate.commission_rate)
+        commission_amount = int(
+            (Decimal(subscription_amount_cents) * Decimal(str(affiliate.commission_rate))).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+        if commission_amount <= 0:
+            return None
 
         # Create commission record
         commission = Commission(
@@ -145,6 +172,7 @@ class AffiliateService:
             barbershop_id=barbershop_id,
             subscription_id=subscription_id,
             amount=commission_amount,
+            currency=barbershop.currency,
             commission_rate=int(affiliate.commission_rate * 100),
             period_start=period_start,
             period_end=period_end,
@@ -156,8 +184,11 @@ class AffiliateService:
         # Update affiliate stats
         affiliate.total_commissions_earned += commission_amount
 
-        db.commit()
-        db.refresh(commission)
+        if commit:
+            db.commit()
+            db.refresh(commission)
+        else:
+            db.flush()
 
         return commission
 
@@ -193,7 +224,7 @@ class AffiliateService:
             return None
 
         commission.status = CommissionStatus.PAID
-        commission.paid_at = datetime.utcnow()
+        commission.paid_at = utc_now_naive()
         commission.payment_method = payment_method
         commission.payment_reference = payment_reference
         commission.payment_notes = payment_notes

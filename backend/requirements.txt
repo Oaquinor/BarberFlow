@@ -8,7 +8,7 @@ python-multipart==0.0.6
 
 # Database
 sqlalchemy==2.0.25
-asyncpg==0.29.0
+PyMySQL>=1.1,<2
 alembic==1.13.1
 
 # Authentication & Security
@@ -19,10 +19,7 @@ pydantic-settings==2.1.0
 
 # Environment
 python-dotenv==1.0.0
-
-# Background Tasks (Optional)
-celery==5.3.6
-redis==5.0.1
+tzdata>=2024.1,<2027
 
 # Email (Optional)
 python-multipart==0.0.6

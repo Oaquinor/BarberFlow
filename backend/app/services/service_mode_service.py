@@ -14,6 +14,7 @@ from app.models import Appointment, BarberPerformance, User, Achievement, UserAc
 from app.core.constants import AppointmentStatus
 from app.services.performance_service import PerformanceService
 from app.services.achievement_service import AchievementService
+from app.utils.datetime import utc_now_naive
 
 
 class ServiceModeService:
@@ -48,7 +49,7 @@ class ServiceModeService:
 
         # Update appointment
         appointment.status = AppointmentStatus.IN_PROGRESS
-        appointment.actual_start_time = datetime.utcnow()
+        appointment.actual_start_time = utc_now_naive()
 
         db.commit()
         db.refresh(appointment)
@@ -103,7 +104,7 @@ class ServiceModeService:
 
         # Update appointment
         appointment.status = AppointmentStatus.COMPLETED
-        appointment.actual_end_time = datetime.utcnow()
+        appointment.actual_end_time = utc_now_naive()
         if barber_notes:
             appointment.barber_notes = barber_notes
 
@@ -181,7 +182,7 @@ class ServiceModeService:
             return None
 
         # Calculate elapsed time
-        elapsed_seconds = (datetime.utcnow() - active_appointment.actual_start_time).total_seconds()
+        elapsed_seconds = (utc_now_naive() - active_appointment.actual_start_time).total_seconds()
         elapsed_minutes = int(elapsed_seconds / 60)
 
         # Calculate remaining time
@@ -226,7 +227,7 @@ class ServiceModeService:
         next_appt = db.query(Appointment).filter(
             and_(
                 Appointment.barber_id == barber_id,
-                Appointment.scheduled_time > datetime.utcnow(),
+                Appointment.scheduled_time > utc_now_naive(),
                 Appointment.status.in_([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING]),
                 Appointment.is_deleted == False
             )
@@ -235,7 +236,7 @@ class ServiceModeService:
         if not next_appt:
             return None
 
-        time_until = next_appt.scheduled_time - datetime.utcnow()
+        time_until = next_appt.scheduled_time - utc_now_naive()
         minutes_until = int(time_until.total_seconds() / 60)
 
         return {

@@ -1,5 +1,7 @@
 # 🚀 INSTRUCCIONES FINALES - Sistema Listo
 
+> **Documento histórico de 2024:** los puertos y la migración 003 que aparecen aquí no describen necesariamente el entorno actual ni confirman que los servicios sigan ejecutándose. La base de datos vigente es MySQL. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) para el estado actual antes de seguir estas instrucciones.
+
 ## ⚠️ ESTADO ACTUAL
 
 ### ✅ Lo que está funcionando:
@@ -46,7 +48,7 @@ INFO:     Application startup complete.
 Una vez que el backend esté corriendo, las páginas web ya abiertas deberían funcionar correctamente:
 
 ### **Página 1: Dashboard** (http://localhost:3000)
-- Login con: `admin@test.com` / `admin123`
+- Login con: `<YOUR_SUPER_ADMIN_EMAIL>` / `<YOUR_SUPER_ADMIN_PASSWORD>`
 - Si no has completado onboarding → Redirección automática
 
 ### **Página 2: Onboarding** (http://localhost:3000/onboarding.html)
@@ -168,7 +170,7 @@ netstat -ano | findstr ":3000 :8000 :3001"
 - [ ] Redirecciona al dashboard al finalizar
 
 #### Dashboard:
-- [ ] Login funciona con admin@test.com
+- [ ] Login funciona con <YOUR_SUPER_ADMIN_EMAIL>
 - [ ] Si no hay onboarding → Redirección automática
 - [ ] Si hay onboarding → Logo personalizado visible
 - [ ] Colores personalizados aplicados

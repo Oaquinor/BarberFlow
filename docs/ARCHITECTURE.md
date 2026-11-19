@@ -126,38 +126,19 @@ backend/
 │   │       ├── __init__.py
 │   │       └── enums.py             # Application enums
 │   │
-│   ├── middleware/                  # 🔧 Middleware
-│   │   ├── __init__.py
-│   │   ├── auth.py                  # Auth middleware
-│   │   ├── logging.py               # Request logging
-│   │   └── rate_limit.py            # Rate limiting
+│   ├── middleware/                  # HTTP security headers; CORS is in app.main
+│   │   └── security_headers.py      # Browser headers and no-store API responses
+│   ├── websocket/                   # Manager prototype; no mounted route
+│   │   └── manager.py               # Not connected to appointment events
 │   │
-│   ├── websocket/                   # 🔌 Real-time Layer
-│   │   ├── __init__.py
-│   │   ├── manager.py               # WebSocket manager
-│   │   ├── handlers.py              # WebSocket handlers
-│   │   └── events.py                # WebSocket events
-│   │
-│   ├── notifications/               # 🔔 Notification System
-│   │   ├── __init__.py
-│   │   ├── email.py                 # Email notifications
-│   │   ├── push.py                  # Push notifications
-│   │   └── templates/               # Notification templates
-│   │
-│   ├── analytics/                   # 📊 Analytics Engine
-│   │   ├── __init__.py
-│   │   ├── calculator.py            # Metric calculations
-│   │   └── reporter.py              # Report generation
-│   │
-│   ├── ai/                          # 🤖 AI Module (Future)
-│   │   ├── __init__.py
-│   │   ├── recommendations.py       # AI recommendations
-│   │   └── predictions.py           # Predictive analytics
-│   │
-│   ├── workers/                     # ⚡ Background Jobs
-│   │   ├── __init__.py
-│   │   ├── celery_app.py            # Celery configuration
-│   │   └── tasks.py                 # Background tasks
+│   ├── services/                    # Business logic and delivery
+│   │   ├── performance_service.py
+│   │   ├── notification_service.py
+│   │   └── notification_outbox.py   # MySQL outbox and reminder scheduling
+│   ├── analytics/                   # Analytics service exports
+│   ├── ai/demand_forecast.py        # Explainable tenant demand baseline
+│   ├── notifications/               # Exports MySQL-backed notification services
+│   ├── workers/                     # Worker package marker
 │   │
 │   ├── utils/                       # 🛠️ Utilities
 │   │   ├── __init__.py
@@ -165,17 +146,13 @@ backend/
 │   │   ├── validators.py            # Custom validators
 │   │   └── formatters.py            # Data formatters
 │   │
-│   └── tests/                       # 🧪 Test Suite
-│       ├── __init__.py
-│       ├── conftest.py              # Test configuration
-│       ├── unit/                    # Unit tests
-│       ├── integration/             # Integration tests
-│       └── fixtures/                # Test fixtures
+│   └── tests/                       # MySQL integration and unit coverage
 │
 ├── alembic/                         # 📦 Database Migrations
 │   ├── versions/
 │   ├── env.py
 │   └── alembic.ini
+├── scripts/notification_worker.py  # MySQL notification outbox worker
 │
 ├── docs/                            # 📚 Documentation
 │   ├── ARCHITECTURE.md
@@ -442,66 +419,15 @@ async def get_appointments(self, barbershop_id: int):
 
 ---
 
-## ⚡ Real-Time Architecture
+## 🔔 Actualizaciones operativas
 
-### WebSocket Manager
-
-```python
-class ConnectionManager:
-    """Manages WebSocket connections."""
-
-    def __init__(self):
-        self.active_connections: dict[int, WebSocket] = {}
-
-    async def connect(self, barbershop_id: int, websocket: WebSocket):
-        """Connect client to barbershop room."""
-        await websocket.accept()
-        self.active_connections[barbershop_id] = websocket
-
-    async def broadcast(self, barbershop_id: int, message: dict):
-        """Broadcast to all connected clients."""
-        websocket = self.active_connections.get(barbershop_id)
-        if websocket:
-            await websocket.send_json(message)
-```
-
-### Event Broadcasting
-
-```python
-# When appointment status changes
-await websocket_manager.broadcast(
-    barbershop_id=appointment.barbershop_id,
-    message={
-        "event": "appointment_updated",
-        "data": appointment.dict()
-    }
-)
-```
+El backend persiste notificaciones para los usuarios de la barbería y el frontend consulta su bandeja cada 60 segundos mientras la sesión está abierta. No hay servidor WebSocket ni eventos en tiempo real configurados.
 
 ---
 
-## 📊 Analytics Architecture
+## 📊 Analítica
 
-### Metric Calculation
-
-```python
-class AnalyticsCalculator:
-    """Calculate business metrics."""
-
-    async def calculate_average_service_time(
-        self,
-        barbershop_id: int,
-        start_date: date,
-        end_date: date
-    ) -> float:
-        """Calculate average service time."""
-        appointments = await self.repository.get_completed_appointments(
-            barbershop_id, start_date, end_date
-        )
-
-        total_time = sum(a.actual_duration for a in appointments)
-        return total_time / len(appointments) if appointments else 0
-```
+`PerformanceService` calcula métricas del barbero a partir de citas y pagos de la barbería. `DemandForecastService` calcula el promedio histórico semanal por día/hora y lo combina con reservas próximas. La ruta de pronóstico está protegida para owners y deriva el tenant de la sesión autenticada. Ambos servicios usan datos MySQL existentes; no hay almacenamiento de analítica separado.
 
 ---
 
@@ -542,56 +468,25 @@ class AffiliateService:
 
 ## 🔔 Notification Architecture
 
-### Notification Strategy Pattern
-
-```python
-class NotificationService:
-    """Orchestrates notifications across channels."""
-
-    def __init__(
-        self,
-        email_notifier: EmailNotifier,
-        push_notifier: PushNotifier
-    ):
-        self.email_notifier = email_notifier
-        self.push_notifier = push_notifier
-
-    async def notify_appointment_created(self, appointment: Appointment):
-        """Send notifications for new appointment."""
-        await self.email_notifier.send(appointment.client.email, template="new_appointment")
-        await self.push_notifier.send(appointment.client.device_token, message="Appointment confirmed")
-```
+Operaciones de reservas y cobros escriben notificaciones internas y entregas email/WhatsApp en MySQL dentro de su transacción. `notification-worker` procesa la outbox con idempotencia, leases y reintentos. No hay servicio push configurado; el paquete WebSocket existente es un prototipo sin ruta ni emisiones conectado a los flujos.
 
 ---
 
-## 🤖 AI Module Architecture (Future)
+## 🤖 Inteligencia y pronóstico
 
-### Modular Design
+El módulo `app.ai.demand_forecast` calcula una referencia estadística por tenant: promedio de servicios completados por día de semana y hora en las 12 semanas anteriores, más las reservas ya confirmadas en el periodo previsto. No envía datos a proveedores externos ni presenta esta heurística como un modelo de aprendizaje automático. La ruta `GET /api/v1/analytics/demand-forecast` es exclusiva del owner autenticado. Incluye tamaño de muestra y confianza para que el panel no oculte la incertidumbre cuando hay pocos datos.
 
-```python
-class RecommendationEngine:
-    """AI recommendations - pluggable architecture."""
+El sistema todavía no ofrece recomendaciones generativas, predicción entrenada ni análisis de cohortes. Esas funciones requieren criterios de negocio y datos suficientes antes de prometerlas.
 
-    async def recommend_barber(self, client_id: int) -> list[Barber]:
-        """
-        Recommend barbers based on:
-        - Client history
-        - Barber ratings
-        - Availability
-        - Service preferences
-        """
-        # AI logic here
-        pass
-```
+La extensión de este módulo debe comenzar con objetivos de producto verificables, muestras suficientes y métricas de calidad. Hasta entonces, la API expone solo este pronóstico histórico transparente.
 
 ---
 
 ## 🚀 Scalability Considerations
 
 ### Horizontal Scaling
-- Stateless API servers
-- Load balancer ready
-- Session stored in Redis
+- La API no guarda sesión en memoria; los refresh tokens se persisten en MySQL.
+- Ejecutar varias instancias requiere una base MySQL compartida y configuración de conexión/pool adecuada.
 
 ### Database Optimization
 - Indexes on foreign keys
@@ -599,15 +494,11 @@ class RecommendationEngine:
 - Connection pooling
 
 ### Caching Strategy
-- Redis for session storage
-- Cache frequently accessed data
-- Invalidation on updates
+- No hay caché Redis activa; las lecturas van a MySQL.
 
 ### Background Jobs
-- Celery for async tasks
-- Email sending
-- Report generation
-- Analytics calculation
+- `scripts/notification_worker.py` procesa la outbox MySQL y programa recordatorios.
+- Entrega SMTP/WhatsApp con reintentos persistidos; no se usa Celery.
 
 ---
 
@@ -659,7 +550,7 @@ logger.info(
 2. **Service Layer Pattern** - Business logic encapsulation
 3. **Dependency Injection** - Loose coupling
 4. **Strategy Pattern** - Notification channels
-5. **Observer Pattern** - WebSocket events
+5. **Transactional outbox** - MySQL records operational email and WhatsApp deliveries
 6. **Factory Pattern** - Object creation
 7. **Singleton Pattern** - Configuration management
 

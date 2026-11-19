@@ -1,466 +1,73 @@
-# 📦 KingFlow Barber - Project Summary
-
-**Enterprise SaaS Platform for Modern Barbershops**  
-**Developed by NOVENTIA GROUP**
-
----
-
-## ✅ What Has Been Created
-
-### 📁 Complete Project Structure
-
-```
-kingflow-barber/
-│
-├── 📚 Documentation (Complete)
-│   ├── README.md                    ✅ Main project documentation
-│   ├── QUICKSTART.md               ✅ Quick setup guide
-│   ├── CONTRIBUTING.md             ✅ Contribution guidelines
-│   ├── CHANGELOG.md                ✅ Version history
-│   ├── LICENSE                     ✅ MIT License
-│   │
-│   └── docs/
-│       ├── ARCHITECTURE.md         ✅ Complete architecture guide
-│       ├── STANDARDS.md            ✅ Comprehensive coding standards
-│       ├── API_GUIDELINES.md       ✅ API design guidelines
-│       ├── DATABASE.md             ✅ Database schema documentation
-│       └── DEPLOYMENT.md           ✅ Production deployment guide
-│
-├── 🔧 Backend (Complete & Production-Ready)
-│   ├── app/
-│   │   ├── main.py                 ✅ FastAPI application entry
-│   │   │
-│   │   ├── core/                   ✅ Core functionality
-│   │   │   ├── config/             ✅ Settings & configuration
-│   │   │   ├── database/           ✅ Database session management
-│   │   │   ├── security/           ✅ JWT, passwords, permissions
-│   │   │   ├── logging/            ✅ Centralized logging
-│   │   │   ├── exceptions/         ✅ Custom exceptions & handlers
-│   │   │   └── constants/          ✅ Enums & constants
-│   │   │
-│   │   ├── models/                 ✅ SQLAlchemy models
-│   │   │   ├── base.py             ✅ Base model with timestamps
-│   │   │   ├── user.py             ✅ User entity
-│   │   │   ├── barbershop.py       ✅ Barbershop entity
-│   │   │   ├── appointment.py      ✅ Appointment entity
-│   │   │   └── subscription.py     ✅ Subscription entity
-│   │   │
-│   │   ├── repositories/           ✅ Data access layer
-│   │   │   ├── base_repository.py  ✅ Generic CRUD operations
-│   │   │   ├── user_repository.py  ✅ User data access
-│   │   │   └── appointment_repository.py ✅ Appointment data access
-│   │   │
-│   │   ├── services/               ✅ Business logic
-│   │   │   ├── auth_service.py     ✅ Authentication logic
-│   │   │   └── appointment_service.py ✅ Appointment logic
-│   │   │
-│   │   ├── schemas/                ✅ Pydantic DTOs
-│   │   │   ├── common.py           ✅ Standard responses
-│   │   │   └── auth.py             ✅ Auth schemas
-│   │   │
-│   │   ├── api/                    ✅ API endpoints
-│   │   │   ├── deps.py             ✅ Dependencies (auth, db)
-│   │   │   └── v1/
-│   │   │       ├── auth.py         ✅ Authentication endpoints
-│   │   │       └── appointments.py ✅ Appointment endpoints
-│   │   │
-│   │   ├── websocket/              ✅ Real-time (ready)
-│   │   ├── utils/                  ✅ Utility functions
-│   │   ├── notifications/          📦 Ready for implementation
-│   │   ├── analytics/              📦 Ready for implementation
-│   │   ├── ai/                     📦 Ready for implementation
-│   │   ├── workers/                📦 Ready for implementation
-│   │   └── middleware/             📦 Ready for implementation
-│   │
-│   ├── alembic/                    ✅ Database migrations
-│   │   ├── versions/
-│   │   │   └── 001_initial.py      ✅ Initial schema migration
-│   │   ├── env.py                  ✅ Alembic configuration
-│   │   └── script.py.mako          ✅ Migration template
-│   │
-│   ├── tests/                      ✅ Test suite
-│   │   ├── conftest.py             ✅ Test fixtures
-│   │   └── test_auth.py            ✅ Authentication tests
-│   │
-│   ├── scripts/                    ✅ Utility scripts
-│   │   ├── seed_db.py              ✅ Database seeding
-│   │   └── create_admin.py         ✅ Create admin user
-│   │
-│   ├── requirements.txt            ✅ Python dependencies
-│   ├── pyproject.toml              ✅ Python project config
-│   ├── .env.example                ✅ Environment template
-│   ├── .gitignore                  ✅ Git ignore rules
-│   ├── Dockerfile                  ✅ Docker image
-│   ├── alembic.ini                 ✅ Alembic configuration
-│   └── README.md                   ✅ Backend documentation
-│
-├── 🐳 DevOps (Complete)
-│   ├── docker-compose.yml          ✅ Full stack setup
-│   └── .gitignore                  ✅ Global ignore rules
-│
-└── 📊 Status: PRODUCTION-READY BASE ✅
-
-```
-
----
-
-## 🎯 What Works Right Now
-
-### ✅ Fully Functional Features
-
-1. **Authentication System**
-   - User registration with validation
-   - Login with JWT tokens
-   - Refresh token mechanism
-   - Password change
-   - Current user retrieval
-
-2. **User Management**
-   - Multi-role system (Super Admin, Owner, Barber, Client)
-   - User profiles
-   - Barbershop association
-   - Active/inactive status
-
-3. **Appointment System**
-   - Create appointments with validation
-   - Get appointment by ID
-   - List appointments (paginated)
-   - Start appointment
-   - Complete appointment
-   - Cancel appointment
-   - Barber availability checking
-   - Time slot validation
-
-4. **Barbershop Management**
-   - Multi-tenant architecture
-   - Barbershop profiles
-   - Subscription linking
-
-5. **Subscription System**
-   - Plan management (Free, Basic, Pro, Enterprise)
-   - Subscription limits
-   - Status tracking
-
-6. **Database**
-   - Complete schema with relationships
-   - Migrations system (Alembic)
-   - Soft delete pattern
-   - Timestamps on all entities
-   - Proper indexes
-
-7. **API Documentation**
-   - Auto-generated Swagger UI
-   - ReDoc documentation
-   - Standard response format
-   - Error handling
-
-8. **Security**
-   - JWT authentication
-   - Password hashing (bcrypt)
-   - Input validation (Pydantic)
-   - Role-based permissions
-   - SQL injection prevention
-
----
-
-## 🚀 How to Run
-
-### Quick Start (5 minutes)
-
-```bash
-# 1. Setup database
-createdb kingflow_barber
-
-# 2. Setup backend
-cd backend
-python3.12 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-
-# 3. Run migrations
-alembic upgrade head
-
-# 4. Seed database (optional)
-python scripts/seed_db.py
-
-# 5. Start server
-uvicorn app.main:app --reload
-```
-
-### With Docker (Even Faster)
-
-```bash
-docker-compose up -d
-docker-compose exec backend alembic upgrade head
-docker-compose exec backend python scripts/seed_db.py
-```
-
-### Test Accounts (After Seeding)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | admin@kingflow.com | Admin123! |
-| Owner | owner@kingsbarbershop.com | Owner123! |
-| Barber | mike@kingsbarbershop.com | Barber123! |
-| Client | client1@example.com | Client123! |
-
----
-
-## 📋 API Endpoints Available
-
-### Authentication
-- `POST /api/v1/auth/register` - Register
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/refresh` - Refresh token
-- `GET /api/v1/auth/me` - Get current user
-- `POST /api/v1/auth/change-password` - Change password
-
-### Appointments
-- `POST /api/v1/appointments` - Create
-- `GET /api/v1/appointments/{id}` - Get by ID
-- `GET /api/v1/appointments` - List
-- `POST /api/v1/appointments/{id}/start` - Start
-- `POST /api/v1/appointments/{id}/complete` - Complete
-
-### Documentation
-- `GET /docs` - Swagger UI
-- `GET /redoc` - ReDoc
-- `GET /health` - Health check
-
----
-
-## 📦 Ready for Implementation
-
-These modules have placeholder files ready:
-
-1. **WebSocket** (`app/websocket/`)
-   - Real-time updates
-   - Live dashboard
-   - Connection manager ready
-
-2. **Notifications** (`app/notifications/`)
-   - Email notifications
-   - Push notifications
-   - SMS (future)
-
-3. **Analytics** (`app/analytics/`)
-   - Performance metrics
-   - Reports
-   - Statistics
-
-4. **AI Module** (`app/ai/`)
-   - Recommendations
-   - Predictions
-   - Smart scheduling
-
-5. **Background Workers** (`app/workers/`)
-   - Celery tasks
-   - Async jobs
-   - Scheduled tasks
-
----
-
-## 🏗️ Architecture Principles
-
-✅ **Clean Architecture**
-- Clear separation of concerns
-- Dependency inversion
-- Testable code
-
-✅ **SOLID Principles**
-- Single Responsibility
-- Open/Closed
-- Liskov Substitution
-- Interface Segregation
-- Dependency Inversion
-
-✅ **Design Patterns**
-- Repository Pattern (data access)
-- Service Layer Pattern (business logic)
-- Dependency Injection
-- Factory Pattern (ready)
-
-✅ **Code Quality**
-- Type hints everywhere
-- Comprehensive docstrings
-- Clear naming conventions
-- DRY, KISS, YAGNI
-
----
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app
-
-# Run specific test
-pytest tests/test_auth.py::test_login_success
-```
-
----
-
-## 📚 Complete Documentation
-
-All documentation is in `/docs`:
-
-1. **ARCHITECTURE.md** - System design & patterns
-2. **STANDARDS.md** - Coding conventions
-3. **API_GUIDELINES.md** - API design rules
-4. **DATABASE.md** - Schema documentation
-5. **DEPLOYMENT.md** - Production setup
-
----
-
-## 🎓 Code Examples
-
-### Create Appointment
-```python
-POST /api/v1/appointments
-Authorization: Bearer <token>
-
-{
-  "client_id": 1,
-  "barber_id": 2,
-  "scheduled_time": "2024-01-15T10:00:00Z",
-  "service_type": "haircut",
-  "estimated_duration": 30
-}
-```
-
-### Login
-```python
-POST /api/v1/auth/login
-
-{
-  "email": "user@example.com",
-  "password": "SecurePass123"
-}
-```
-
----
-
-## ✨ Key Highlights
-
-1. **Production-Ready Code**
-   - No shortcuts
-   - Enterprise-grade
-   - Scalable from day 1
-
-2. **Comprehensive Documentation**
-   - 6+ detailed guides
-   - API documentation
-   - Code examples
-
-3. **Clean & Maintainable**
-   - Easy to understand
-   - Easy to modify
-   - Easy to extend
-
-4. **Fully Tested**
-   - Test suite ready
-   - Example tests
-   - Test fixtures
-
-5. **DevOps Ready**
-   - Docker support
-   - Migration system
-   - Deployment guides
-
----
-
-## 🚀 Next Steps
-
-1. **Run the project**
-   ```bash
-   cd backend
-   uvicorn app.main:app --reload
-   ```
-
-2. **Test API**
-   - Visit http://localhost:8000/docs
-   - Try authentication endpoints
-   - Create test appointments
-
-3. **Read documentation**
-   - Start with QUICKSTART.md
-   - Then ARCHITECTURE.md
-   - Then STANDARDS.md
-
-4. **Extend features**
-   - Add more endpoints
-   - Implement notifications
-   - Add analytics
-   - Build frontend
-
----
-
-## 💡 Philosophy
-
-This codebase follows:
-
-> **Simplicity over complexity**  
-> **Clarity over cleverness**  
-> **Maintainability over quick hacks**
-
-Every file, every function, every line has been written with **long-term maintenance** in mind.
-
----
-
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
----
-
-## 📞 Support
-
-- **Documentation**: `/docs` folder
-- **Issues**: GitHub Issues
-- **Email**: support@noventiagroup.com
-
----
-
-## 🏆 Credits
-
-**Developed by NOVENTIA GROUP**
-
-A professional, enterprise-grade SaaS platform built with:
-- ❤️ Passion for clean code
-- 🎯 Focus on maintainability
-- 🚀 Vision for scalability
-- 📚 Commitment to documentation
-
----
-
-**© 2024 NOVENTIA GROUP**
-
-**Built with Clean Architecture, SOLID principles, and modern best practices.**
-
----
-
-## ✅ Checklist for Developers
-
-Before starting development:
-
-- [ ] Read QUICKSTART.md
-- [ ] Read STANDARDS.md
-- [ ] Read ARCHITECTURE.md
-- [ ] Setup development environment
-- [ ] Run tests to verify setup
-- [ ] Explore API documentation
-- [ ] Review code structure
-- [ ] Understand design patterns used
-
-**Ready to code? Start here:**
-```bash
-cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload
-```
-
-**Happy coding! 🎉**
+# KingFlow Barber — estado técnico actual
+
+Este resumen refleja el código y las pruebas disponibles, no una lista de funciones futuras.
+
+## Stack
+
+- API: Python, FastAPI, SQLAlchemy y Alembic.
+- Base de datos: **MySQL 8.4**, mediante `mysql+pymysql`.
+- Frontend: HTML, CSS y JavaScript; PWA con service worker.
+- Mensajería: outbox transaccional MySQL; SMTP y gateway WhatsApp Baileys configurables.
+- Worker: `backend/scripts/notification_worker.py`; Celery y Redis no se usan.
+
+## Flujos implementados
+
+- Registro de barbería y owner, login, renovación/revocación de sesiones, cambio de contraseña desde los portales de owner/barbero y superadmin, y recuperación por correo con token de un solo uso.
+- Autorización por rol y aislamiento por `barbershop_id` en rutas de negocio.
+- Página pública: catálogo, turnos calculados para la duración del servicio y filtrados por citas/ausencias, reserva sin cuenta, seguimiento mediante token, reprogramación y cancelación.
+- Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión.
+- Disponibilidad y ausencias: el barbero genera turnos y registra bloqueos futuros; el backend protege los rangos contra citas existentes y nuevas reservas.
+- Operación de negocio: personal, gestión de clientes (edición y estado con historial conservado), servicios, caja diaria, cierre y comisiones.
+- Configuración del negocio: owner edita nombre, horarios, zona horaria y marca; los cambios se auditan y se reflejan en el perfil.
+- Superadministración: overview global, tenants, usuarios, suscripciones, parámetros de registro y periodo inicial, pagos externos registrados, afiliados, comisiones y auditoría.
+- El owner puede consultar el estado efectivo del periodo de suscripción y el uso real de límites por barbería.
+- Notificaciones internas y entregas durables SMTP/WhatsApp con recordatorios programados.
+- Logros, modo de servicio, onboarding y personalización de marca.
+- Analítica de rendimiento y referencia estadística de demanda de siete días para owners.
+- Reporte financiero por rango de hasta 366 días con desglose por fecha comercial, método y barbero, basado en pagos efectivamente registrados.
+
+## Verificación local
+
+Verificaciones disponibles en este workspace (distinguiendo ejecuciones anteriores de la repetición actual):
+
+- Backend, ejecución completa previamente registrada: `python -m pytest backend/tests -q` — **73 passed** en MySQL 8.4 desechable; 2 advertencias de dependencias de prueba. Incluyó recuperación no enumerativa y limitada, tokens vencidos/de un solo uso, contraseñas robustas, retención acotada de buckets y revocación inmediata de access y refresh tokens.
+- Backend, repetición actual: **28 passed, 47 skipped**. Los tests de integración omitieron ejecución porque `TEST_DATABASE_URL` no está configurada y no hay servidor MySQL local disponible; el listener local de 3306 pertenece a PostgreSQL. Esta repetición no valida ahora los flujos de integración MySQL.
+- Frontend, ejecución actual: `npm test` desde `frontend/` — **19 passed**. Incluye reserva pública por duración de servicio y reprogramación por duración de la cita, además de cambio de contraseña, carga PWA y otras conexiones del portal.
+- WhatsApp, ejecución actual: `npm test` desde `whatsapp-service/` — **6 passed**.
+- Se añadió `.github/workflows/ci.yml` para ejecutar migraciones y las tres suites en GitHub Actions con MySQL 8.4. GitHub reporta **0 ejecuciones** en el repositorio y el workflow aún no se ha ejecutado desde esta rama local.
+- Python compileall, `node --check` y `git diff --check` pasaron.
+- La aplicación también inicializó en modo producción con secreto válido, MySQL y una lista CORS HTTPS; la prueba rechazó valores vacíos, wildcard y HTTP.
+- Alembic 001→022 se aplicó desde una base MySQL 8.4 vacía; se hizo downgrade y re-upgrade de 021 y quedó en head. Las migraciones 020–021 añaden recuperación de contraseña y revocación de access tokens por versión; la 022 indexa la depuración de buckets caducados.
+- La pantalla de registro se inspeccionó en Chrome con emulación iPhone SE a 375 × 667 px; el formulario se presenta en una columna. Se corrigió el listener PWA que cancelaba la instalación nativa en páginas sin botón personalizado. Auditoría y tablas de afiliados ahora exponen etiquetas por celda en el diseño móvil.
+- No se pudo validar Docker Compose en runtime porque Docker no está instalado en el equipo.
+- No se enviaron mensajes reales: dependen de credenciales SMTP y una sesión WhatsApp autorizada.
+- La pantalla y API de recuperación se probaron con envío SMTP simulado; hace falta configurar SMTP para validar entrega real. Producción ahora requiere `FRONTEND_BASE_URL` HTTPS para construir los enlaces de recuperación.
+
+Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombre termine en `_test`, establece `TEST_DATABASE_URL=mysql+pymysql://...` y ejecuta `python -m pytest backend/tests -q`. La fixture rechaza URLs que no sean MySQL o que no terminen en `_test`.
+
+## Límites confirmados
+
+- Los cobros de suscripción y las comisiones de afiliado se registran después de recibir un pago externo; no existe pasarela de pago conectada.
+- El pronóstico es un promedio histórico explicable; no usa un modelo entrenado ni un proveedor generativo.
+- El manager WebSocket es un prototipo sin ruta autenticada ni emisión conectada a las citas. El portal usa bandeja interna con consulta periódica.
+- No hay notificaciones push ni proveedor SMS.
+- Credenciales y secretos de infraestructura se administran mediante configuración de despliegue, no desde la interfaz de plataforma.
+- La entrega depende de la configuración del proveedor; la cola reintenta y registra fallos, pero no garantiza entrega externa.
+- El calendario de ausencias usa rangos locales de una fecha y la migración 018 persiste los bloqueos en MySQL.
+- El portal del owner muestra plan, estado efectivo del periodo y uso de límites desde MySQL; una suscripción vencida se presenta como vencida sin mutar al consultarla.
+- La PWA conserva el diálogo nativo de instalación en páginas sin botón propio y usa el botón personalizado solo en la pantalla que lo ofrece.
+- Las respuestas HTTP incluyen cabeceras anti-iframe, anti-MIME-sniffing, política de referencia y permisos; las rutas API usan `Cache-Control: no-store`, y producción activa HSTS.
+- El inicio en producción rechaza CORS vacío, comodín o HTTP y requiere `FRONTEND_BASE_URL` HTTPS; Compose exige el secreto, el origen frontend y la lista CORS, y Render deja ambos orígenes como configuración explícita.
+- La recuperación usa tokens de 256 bits con hash SHA-256 en MySQL, 30 minutos de vigencia, uso único, limitación de solicitudes y revocación global de sesiones. La columna auth_version invalida también access tokens ya emitidos al cambiar o recuperar contraseña.
+- Los buckets de login/soporte/recuperación se depuran de forma periódica, conservando solo el último día; cada ciclo borra como máximo 1.000 buckets vencidos y 1.000 tokens expirados por proceso.
+- El portal valida el destino para compartir por WhatsApp contra `https://wa.me` y abre la pestaña con `noopener,noreferrer`; el service worker renueva la caché al incluir ese control.
+
+## Fuentes de detalle
+
+- Rutas y permisos: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
+- Arquitectura existente y limitaciones: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+- Base de datos y migraciones: [`docs/DATABASE.md`](docs/DATABASE.md).
+- Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
+- Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+El trabajo está en la rama `codex/kingflow-completion`. Los cambios locales aún no están comprometidos ni publicados.

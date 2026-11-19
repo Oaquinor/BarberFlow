@@ -4,8 +4,13 @@ Utility helpers.
 Common utility functions used across the application.
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
+
+
+def utc_now_naive() -> datetime:
+    """Return current UTC for MySQL DATETIME columns stored without tzinfo."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def format_datetime(dt: datetime, format: str = "%Y-%m-%d %H:%M:%S") -> str:

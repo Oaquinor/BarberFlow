@@ -1,56 +1,104 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # MySQL database
   db:
-    image: postgres:15-alpine
+    image: mysql:8.4
     container_name: kingflow_db
     environment:
-      POSTGRES_USER: kingflow
-      POSTGRES_PASSWORD: kingflow123
-      POSTGRES_DB: kingflow_barber
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-kingflow-root-local}
+      MYSQL_USER: ${MYSQL_USER:-kingflow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-kingflow-local}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-kingflow_barber}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:3307:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-kingflow-root-local}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     networks:
       - kingflow_network
 
-  # Redis (for caching and sessions)
-  redis:
-    image: redis:7-alpine
-    container_name: kingflow_redis
-    ports:
-      - "6379:6379"
+  whatsapp:
+    build: ./whatsapp-service
+    restart: unless-stopped
+    environment:
+      WHATSAPP_BIND_HOST: 0.0.0.0
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
     volumes:
-      - redis_data:/data
+      - whatsapp_auth:/app/auth_info_baileys
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
     networks:
       - kingflow_network
 
   # FastAPI Backend
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: kingflow_backend
     environment:
-      - DATABASE_URL=postgresql+asyncpg://kingflow:kingflow123@db:5432/kingflow_barber
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-kingflow}:${MYSQL_PASSWORD:-kingflow-local}@db:3306/${MYSQL_DATABASE:-kingflow_barber}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:8000}
       - DEBUG=True
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@kingflow.com}
+      - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:-}
+      - WHATSAPP_API_URL=http://whatsapp:3001/send
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./frontend/uploads:/frontend/uploads
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     networks:
       - kingflow_network
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  notification-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-kingflow}:${MYSQL_PASSWORD:-kingflow-local}@db:3306/${MYSQL_DATABASE:-kingflow_barber}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@kingflow.com}
+      - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:-}
+      - WHATSAPP_API_URL=http://whatsapp:3001/send
+      - DEBUG=False
+    depends_on:
+      backend:
+        condition: service_healthy
+      whatsapp:
+        condition: service_started
+    networks:
+      - kingflow_network
+    command: python scripts/notification_worker.py
 
 volumes:
-  postgres_data:
-  redis_data:
+  mysql_data:
+  whatsapp_auth:
 
 networks:
   kingflow_network:

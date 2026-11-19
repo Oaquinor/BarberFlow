@@ -19,7 +19,7 @@
 ║       Accede a tu cuenta de KingFlow Barber          ║
 ║                                                        ║
 ║   📧 Email                                            ║
-║   [admin@test.com                          ]          ║
+║   [<YOUR_SUPER_ADMIN_EMAIL>                          ]          ║
 ║                                                        ║
 ║   🔒 Contraseña                                       ║
 ║   [••••••••                                ]          ║
@@ -28,8 +28,8 @@
 ║                                                        ║
 ║   ┌──────────────────────────────────────┐           ║
 ║   │ 💡 Credenciales de prueba:           │           ║
-║   │ Email: admin@test.com                │           ║
-║   │ Contraseña: admin123                 │           ║
+║   │ Email: <YOUR_SUPER_ADMIN_EMAIL>                │           ║
+║   │ Contraseña: <YOUR_SUPER_ADMIN_PASSWORD>                 │           ║
 ║   └──────────────────────────────────────┘           ║
 ║                                                        ║
 ║   ¿Problemas para acceder? Contacta soporte          ║

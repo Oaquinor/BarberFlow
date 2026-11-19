@@ -1,15 +1,5 @@
-"""
-Middleware package.
+"""Shared request policies are configured in the FastAPI app and API routes.
 
-Custom middleware for:
-- Request logging
-- Performance tracking
-- Rate limiting
-- CORS handling
-- Authentication
+CORS is registered in ``app.main``. Login and support request limits use
+MySQL-backed counters; no separate custom middleware stack is configured.
 """
-
-# TODO: Implement custom middleware
-# - Request logger middleware
-# - Rate limiting middleware
-# - Performance tracking middleware

@@ -64,7 +64,7 @@ Deploy on a Linux VPS (Ubuntu/Debian recommended).
 sudo apt update && sudo apt upgrade -y
 
 # Install dependencies
-sudo apt install -y python3.12 python3.12-venv python3-pip postgresql nginx certbot
+sudo apt install -y python3.12 python3.12-venv python3-pip mysql-server nginx certbot
 
 # Install Node.js (for frontend)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -74,12 +74,13 @@ sudo apt install -y nodejs
 #### 2. Database Setup
 
 ```bash
-# Create database and user
-sudo -u postgres psql
-CREATE DATABASE kingflow_barber;
-CREATE USER kingflow WITH PASSWORD 'secure_password_here';
-GRANT ALL PRIVILEGES ON DATABASE kingflow_barber TO kingflow;
-\q
+# Create database and restricted application user
+sudo mysql
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'kingflow'@'localhost' IDENTIFIED BY 'use-a-generated-secret';
+GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 #### 3. Backend Deployment
@@ -156,13 +157,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # WebSocket support
-    location /ws {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
 }
 ```
 
@@ -191,7 +185,7 @@ sudo systemctl enable certbot.timer
 
 **Services:**
 - **EC2**: Application server
-- **RDS**: PostgreSQL database
+- **RDS**: MySQL database
 - **S3**: File storage
 - **CloudFront**: CDN
 - **Route 53**: DNS
@@ -210,15 +204,15 @@ services:
     run_command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     envs:
       - key: DATABASE_URL
-        value: ${db.DATABASE_URL}
+        value: mysql+pymysql://USER:PASSWORD@MYSQL_HOST:3306/kingflow_barber
+        type: SECRET
       - key: SECRET_KEY
         scope: RUN_TIME
         type: SECRET
 
-databases:
-  - name: db
-    engine: PG
-    version: "15"
+# Provide a managed MySQL 8 database and store its URL as a secret.
+# Set FRONTEND_BASE_URL to the public HTTPS origin (for example, https://kingflow.example)
+# so password recovery links use the deployed site rather than localhost.
 ```
 
 #### Heroku Deployment
@@ -233,8 +227,7 @@ heroku login
 # Create app
 heroku create kingflow-barber
 
-# Add PostgreSQL
-heroku addons:create heroku-postgresql:hobby-dev
+# Configure DATABASE_URL with a managed MySQL 8 service before deploying.
 
 # Deploy
 git push heroku main
@@ -253,6 +246,8 @@ Before going to production:
 - [ ] Set `DEBUG=False`
 - [ ] Use strong database passwords
 - [ ] Configure CORS properly (not `*`)
+- [ ] Set `SECRET_KEY` to a generated value of at least 32 characters.
+- [ ] Set `CORS_ORIGINS` to a JSON list containing only the public HTTPS app origins, such as `["https://app.example.com"]`.
 - [ ] Enable HTTPS/SSL
 - [ ] Setup firewall rules
 - [ ] Enable rate limiting
@@ -356,7 +351,7 @@ find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
 
 1. **Add more API servers** behind load balancer
 2. **Database read replicas** for read-heavy operations
-3. **Redis cache** for session and frequently accessed data
+3. **Notification worker** polls the durable MySQL outbox; the application does not currently use Redis caching.
 4. **CDN** for static assets
 
 ### Load Balancer (Nginx)
@@ -383,11 +378,11 @@ server {
 
 **1. Database connection errors**
 ```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
+# Check MySQL is running
+sudo systemctl status mysql
 
 # Check connection
-psql -U kingflow -d kingflow_barber -h localhost
+mysql -u kingflow -p -h localhost kingflow_barber
 ```
 
 **2. Application won't start**

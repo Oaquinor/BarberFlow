@@ -1,6 +1,6 @@
 # 🚀 Guía Rápida - Inicio Completo con WhatsApp
 
-**Sistema completo de KingFlow Barber con notificaciones WhatsApp GRATIS**
+**Configuración opcional del gateway WhatsApp de KingFlow Barber**
 
 ---
 
@@ -365,16 +365,11 @@ Si tienes problemas:
 
 ---
 
-## 🎉 ¡Listo para Producción!
+## ⚙️ Alcance de esta guía
 
-Con esto tienes:
-- ✅ Sistema de notificaciones completo
-- ✅ WhatsApp GRATIS e ilimitado
-- ✅ Emails profesionales
-- ✅ Frontend funcional
-- ✅ Backend robusto
+Esta guía explica cómo configurar localmente el servicio opcional de WhatsApp. No acredita que el producto esté listo para producción. El envío real requiere configurar y validar las credenciales y dependencias externas descritas en `whatsapp-service/README.md`; correo y otros servicios también necesitan su propia configuración.
 
-**Todo integrado y funcionando automáticamente** 🚀
+Al completar estos pasos tendrás el servicio configurado en tu entorno local. Verifica los registros y una entrega real antes de depender de las notificaciones.
 
 ---
 

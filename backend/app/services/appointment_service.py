@@ -22,6 +22,7 @@ from app.core.exceptions import (
 )
 from app.core.constants import AppointmentStatus
 from app.core.logging import get_logger
+from app.utils.datetime import utc_now_naive
 
 logger = get_logger(__name__)
 
@@ -76,7 +77,7 @@ class AppointmentService:
             raise BarberNotFoundError(f"Barber with ID {barber_id} not found")
 
         # Validate time slot is in the future
-        if scheduled_time <= datetime.utcnow():
+        if scheduled_time <= utc_now_naive():
             raise InvalidTimeSlotError("Appointment time must be in the future")
 
         # Check barber availability
@@ -181,7 +182,7 @@ class AppointmentService:
         appointment = await self.appointment_repository.update(
             appointment_id,
             status=AppointmentStatus.IN_PROGRESS,
-            actual_start_time=datetime.utcnow()
+            actual_start_time=utc_now_naive()
         )
 
         logger.info(f"Appointment started: ID {appointment_id}")
@@ -213,7 +214,7 @@ class AppointmentService:
         appointment = await self.appointment_repository.update(
             appointment_id,
             status=AppointmentStatus.COMPLETED,
-            actual_end_time=datetime.utcnow()
+            actual_end_time=utc_now_naive()
         )
 
         logger.info(f"Appointment completed: ID {appointment_id}")
@@ -279,7 +280,7 @@ class AppointmentService:
         appointment = await self.get_appointment(appointment_id)
 
         # Validate new time is in the future
-        if new_scheduled_time <= datetime.utcnow():
+        if new_scheduled_time <= utc_now_naive():
             raise InvalidTimeSlotError("New appointment time must be in the future")
 
         # Check barber availability at new time

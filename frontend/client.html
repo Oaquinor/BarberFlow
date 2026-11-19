@@ -99,6 +99,9 @@
             color: transparent;
             display: inline-block;
         }
+        .brand-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        #shopLogo { width: 52px; height: 52px; object-fit: cover; border-radius: 12px; }
+        #shopLogo[hidden] { display: none; }
         .option-panel {
             animation: fadeIn .25s ease;
         }
@@ -112,8 +115,11 @@
 <body>
     <div class="container">
         <div class="card">
-            <h1 class="title" id="shopName">💈 Cargando barbería...</h1>
-            <p class="muted">Agenda tu cita sin registrarte y revisa su estado con tu teléfono.</p>
+            <div class="brand-header">
+                <img id="shopLogo" alt="" hidden>
+                <h1 class="title" id="shopName">💈 Cargando barbería...</h1>
+            </div>
+            <p class="muted">Agenda tu cita sin registrarte y consulta su estado con el código privado de seguimiento.</p>
         </div>
 
         <div class="card actions-bar">
@@ -152,12 +158,8 @@
             <section class="card option-panel" id="trackSection" style="display:none;">
                 <h2 class="title">🔎 Ver estado de cita</h2>
                 <div class="field">
-                    <label>Teléfono</label>
-                    <input id="trackPhone" placeholder="8095550000" />
-                </div>
-                <div class="field">
-                    <label>ID de cita (opcional)</label>
-                    <input id="trackId" placeholder="Ej: 12" />
+                    <label>Código de seguimiento</label>
+                    <input id="trackToken" autocomplete="off" placeholder="Pega el código recibido al reservar" />
                 </div>
                 <button id="trackBtn">Consultar</button>
                 <div id="trackList" class="list"></div>
@@ -189,6 +191,7 @@
         </section>
     </div>
 
+    <script src="js/config.js"></script>
     <script src="js/pwa.js"></script>
     <script src="js/client.js"></script>
 </body>

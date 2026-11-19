@@ -1,21 +1,20 @@
 # 💬 KingFlow Barber - WhatsApp Service (Baileys)
 
-**Servicio de notificaciones WhatsApp GRATIS e ILIMITADO usando Baileys**
+**Gateway opcional de WhatsApp usando Baileys**
 
 ---
 
 ## 🎯 ¿Qué es esto?
 
-Un servicio Node.js independiente que mantiene una conexión permanente con WhatsApp usando el protocolo oficial de WhatsApp Multi-Device (Baileys). Expone una API REST que FastAPI puede usar para enviar mensajes.
+Un servicio Node.js independiente que expone una API REST autenticada. Se vincula a una cuenta con QR y FastAPI lo usa para enviar los mensajes encolados. La conexión requiere una sesión activa y las entregas reales dependen del estado del servicio y de las condiciones aplicables a la cuenta.
 
 ---
 
 ## ✅ Características
 
-- ✅ **100% GRATIS** - Sin costos, sin límites
-- ✅ **Ilimitado** - Envía todos los mensajes que necesites
-- ✅ **Protocolo oficial** - Usa WhatsApp Multi-Device
-- ✅ **Tu propio número** - Usa tu WhatsApp personal o Business
+- ✅ Vinculación de cuenta mediante QR
+- ✅ Sesión persistente en volumen protegido
+- ✅ API REST autenticada para el backend
 - ✅ **Reconexión automática** - Si se cae, se reconecta solo
 - ✅ **Formato completo** - Negritas, cursivas, emojis, imágenes
 - ✅ **Sesión persistente** - Escanea QR una sola vez
@@ -53,6 +52,19 @@ Esto instalará:
 ---
 
 ## 🚀 Uso
+
+### Seguridad de la API
+
+Antes de iniciar el servicio, configura un secreto largo y aleatorio en `WHATSAPP_API_TOKEN` tanto en el proceso Node.js como en `backend/.env`. FastAPI lo envía como `Authorization: Bearer ...`. Los endpoints de envío, consulta de número, información de la sesión y desconexión responden `401` sin el token; si falta la configuración responden `503`. `/health` permanece disponible sin autenticación y no revela el número vinculado. El servicio escucha en `127.0.0.1` por defecto; define `WHATSAPP_BIND_HOST` solo si necesitas otro enlace de red y protege esa red.
+
+Ejemplo PowerShell (usa el mismo valor en ambas consolas):
+
+```powershell
+$env:WHATSAPP_API_TOKEN = "<secreto-aleatorio-largo>"
+npm start
+```
+
+Si FastAPI está en otra máquina o contenedor, define `WHATSAPP_API_URL` con una dirección alcanzable desde el backend y configura el acceso de red de forma explícita.
 
 ### Primera Vez: Conectar WhatsApp
 
@@ -132,6 +144,7 @@ GET http://localhost:3001/health
 ```http
 POST http://localhost:3001/send
 Content-Type: application/json
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 
 {
   "phone": "+18095555555",
@@ -199,6 +212,7 @@ Content-Type: application/json
 
 ```http
 GET http://localhost:3001/check/18095555555
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 **Respuesta:**
@@ -216,6 +230,7 @@ GET http://localhost:3001/check/18095555555
 
 ```http
 GET http://localhost:3001/info
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 **Respuesta:**
@@ -237,31 +252,14 @@ GET http://localhost:3001/info
 
 ```http
 POST http://localhost:3001/disconnect
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 ---
 
 ## 🔗 Integración con FastAPI
 
-El servicio de notificaciones de Python (`notification_service.py`) ya está configurado para usar Baileys automáticamente.
-
-**Cuando creas una cita:**
-```python
-# FastAPI automáticamente enviará WhatsApp si el servicio está corriendo
-POST /api/v1/appointments/
-{
-  "barbershop_id": 1,
-  "barber_id": 2,
-  "scheduled_time": "2024-05-30T14:00:00",
-  "service_type": "haircut",
-  "send_confirmation": true  # ← Envía email + WhatsApp
-}
-```
-
-**El sistema automáticamente:**
-1. Envía email de confirmación
-2. Llama a `http://localhost:3001/send` con el mensaje de WhatsApp
-3. El cliente recibe el WhatsApp inmediatamente
+El backend usa `WHATSAPP_API_URL` y envía el secreto configurado en `WHATSAPP_API_TOKEN`. Los flujos activos intentan enviar WhatsApp al crear, cancelar o reprogramar una reserva pública y al registrar un pago. La entrega es de mejor esfuerzo: una caída del servicio no revierte la cita ni el pago y actualmente no hay cola ni reintentos. Los métodos SMTP de `notification_service.py` no se llaman automáticamente desde esos flujos.
 
 ---
 

@@ -1,12 +1,25 @@
-const CACHE_NAME = 'kingflow-pwa-v3';
+const CACHE_PREFIX = 'kingflow-pwa-';
+const CACHE_NAME = `${CACHE_PREFIX}v10`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/onboarding.html',
   '/client.html',
+  '/signup.html',
+  '/reset-password.html',
+  '/admin.html',
   '/offline.html',
   '/manifest.webmanifest',
+  '/css/styles.css',
+  '/css/account-security.css',
   '/js/main.js',
+  '/js/security.js',
+  '/js/config.js',
+  '/js/auth.js',
+  '/js/account-security.js',
+  '/js/signup.js',
+  '/js/password-reset.js',
+  '/js/admin.js',
   '/js/onboarding.js',
   '/js/client.js',
   '/js/pwa.js',
@@ -26,7 +39,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     )
@@ -43,6 +56,22 @@ self.addEventListener('fetch', (event) => {
   const isSameOrigin = requestUrl.origin === self.location.origin;
 
   if (!isSameOrigin) {
+    return;
+  }
+
+  // Never put API payloads or authenticated responses in the shared offline cache.
+  if (requestUrl.pathname.startsWith('/api/') || event.request.headers.has('Authorization')) {
+    return;
+  }
+
+  // Tracking tokens and other credentials must not be persisted as cache keys.
+  const sensitiveQueryKeys = ['token', 'track_token', 'code', 'email', 'phone', 'password'];
+  if (sensitiveQueryKeys.some((key) => requestUrl.searchParams.has(key))) {
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        event.request.mode === 'navigate' ? caches.match('/offline.html') : Response.error()
+      )
+    );
     return;
   }
 

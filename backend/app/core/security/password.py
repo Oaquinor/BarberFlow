@@ -18,7 +18,10 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password
     """
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    encoded = password.encode("utf-8")
+    if len(encoded) > 72:
+        raise ValueError("Password cannot exceed 72 UTF-8 bytes")
+    hashed = bcrypt.hashpw(encoded, bcrypt.gensalt())
     return hashed.decode("utf-8")
 
 

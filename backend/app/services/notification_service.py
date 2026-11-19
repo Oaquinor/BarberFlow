@@ -4,17 +4,24 @@ Handles email and SMS/WhatsApp notifications to clients
 """
 
 from typing import Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from email.message import EmailMessage
+from html import escape
+import json
+import logging
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from urllib import request as urlrequest
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
 from app.models.appointment import Appointment
 from app.models.user import User
 from app.models.barbershop import Barbershop
-from app.core.config import settings
+from app.core.config import get_settings
+
+settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 class NotificationService:
@@ -53,10 +60,10 @@ class NotificationService:
             client_name=client.full_name,
             barber_name=barber.full_name,
             barbershop_name=barbershop.name,
-            scheduled_time=appointment.scheduled_time,
+            scheduled_time=self._local_scheduled_time(appointment.scheduled_time, barbershop),
             service_type=appointment.service_type,
             estimated_duration=appointment.estimated_duration,
-            barbershop_address=barbershop.address or "N/A",
+            barbershop_address=barbershop.address_line1 or "N/A",
             barbershop_phone=barbershop.phone or "N/A"
         )
 
@@ -94,9 +101,9 @@ class NotificationService:
             client_name=client.full_name,
             barber_name=barber.full_name,
             barbershop_name=barbershop.name,
-            scheduled_time=appointment.scheduled_time,
+            scheduled_time=self._local_scheduled_time(appointment.scheduled_time, barbershop),
             service_type=appointment.service_type,
-            barbershop_address=barbershop.address or "N/A"
+            barbershop_address=barbershop.address_line1 or "N/A"
         )
 
         return self._send_email(
@@ -133,7 +140,7 @@ class NotificationService:
         body = self._get_cancellation_email_template(
             client_name=client.full_name,
             barbershop_name=barbershop.name,
-            scheduled_time=appointment.scheduled_time,
+            scheduled_time=self._local_scheduled_time(appointment.scheduled_time, barbershop),
             reason=reason or "No especificada"
         )
 
@@ -211,7 +218,7 @@ class NotificationService:
             barbershop_name=barbershop.name,
             scheduled_time=appointment.scheduled_time,
             service_type=appointment.service_type,
-            barbershop_address=barbershop.address or "N/A"
+            barbershop_address=barbershop.address_line1 or "N/A"
         )
 
         return self._send_whatsapp(
@@ -244,7 +251,7 @@ class NotificationService:
 
         message = self._get_sms_reminder_template(
             barbershop_name=barbershop.name,
-            scheduled_time=appointment.scheduled_time
+            scheduled_time=self._local_scheduled_time(appointment.scheduled_time, barbershop)
         )
 
         return self._send_sms(
@@ -254,125 +261,66 @@ class NotificationService:
 
     # ==================== INTERNAL EMAIL SENDER ====================
 
-    def _send_email(
-        self,
-        to_email: str,
-        subject: str,
-        body: str
-    ) -> bool:
-        """
-        Internal method to send email via SMTP.
-
-        Args:
-            to_email: Recipient email
-            subject: Email subject
-            body: Email body (HTML)
-
-        Returns:
-            bool: True if sent successfully
-        """
+    @staticmethod
+    def _local_scheduled_time(scheduled_time: datetime, barbershop: Barbershop) -> datetime:
+        """Render persisted UTC appointment timestamps in the tenant's timezone."""
+        value = scheduled_time.replace(tzinfo=timezone.utc) if scheduled_time.tzinfo is None else scheduled_time
         try:
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['From'] = settings.SMTP_FROM_EMAIL
-            msg['To'] = to_email
-            msg['Subject'] = subject
+            return value.astimezone(ZoneInfo(barbershop.timezone))
+        except (ZoneInfoNotFoundError, TypeError):
+            return value.astimezone(timezone.utc)
 
-            # Attach HTML body
-            html_part = MIMEText(body, 'html')
-            msg.attach(html_part)
-
-            # Send via SMTP
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-                if settings.SMTP_TLS:
-                    server.starttls()
-
-                if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-
-                server.send_message(msg)
-
+    def _send_email(self, to_email: str, subject: str, body: str) -> bool:
+        if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+            logger.info("Email delivery skipped because SMTP is not fully configured")
+            return False
+        message = EmailMessage()
+        message["From"] = settings.EMAIL_FROM
+        message["To"] = to_email
+        message["Subject"] = subject
+        message.set_content("Este mensaje requiere un cliente de correo HTML.")
+        message.add_alternative(body, subtype="html")
+        try:
+            if settings.SMTP_PORT == 465:
+                with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=8) as smtp:
+                    smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                    smtp.send_message(message)
+            else:
+                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=8) as smtp:
+                    smtp.starttls()
+                    smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                    smtp.send_message(message)
             return True
-
-        except Exception as e:
-            print(f"Error sending email: {e}")
+        except Exception:
+            logger.exception("Notification email delivery failed")
             return False
 
     def _send_whatsapp(self, phone: str, message: str) -> bool:
-        """
-        Send WhatsApp message via Baileys service (FREE & UNLIMITED).
-
-        Uses local Baileys Node.js service running on port 3001.
-
-        Args:
-            phone: Phone number (with country code, e.g., +18095555555)
-            message: Message text (supports WhatsApp formatting: *bold*, _italic_, ~strikethrough~)
-
-        Returns:
-            bool: True if sent successfully
-        """
-        try:
-            import requests
-
-            # Baileys service URL (local Node.js service)
-            url = "http://localhost:3001/send"
-
-            # Send request to Baileys service
-            response = requests.post(
-                url,
-                json={
-                    "phone": phone,
-                    "message": message
-                },
-                timeout=10
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("success"):
-                    print(f"✅ WhatsApp sent to {phone}")
-                    return True
-                else:
-                    print(f"❌ WhatsApp error: {result.get('error')}")
-                    return False
-            else:
-                print(f"❌ WhatsApp service error: {response.status_code}")
-                return False
-
-        except requests.exceptions.ConnectionError:
-            print(f"⚠️  WhatsApp service not running. Start with: cd whatsapp-service && npm start")
+        token = settings.WHATSAPP_API_TOKEN.strip()
+        if not token:
+            logger.info("WhatsApp delivery skipped because WHATSAPP_API_TOKEN is not configured")
             return False
-        except Exception as e:
-            print(f"❌ Error sending WhatsApp: {e}")
+        url = settings.WHATSAPP_API_URL
+        request = urlrequest.Request(
+            url,
+            data=json.dumps({"phone": phone, "message": message}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+            method="POST",
+        )
+        try:
+            with urlrequest.urlopen(request, timeout=8) as response:
+                if not 200 <= response.status < 300:
+                    return False
+                result = json.loads(response.read().decode("utf-8"))
+                return result.get("success") is True
+        except Exception:
+            logger.exception("WhatsApp delivery failed")
             return False
 
     def _send_sms(self, phone: str, message: str) -> bool:
-        """
-        Send SMS via Twilio or similar.
-
-        Args:
-            phone: Phone number (with country code)
-            message: Message text
-
-        Returns:
-            bool: True if sent successfully
-        """
-        try:
-            # TODO: Implement Twilio SMS API
-            # from twilio.rest import Client
-            # client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            # message = client.messages.create(
-            #     from_=settings.TWILIO_PHONE_NUMBER,
-            #     to=phone,
-            #     body=message
-            # )
-
-            print(f"SMS would be sent to {phone}: {message}")
-            return True
-
-        except Exception as e:
-            print(f"Error sending SMS: {e}")
-            return False
+        # No SMS provider is configured; never report an undelivered message as sent.
+        logger.info("SMS reminder skipped because no SMS provider is configured")
+        return False
 
     # ==================== EMAIL TEMPLATES ====================
 
@@ -409,11 +357,11 @@ class NotificationService:
 <body>
     <div class="container">
         <div class="header">
-            <h1>👑 {barbershop_name}</h1>
+            <h1>👑 {escape(barbershop_name)}</h1>
             <h2>✅ Cita Confirmada</h2>
         </div>
         <div class="content">
-            <p>Hola <strong>{client_name}</strong>,</p>
+            <p>Hola <strong>{escape(client_name)}</strong>,</p>
 
             <p>Tu cita ha sido confirmada exitosamente. ¡Esperamos verte pronto!</p>
 
@@ -421,16 +369,16 @@ class NotificationService:
                 <h3>📅 Detalles de tu Cita:</h3>
                 <p><strong>Fecha:</strong> {formatted_date}</p>
                 <p><strong>Hora:</strong> {formatted_time}</p>
-                <p><strong>Barbero:</strong> {barber_name}</p>
-                <p><strong>Servicio:</strong> {service_type}</p>
+                <p><strong>Barbero:</strong> {escape(barber_name)}</p>
+                <p><strong>Servicio:</strong> {escape(service_type)}</p>
                 <p><strong>Duración estimada:</strong> {estimated_duration} minutos</p>
             </div>
 
             <div class="info-box">
                 <h3>📍 Ubicación:</h3>
-                <p><strong>{barbershop_name}</strong></p>
-                <p>{barbershop_address}</p>
-                <p>📞 {barbershop_phone}</p>
+                <p><strong>{escape(barbershop_name)}</strong></p>
+                <p>{escape(barbershop_address)}</p>
+                <p>📞 {escape(barbershop_phone)}</p>
             </div>
 
             <p><strong>⏰ Importante:</strong> Por favor llega 5-10 minutos antes de tu cita.</p>
@@ -438,7 +386,7 @@ class NotificationService:
             <p>Si necesitas cancelar o reprogramar, contáctanos lo antes posible.</p>
 
             <div class="footer">
-                <p>Gracias por confiar en {barbershop_name}</p>
+                <p>Gracias por confiar en {escape(barbershop_name)}</p>
                 <p>Este es un email automático. Por favor no respondas a este mensaje.</p>
             </div>
         </div>
@@ -480,7 +428,7 @@ class NotificationService:
             <h1>⏰ Recordatorio de Cita</h1>
         </div>
         <div class="content">
-            <p>Hola <strong>{client_name}</strong>,</p>
+            <p>Hola <strong>{escape(client_name)}</strong>,</p>
 
             <div class="reminder-box">
                 <h2>Tu cita es MAÑANA</h2>
@@ -488,15 +436,15 @@ class NotificationService:
                 <p>{formatted_date}</p>
             </div>
 
-            <p><strong>Barbero:</strong> {barber_name}</p>
-            <p><strong>Servicio:</strong> {service_type}</p>
-            <p><strong>Lugar:</strong> {barbershop_name}</p>
-            <p>{barbershop_address}</p>
+            <p><strong>Barbero:</strong> {escape(barber_name)}</p>
+            <p><strong>Servicio:</strong> {escape(service_type)}</p>
+            <p><strong>Lugar:</strong> {escape(barbershop_name)}</p>
+            <p>{escape(barbershop_address)}</p>
 
             <p>¡Te esperamos! 👋</p>
 
             <div class="footer">
-                <p>{barbershop_name}</p>
+                <p>{escape(barbershop_name)}</p>
             </div>
         </div>
     </div>
@@ -533,18 +481,18 @@ class NotificationService:
             <h1>❌ Cita Cancelada</h1>
         </div>
         <div class="content">
-            <p>Hola <strong>{client_name}</strong>,</p>
+            <p>Hola <strong>{escape(client_name)}</strong>,</p>
 
             <p>Tu cita del <strong>{formatted_time}</strong> ha sido cancelada.</p>
 
-            <p><strong>Motivo:</strong> {reason}</p>
+            <p><strong>Motivo:</strong> {escape(reason)}</p>
 
             <p>Si deseas reagendar, contáctanos o reserva una nueva cita en nuestra app.</p>
 
             <p>¡Esperamos verte pronto!</p>
 
             <div class="footer">
-                <p>{barbershop_name}</p>
+                <p>{escape(barbershop_name)}</p>
             </div>
         </div>
     </div>
@@ -578,16 +526,16 @@ class NotificationService:
             <h1>✅ ¡Gracias por tu visita!</h1>
         </div>
         <div class="content">
-            <p>Hola <strong>{client_name}</strong>,</p>
+            <p>Hola <strong>{escape(client_name)}</strong>,</p>
 
-            <p>Esperamos que hayas disfrutado tu servicio con <strong>{barber_name}</strong>.</p>
+            <p>Esperamos que hayas disfrutado tu servicio con <strong>{escape(barber_name)}</strong>.</p>
 
             <p>Tu opinión es muy importante para nosotros. Si tienes un momento, nos encantaría que nos dejaras una reseña.</p>
 
             <p>¡Esperamos verte pronto para tu próxima cita!</p>
 
             <div class="footer">
-                <p>Gracias por confiar en {barbershop_name}</p>
+                <p>Gracias por confiar en {escape(barbershop_name)}</p>
             </div>
         </div>
     </div>
@@ -634,8 +582,9 @@ Hola {client_name},
     ) -> str:
         """Get SMS message template for reminder."""
 
+        formatted_date = scheduled_time.strftime("%d/%m/%Y")
         formatted_time = scheduled_time.strftime("%I:%M %p")
 
         return f"""
-⏰ Recordatorio: Tu cita en {barbershop_name} es MAÑANA a las {formatted_time}. ¡Te esperamos!
+⏰ Recordatorio: Tu cita en {barbershop_name} es el {formatted_date} a las {formatted_time}. ¡Te esperamos!
 """

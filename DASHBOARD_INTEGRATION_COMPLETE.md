@@ -125,7 +125,7 @@ const greeting = await fetch('/api/v1/onboarding/greeting');
 ```
 1. Usuario abre http://localhost:3000
 2. Ve pantalla de login
-3. Ingresa credenciales (admin@test.com / admin123)
+3. Ingresa credenciales (<YOUR_SUPER_ADMIN_EMAIL> / <YOUR_SUPER_ADMIN_PASSWORD>)
 4. Sistema detecta: onboarding_completed = false
 5. ⚠️ REDIRECCIÓN AUTOMÁTICA → http://localhost:3000/onboarding.html
 6. Usuario completa 10 pasos de onboarding
@@ -231,7 +231,7 @@ Buscar sección **"onboarding"** - debe mostrar 14 endpoints:
 
 ### **Paso 5: Validar Dashboard Personalizado**
 1. Abrir: http://localhost:3000
-2. Login: admin@test.com / admin123
+2. Login: <YOUR_SUPER_ADMIN_EMAIL> / <YOUR_SUPER_ADMIN_PASSWORD>
 3. ✅ Verificar logo personalizado en header
 4. ✅ Verificar colores personalizados en todo el dashboard
 5. ✅ Verificar saludo contextual en modo servicio

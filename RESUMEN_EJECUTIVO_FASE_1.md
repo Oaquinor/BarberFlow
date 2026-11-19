@@ -332,7 +332,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### **PASO 4: Probar Login con Branding** 🎨
 ```
 1. Abrir: http://localhost:3000
-2. Login: admin@test.com / admin123
+2. Login: <YOUR_SUPER_ADMIN_EMAIL> / <YOUR_SUPER_ADMIN_PASSWORD>
 3. Verificar:
    - Logo personalizado
    - Colores personalizados

@@ -41,7 +41,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_barber_availabilities_slot_start", table_name="barber_availabilities")
-    op.drop_index("ix_barber_availabilities_barber_id", table_name="barber_availabilities")
-    op.drop_index("ix_barber_availabilities_barbershop_id", table_name="barber_availabilities")
     op.drop_table("barber_availabilities")

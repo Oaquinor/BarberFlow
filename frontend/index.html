@@ -10,6 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="KingFlow Barber">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <link rel="stylesheet" href="/css/account-security.css">
     <title>KingFlow Barber - Sistema Operativo para Barberías</title>
     <style>
         :root {
@@ -107,6 +108,20 @@
         .action-text { font-weight: 600; color: #333; }
         .date-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 12px; }
         .date-header h3 { color: #333; font-size: 1.5em; }
+        .calendar-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .calendar-controls input, .calendar-controls select { min-height:40px; }
+        .calendar-viewport { overflow-x:auto; }
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(125px,1fr)); gap:6px; min-width:930px; }
+        .calendar-weekday { padding:8px; text-align:center; font-weight:700; color:#52525b; }
+        .calendar-day { min-height:132px; padding:8px; border:1px solid #e4e4e7; border-radius:10px; background:#fff; overflow:hidden; }
+        .calendar-day.outside-month { background:#f4f4f5; color:#a1a1aa; }
+        .calendar-day.today { border-color:var(--brand-primary); box-shadow:inset 0 0 0 1px var(--brand-primary); }
+        .calendar-day-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .calendar-day-select { border:0; background:transparent; color:inherit; font:inherit; font-weight:800; cursor:pointer; padding:3px; }
+        .calendar-day-count { font-size:.75em; color:#71717a; }
+        .calendar-entry { display:block; width:100%; padding:5px 6px; margin-top:4px; border-left:3px solid #eab308; border-radius:5px; background:#fefce8; font-size:.78em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .calendar-entry.completed { border-color:#22c55e; background:#f0fdf4; }
+        .calendar-entry.in-progress { border-color:var(--brand-primary); background:#eef2ff; }
         .btn-icon { background: #f8f9fa; border: 2px solid #e0e0e0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 18px; }
         .appointments-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .summary-item { background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); padding: 20px; border-radius: 12px; text-align: center; color: white; }
@@ -150,6 +165,11 @@
         .insights-card { background: #f8f9fa; padding: 30px; border-radius: 15px; }
         .insights-card h3 { color: #333; margin-bottom: 25px; }
         .insights-list { display: flex; flex-direction: column; gap: 15px; }
+        .demand-forecast-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+        .demand-forecast-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 14px; }
+        .demand-forecast-day { border: 1px solid #e4e4e7; border-radius: 12px; padding: 12px; min-width: 0; }
+        .demand-forecast-day h4 { text-transform: capitalize; margin-bottom: 6px; }
+        .demand-forecast-day p { color: #52525b; margin: 4px 0; }
         .insight-item { display: flex; gap: 20px; padding: 20px; background: white; border-radius: 12px; border-left: 4px solid #e0e0e0; }
         .insight-item.positive { border-left-color: #22c55e; }
         .insight-item.warning { border-left-color: #ffc107; }
@@ -293,10 +313,13 @@
             </div>
             <div class="header-actions">
                 <button id="installAppBtn" class="btn-install" type="button">📲 Instalar App</button>
+                <button id="notificationInboxButton" class="btn-secondary" type="button" aria-expanded="false" hidden>🔔 <span id="notificationUnreadCount">0</span></button>
                 <div class="user-info" id="userInfo" style="display: none;">
                     <span id="userName">Carlos Martínez (Barbero)</span>
+                    <button id="changePasswordBtn" type="button" class="btn-secondary" aria-haspopup="dialog">🔒 Contraseña</button>
                     <button onclick="logout()" class="btn-secondary">Cerrar Sesión</button>
                 </div>
+                <p id="passwordChangeNotice" role="status" aria-live="polite" hidden></p>
             </div>
         </header>
 
@@ -320,6 +343,8 @@
                     <button type="submit" class="btn-primary btn-large">Entrar al Sistema</button>
                 </form>
                 <div class="auth-footer">
+                    <p>¿Aún no tienes barbería? <a href="/signup.html">Crear una cuenta</a></p>
+                    <p><a href="/reset-password.html">¿Olvidaste tu contraseña?</a></p>
                     <p>¿Problemas para acceder? <button type="button" id="toggleLoginSupportBtn">Contacta soporte</button></p>
                     <div id="loginSupportPanel" class="support-inline" style="display:none;">
                         <label for="loginSupportName" style="font-weight:600; color:#333;">Nombre</label>
@@ -347,6 +372,15 @@
 
         <!-- Dashboard Section -->
         <div id="dashboardSection" style="display: none;">
+            <section class="card" id="inAppNotificationInbox" aria-label="Bandeja de notificaciones" hidden>
+                <div class="services-header">
+                    <h2 style="margin:0;font-size:1.3em;">Notificaciones</h2>
+                    <div><button id="refreshNotificationInbox" class="btn-secondary" type="button">Actualizar</button>
+                        <button id="closeNotificationInbox" class="btn-secondary" type="button">Cerrar</button></div>
+                </div>
+                <ul id="notificationInboxItems" style="list-style:none;display:grid;gap:10px;"></ul>
+                <p id="notificationInboxResult" role="status" aria-live="polite"></p>
+            </section>
             <!-- Navigation Tabs -->
             <nav class="tabs">
                 <button class="tab active" onclick="showTab('serviceMode')">🔥 Modo Servicio</button>
@@ -354,6 +388,8 @@
                 <button class="tab" onclick="showTab('performance')">📊 Rendimiento</button>
                 <button class="tab" onclick="showTab('achievements')">🎮 Logros</button>
                 <button class="tab" onclick="showTab('services')">🛠️ Servicios</button>
+                <button class="tab" onclick="showTab('cashRegister')">💵 Caja</button>
+                <button class="tab owner-only" id="ownerManagementTabButton" onclick="showTab('ownerManagement')" hidden>👥 Equipo y clientes</button>
             </nav>
 
             <!-- SERVICE MODE TAB -->
@@ -406,6 +442,7 @@
                         </div>
                     </div>
 
+                <section id="barberAvailabilityTools" hidden>
                 <div style="background:#f8f9fa; border:1px solid #e0e0e0; border-radius:12px; padding:14px; margin-top:14px;">
                     <h4 style="margin-bottom:10px; color:#333;">🗓️ Configurar turnos del día</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
@@ -426,12 +463,24 @@
                     </div>
                 </div>
 
+                <div style="background:#fffaf0; border:1px solid #f0d9a8; border-radius:12px; padding:14px; margin-top:10px;">
+                    <h4 style="margin-bottom:6px; color:#333;">Registrar una ausencia</h4>
+                    <p>Bloquea el rango en las reservas nuevas. Si ya tienes citas, debes reprogramarlas o cancelarlas primero.</p>
+                    <form id="barberAbsenceForm" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
+                        <label>Fecha<input type="date" id="absenceDate" required></label>
+                        <label>Desde<input type="time" id="absenceStart" value="09:00" required></label>
+                        <label>Hasta<input type="time" id="absenceEnd" value="18:00" required></label>
+                        <label>Motivo (opcional)<input type="text" id="absenceReason" maxlength="255"></label>
+                        <button class="btn-secondary" type="submit">Bloquear horario</button>
+                    </form>
+                    <p id="barberAbsenceResult" role="status" aria-live="polite"></p>
+                    <ul id="barberAbsenceList" aria-label="Ausencias futuras"></ul>
+                </div>
+                </section>
+
                     <div class="action-buttons">
                         <button class="btn-success btn-large" onclick="finishService()">
                             ✅ Finalizar Servicio
-                        </button>
-                        <button class="btn-secondary" onclick="pauseService()">
-                            ⏸️ Pausar
                         </button>
                     </div>
                 </div>
@@ -484,12 +533,33 @@
 
             <!-- APPOINTMENTS TAB -->
             <div id="appointmentsTab" class="tab-content" style="display: none;">
-                <h2>📅 Mis Citas de Hoy</h2>
+                <h2>📅 Agenda de Citas</h2>
+
+                <form id="walkInForm" style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:14px;margin-bottom:18px;">
+                    <h3 style="margin-bottom:10px;">🚶 Registrar cliente presencial</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
+                        <input id="walkInClientName" required minlength="2" maxlength="120" placeholder="Nombre del cliente">
+                        <input id="walkInClientPhone" required minlength="6" maxlength="30" placeholder="Teléfono">
+                        <select id="walkInServiceSelect" required><option value="">Selecciona un servicio</option></select>
+                        <select id="walkInBarberSelect" required disabled hidden><option value="">Selecciona un barbero</option></select>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                        <button class="btn-primary" type="submit">Iniciar servicio presencial</button>
+                        <span id="walkInResult" role="status" aria-live="polite"></span>
+                    </div>
+                </form>
 
                 <div class="date-header">
-                    <button class="btn-icon">◀️</button>
+                    <div class="calendar-controls">
+                        <button id="appointmentsPrevDay" class="btn-icon" type="button" aria-label="Periodo anterior">◀️</button>
+                        <button id="appointmentsToday" class="btn-secondary" type="button">Hoy</button>
+                        <button id="appointmentsNextDay" class="btn-icon" type="button" aria-label="Periodo siguiente">▶️</button>
+                        <input id="appointmentsAnchorDate" type="date" aria-label="Fecha de referencia de agenda">
+                        <select id="appointmentsView" aria-label="Vista de agenda">
+                            <option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option>
+                        </select>
+                    </div>
                     <h3 id="appointmentsDateHeader">Cargando fecha...</h3>
-                    <button class="btn-icon">▶️</button>
                 </div>
 
                 <div class="appointments-summary">
@@ -512,6 +582,9 @@
                 </div>
 
                 <div class="appointments-list" id="appointmentsList"></div>
+                <div id="appointmentsCalendarViewport" class="calendar-viewport" hidden>
+                    <div id="appointmentsCalendarGrid" class="calendar-grid"></div>
+                </div>
             </div>
 
             <!-- PERFORMANCE TAB -->
@@ -559,6 +632,10 @@
                     <h3>💡 Insights Personalizados</h3>
                     <div class="insights-list" id="insightsList"></div>
                 </div>
+                <section class="card" id="barberCommissionCard" hidden>
+                    <h3>💸 Mis comisiones</h3>
+                    <p id="barberCommissionSummary" role="status">Cargando…</p>
+                </section>
             </div>
 
             <!-- ACHIEVEMENTS TAB -->
@@ -589,9 +666,22 @@
                 <h2>🛠️ Catálogo de Servicios</h2>
 
                 <div class="services-header">
-                    <button class="btn-primary">➕ Nuevo Servicio</button>
-                    <input type="text" placeholder="🔍 Buscar servicio..." class="search-input">
+                    <button id="newServiceBtn" class="btn-primary" type="button">➕ Nuevo Servicio</button>
+                    <input id="serviceSearch" type="search" placeholder="🔍 Buscar servicio..." class="search-input">
                 </div>
+                <form id="serviceForm" hidden style="max-width:640px; padding:16px; margin:12px 0; border:1px solid #ddd; border-radius:10px;">
+                    <h3 id="serviceFormTitle">Nuevo servicio</h3>
+                    <label for="serviceName">Nombre</label><input id="serviceName" required minlength="2" maxlength="100">
+                    <label for="serviceDescription">Descripción</label><textarea id="serviceDescription" maxlength="2000"></textarea>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+                        <div><label for="serviceDuration">Duración (minutos)</label><input id="serviceDuration" type="number" required min="10" max="180" value="30"></div>
+                        <div><label for="servicePrice">Precio</label><input id="servicePrice" type="number" required min="0.01" step="0.01"></div>
+                        <div><label for="serviceCategory">Categoría</label><input id="serviceCategory" required minlength="2" maxlength="50" value="haircut"></div>
+                    </div>
+                    <button class="btn-primary" type="submit">Guardar servicio</button>
+                    <button id="cancelServiceForm" class="btn-secondary" type="button">Cancelar</button>
+                    <p id="serviceFormResult" role="status"></p>
+                </form>
 
                 <div class="services-categories">
                     <button class="category-btn active" type="button">Todos</button>
@@ -599,12 +689,132 @@
 
                 <div class="services-list" id="servicesList"></div>
             </div>
+
+            <div id="ownerManagementTab" class="tab-content" style="display:none;">
+                <h2>👥 Equipo y clientes</h2>
+                <section class="card" aria-labelledby="ownerSubscriptionTitle">
+                    <div class="services-header"><h3 id="ownerSubscriptionTitle">Plan y uso</h3><button id="refreshOwnerSubscription" class="btn-secondary" type="button">Actualizar</button></div>
+                    <div id="ownerSubscriptionSummary" role="status" aria-live="polite">Cargando suscripción…</div>
+                </section>
+                <section class="card" aria-labelledby="businessSettingsTitle">
+                    <h3 id="businessSettingsTitle">Configuración del negocio y página pública</h3>
+                    <p>Actualiza el horario, la zona local y los colores que ven los clientes. Cambiar la zona cambia la hora local mostrada para las citas existentes.</p>
+                    <form id="businessSettingsForm" class="grid">
+                        <div class="field"><label for="businessSettingsName">Nombre del negocio</label><input id="businessSettingsName" required minlength="2" maxlength="200"></div>
+                        <div class="field"><label for="businessSettingsOpening">Apertura</label><input id="businessSettingsOpening" type="time" required></div>
+                        <div class="field"><label for="businessSettingsClosing">Cierre</label><input id="businessSettingsClosing" type="time" required></div>
+                        <div class="field"><label for="businessSettingsTimezone">Zona horaria IANA</label><input id="businessSettingsTimezone" required minlength="3" maxlength="50" placeholder="America/Santo_Domingo"></div>
+                        <div class="field"><label for="businessSettingsPrimary">Color principal</label><input id="businessSettingsPrimary" type="color" required></div>
+                        <div class="field"><label for="businessSettingsSecondary">Color secundario</label><input id="businessSettingsSecondary" type="color" required></div>
+                        <div class="field"><button class="btn-primary" type="submit">Guardar configuración</button></div>
+                    </form>
+                    <p id="businessSettingsResult" role="status" aria-live="polite"></p>
+                </section>
+                <section class="demand-forecast-card" aria-labelledby="demandForecastTitle">
+                    <div class="services-header">
+                        <div><h3 id="demandForecastTitle">Pronóstico de demanda</h3>
+                            <p>Promedio por día y hora de los servicios completados durante las últimas 12 semanas, combinado con reservas próximas.</p></div>
+                        <button id="refreshDemandForecast" class="btn-secondary" type="button">Actualizar pronóstico</button>
+                    </div>
+                    <p id="demandForecastSummary" role="status" aria-live="polite">Cargando datos históricos…</p>
+                    <ul id="demandForecastInsights" aria-label="Hallazgos del pronóstico"></ul>
+                    <div id="demandForecastDays" class="demand-forecast-days"></div>
+                </section>
+                <section class="card">
+                    <h3>Agregar barbero</h3>
+                    <form id="createBarberForm" class="grid">
+                        <div class="field"><label for="newBarberFirstName">Nombre</label><input id="newBarberFirstName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="newBarberLastName">Apellido</label><input id="newBarberLastName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="newBarberEmail">Correo de acceso</label><input id="newBarberEmail" type="email" required maxlength="255"></div>
+                        <div class="field"><label for="newBarberPhone">Teléfono</label><input id="newBarberPhone" maxlength="20"></div>
+                        <div class="field"><label for="newBarberPassword">Contraseña inicial (12+ caracteres, una mayúscula y un número)</label><input id="newBarberPassword" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></div>
+                        <div class="field"><button class="btn-primary" type="submit">Crear acceso de barbero</button></div>
+                    </form>
+                    <p id="createBarberResult" role="status" aria-live="polite"></p>
+                </section>
+                <section class="card">
+                    <div class="services-header"><h3>Barberos</h3><button id="refreshOwnerManagement" class="btn-secondary" type="button">Actualizar</button></div>
+                    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Comisión (%)</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="ownerBarbersBody"></tbody></table></div>
+                </section>
+                <section class="card">
+                    <div class="services-header"><h3>Comisiones del equipo</h3><button id="refreshOwnerCommissions" class="btn-secondary" type="button">Actualizar</button></div>
+                    <p id="ownerCommissionTotals" role="status"></p>
+                    <div class="table-wrap"><table><thead><tr><th>Barbero</th><th>Fecha</th><th>Importe</th><th>Tasa</th><th>Estado</th><th>Liquidación</th></tr></thead><tbody id="ownerCommissionsBody"></tbody></table></div>
+                    <p id="ownerCommissionsResult" role="status"></p>
+                </section>
+                <section class="card">
+                    <h3>Clientes registrados</h3>
+                    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Citas</th><th>Completadas</th><th>Última visita</th><th>Total pagado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerClientsBody"></tbody></table></div>
+                    <form id="ownerClientEditForm" class="grid" hidden style="margin-top:16px;">
+                        <input id="ownerClientEditId" type="hidden">
+                        <div class="field"><label for="ownerClientFirstName">Nombre</label><input id="ownerClientFirstName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerClientLastName">Apellido</label><input id="ownerClientLastName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerClientPhone">Teléfono</label><input id="ownerClientPhone" maxlength="20"></div>
+                        <div class="field"><button class="btn-primary" type="submit">Guardar cliente</button><button id="cancelOwnerClientEdit" class="btn-secondary" type="button">Cancelar</button></div>
+                    </form>
+                    <p id="ownerClientsResult" role="status"></p>
+                </section>
+            </div>
+
+            <div id="cashRegisterTab" class="tab-content" style="display: none;">
+                <h2>💵 Caja y cierre diario</h2>
+                <p id="cashRegisterDate">Cargando...</p>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value" id="cashTotalToday">—</div><div class="stat-label">Cobros del día</div></div>
+                    <div class="stat-card"><div class="stat-value" id="cashExpectedToday">—</div><div class="stat-label">Efectivo esperado</div></div>
+                    <div class="stat-card"><div class="stat-value" id="cashPaymentCount">—</div><div class="stat-label">Pagos registrados</div></div>
+                </div>
+                <div id="cashMethods" style="margin:16px 0;"></div>
+                <form id="cashCloseForm" style="max-width:520px;">
+                    <label for="cashDeclared">Efectivo contado</label>
+                    <input id="cashDeclared" type="number" min="0" step="0.01" required style="padding:10px; margin:8px 0; width:100%;">
+                    <label for="cashCloseNotes">Notas del cierre (opcional)</label>
+                    <textarea id="cashCloseNotes" maxlength="1000" style="padding:10px; margin:8px 0; width:100%;"></textarea>
+                    <button class="btn-primary" type="submit">Cerrar caja del día</button>
+                </form>
+                <p id="cashCloseResult" role="status" aria-live="polite"></p>
+                <section class="card owner-only" id="ownerFinancialReport" hidden style="margin-top:28px;">
+                    <h3>Reporte financiero</h3>
+                    <p>Resumen de cobros realmente registrados, por fecha comercial, método y barbero.</p>
+                    <form id="financialReportForm" class="toolbar" style="align-items:flex-end;">
+                        <label for="financialReportStart">Desde <input id="financialReportStart" type="date" required></label>
+                        <label for="financialReportEnd">Hasta <input id="financialReportEnd" type="date" required></label>
+                        <button class="btn-primary" type="submit">Consultar reporte</button>
+                    </form>
+                    <p id="financialReportResult" role="status" aria-live="polite"></p>
+                    <div id="financialReportSummary" class="stats-grid"></div>
+                    <div id="financialReportBreakdowns" class="table-wrap"></div>
+                </section>
+            </div>
         </div>
 
         <!-- Notifications Container -->
         <div id="notifications"></div>
     </div>
 
+    <dialog id="passwordChangeDialog" class="password-dialog" aria-labelledby="passwordChangeTitle">
+        <h2 id="passwordChangeTitle">Cambiar contraseña</h2>
+        <p>El cambio cerrará tus sesiones activas en todos los dispositivos.</p>
+        <form id="passwordChangeForm">
+            <label for="passwordCurrent">Contraseña actual</label>
+            <input id="passwordCurrent" type="password" autocomplete="current-password" required maxlength="72">
+            <label for="passwordNew">Nueva contraseña</label>
+            <input id="passwordNew" type="password" autocomplete="new-password" required minlength="8" maxlength="72" aria-describedby="passwordChangeHint">
+            <small id="passwordChangeHint">Usa al menos 8 caracteres, una mayúscula y un número.</small>
+            <label for="passwordConfirm">Confirmar contraseña nueva</label>
+            <input id="passwordConfirm" type="password" autocomplete="new-password" required minlength="8" maxlength="72">
+            <p id="passwordChangeResult" role="status" aria-live="polite"></p>
+            <div class="password-dialog-actions">
+                <button id="closePasswordChange" type="button" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Actualizar contraseña</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/account-security.js"></script>
+    <script src="js/security.js"></script>
     <script src="js/main.js?v=2024-01-01"></script>
     <script src="js/pwa.js"></script>
 </body>
