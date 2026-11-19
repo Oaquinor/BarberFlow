@@ -63,13 +63,13 @@ def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     )
     assert duplicate.status_code == 409
 
-    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now + timedelta(minutes=5))
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now + timedelta(minutes=6))
     paid = client.post(
         f"/api/v1/barber/appointments/{appointment.id}/payment",
         headers=headers,
         json={"method": "cash", "tip_cents": 1000},
     )
-    assert paid.status_code == 201
+    assert paid.status_code == 201, paid.text
     assert paid.json()["total_cents"] == 23000
     test_db.refresh(appointment)
     assert appointment.status == "completed"
