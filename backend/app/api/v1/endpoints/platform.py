@@ -515,8 +515,8 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
         created_at=now,
         updated_at=now,
         is_deleted=False,
-    ).prefix_with("IGNORE")
-    db.execute(statement)
+    )
+    db.execute(statement.on_duplicate_key_update(key_hash=statement.inserted.key_hash))
     return db.query(LoginAttempt).filter(
         LoginAttempt.key_hash == key_hash,
         LoginAttempt.is_deleted == False,
