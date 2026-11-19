@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import case, update
+from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -455,6 +456,24 @@ def _login_buckets(email: str, ip_address: str) -> list[tuple[str, int]]:
     ]
 
 
+def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> LoginAttempt:
+    """Atomically ensure and lock a MySQL throttle row, including on first use."""
+    statement = mysql_insert(LoginAttempt).values(
+        key_hash=key_hash,
+        failed_count=0,
+        window_started_at=now,
+        last_attempt_at=now,
+        created_at=now,
+        updated_at=now,
+        is_deleted=False,
+    )
+    db.execute(statement.on_duplicate_key_update(key_hash=statement.inserted.key_hash))
+    return db.query(LoginAttempt).filter(
+        LoginAttempt.key_hash == key_hash,
+        LoginAttempt.is_deleted == False,
+    ).with_for_update().one()
+
+
 def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
     for key_hash, _ in buckets:
         attempt = db.query(LoginAttempt).filter(
@@ -467,26 +486,7 @@ def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: date
 
 def _record_login_failure(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
     for key_hash, limit in buckets:
-        attempt = db.query(LoginAttempt).filter(
-            LoginAttempt.key_hash == key_hash,
-            LoginAttempt.is_deleted == False,
-        ).with_for_update().first()
-        if not attempt:
-            try:
-                with db.begin_nested():
-                    attempt = LoginAttempt(
-                        key_hash=key_hash,
-                        failed_count=0,
-                        window_started_at=now,
-                        last_attempt_at=now,
-                    )
-                    db.add(attempt)
-                    db.flush()
-            except IntegrityError:
-                attempt = db.query(LoginAttempt).filter(
-                    LoginAttempt.key_hash == key_hash,
-                    LoginAttempt.is_deleted == False,
-                ).with_for_update().first()
+        attempt = _lock_or_create_login_attempt(db, key_hash, now)
         if now - attempt.window_started_at >= LOGIN_FAILURE_WINDOW:
             attempt.failed_count = 0
             attempt.window_started_at = now
@@ -515,24 +515,7 @@ def _consume_support_message_quota(db: Session, ip_address: str, now: datetime) 
     """Apply a database-backed per-IP support message quota without storing the IP."""
     prune_expired_auth_records(db, now)
     key_hash = _login_bucket_hash("support-ip", ip_address)
-    attempt = db.query(LoginAttempt).filter(
-        LoginAttempt.key_hash == key_hash,
-        LoginAttempt.is_deleted == False,
-    ).with_for_update().first()
-    if not attempt:
-        try:
-            with db.begin_nested():
-                attempt = LoginAttempt(
-                    key_hash=key_hash, failed_count=0,
-                    window_started_at=now, last_attempt_at=now,
-                )
-                db.add(attempt)
-                db.flush()
-        except IntegrityError:
-            attempt = db.query(LoginAttempt).filter(
-                LoginAttempt.key_hash == key_hash,
-                LoginAttempt.is_deleted == False,
-            ).with_for_update().first()
+    attempt = _lock_or_create_login_attempt(db, key_hash, now)
     if now - attempt.window_started_at >= SUPPORT_MESSAGE_WINDOW:
         attempt.failed_count = 0
         attempt.window_started_at = now
