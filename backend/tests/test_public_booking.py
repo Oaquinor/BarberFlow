@@ -205,6 +205,23 @@ def test_public_booking_tracking_and_cancel_are_connected(
     test_db.refresh(replacement_slot)
     assert replacement_slot.is_booked is False
     assert cancelled.json()["status"] == "cancelled"
+
+    public_client.is_active = False
+    test_db.commit()
+    inactive_booking_payload = {
+        **payload,
+        "scheduled_time": replacement_slot.slot_start.replace(tzinfo=timezone.utc).isoformat(),
+    }
+    inactive_booking = client.post(
+        f"/api/v1/public/{shop.slug}/appointments", json=inactive_booking_payload,
+    )
+    assert inactive_booking.status_code == 409
+    assert test_db.query(Appointment).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.scheduled_time == replacement_slot.slot_start,
+        Appointment.is_deleted == False,
+    ).count() == 0
+
     barber_events = client.get("/api/v1/notifications", headers=barber_headers).json()["items"]
     assert {item["event_type"] for item in barber_events} >= {
         "appointment_booked", "appointment_rescheduled", "appointment_cancelled",

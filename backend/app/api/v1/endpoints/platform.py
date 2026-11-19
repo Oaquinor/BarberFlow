@@ -1210,6 +1210,8 @@ def public_create_appointment(
         )
         .first()
     )
+    if client and not client.is_active:
+        raise HTTPException(status_code=409, detail="El cliente está desactivado en esta barbería")
 
     if not client:
         if subscription.max_clients is not None:
