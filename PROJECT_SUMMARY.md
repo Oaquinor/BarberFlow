@@ -26,22 +26,36 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 - Analítica de rendimiento y referencia estadística de demanda de siete días para owners.
 - Reporte financiero por rango de hasta 366 días con desglose por fecha comercial, método y barbero, basado en pagos efectivamente registrados.
 
-## Verificación local
+## Verificación
 
-Verificaciones disponibles en este workspace (distinguiendo ejecuciones anteriores de la repetición actual):
+La ejecución autoritativa más reciente de GitHub Actions corresponde al commit `39736c2763610b81ac528cc63f5c2afd5ec190a7` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
 
-- Backend, ejecución completa previamente registrada: `python -m pytest backend/tests -q` — **73 passed** en MySQL 8.4 desechable; 2 advertencias de dependencias de prueba. Incluyó recuperación no enumerativa y limitada, tokens vencidos/de un solo uso, contraseñas robustas, retención acotada de buckets y revocación inmediata de access y refresh tokens.
-- Backend, repetición actual: **28 passed, 47 skipped**. Los tests de integración omitieron ejecución porque `TEST_DATABASE_URL` no está configurada y no hay servidor MySQL local disponible; el listener local de 3306 pertenece a PostgreSQL. Esta repetición no valida ahora los flujos de integración MySQL.
-- Frontend, ejecución actual: `npm test` desde `frontend/` — **19 passed**. Incluye reserva pública por duración de servicio y reprogramación por duración de la cita, además de cambio de contraseña, carga PWA y otras conexiones del portal.
-- WhatsApp, ejecución actual: `npm test` desde `whatsapp-service/` — **6 passed**.
-- Se añadió `.github/workflows/ci.yml` para ejecutar migraciones y las tres suites en GitHub Actions con MySQL 8.4. GitHub reporta **0 ejecuciones** en el repositorio y el workflow aún no se ha ejecutado desde esta rama local.
-- Python compileall, `node --check` y `git diff --check` pasaron.
-- La aplicación también inicializó en modo producción con secreto válido, MySQL y una lista CORS HTTPS; la prueba rechazó valores vacíos, wildcard y HTTP.
-- Alembic 001→022 se aplicó desde una base MySQL 8.4 vacía; se hizo downgrade y re-upgrade de 021 y quedó en head. Las migraciones 020–021 añaden recuperación de contraseña y revocación de access tokens por versión; la 022 indexa la depuración de buckets caducados.
-- La pantalla de registro se inspeccionó en Chrome con emulación iPhone SE a 375 × 667 px; el formulario se presenta en una columna. Se corrigió el listener PWA que cancelaba la instalación nativa en páginas sin botón personalizado. Auditoría y tablas de afiliados ahora exponen etiquetas por celda en el diseño móvil.
-- No se pudo validar Docker Compose en runtime porque Docker no está instalado en el equipo.
-- No se enviaron mensajes reales: dependen de credenciales SMTP y una sesión WhatsApp autorizada.
-- La pantalla y API de recuperación se probaron con envío SMTP simulado; hace falta configurar SMTP para validar entrega real. Producción ahora requiere `FRONTEND_BASE_URL` HTTPS para construir los enlaces de recuperación.
+- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→022; `python -m pytest backend/tests -q` — **75 passed**, 157 warnings.
+- Frontend: `npm test` — **19 passed**.
+- WhatsApp: `npm test` — **6 passed**.
+- La repetición local anterior del backend fue **28 passed, 47 skipped** porque no había una base MySQL de prueba configurada; no sustituye la ejecución MySQL de CI indicada arriba.
+- Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
+- No se validó Docker Compose en runtime en el equipo local porque Docker no está instalado.
+- No se verificó entrega real de SMTP/WhatsApp porque requiere credenciales SMTP y una sesión WhatsApp autorizada.
+- La pantalla y API de recuperación se probaron con SMTP simulado; producción requiere `FRONTEND_BASE_URL` HTTPS para construir los enlaces.
+
+### Matriz de módulos y evidencia
+
+| Módulo | Estado en código | Evidencia y límite de validación |
+|---|---|---|
+| Autenticación, recuperación y sesiones | Implementado | Suite backend en MySQL 8.4; sin auditoría externa ni prueba de penetración. |
+| Aislamiento multitenant y permisos por rol | Implementado | Suite backend en MySQL 8.4; no equivale a una certificación de seguridad. |
+| Registro SaaS, planes y configuración de plataforma | Parcial | APIs y controles probados; suscripciones y comisiones se registran tras cobro externo, sin pasarela conectada. |
+| Reserva pública, disponibilidad, seguimiento y cambios | Implementado | Suite backend MySQL y pruebas frontend; la concurrencia está cubierta en CI MySQL. |
+| Agenda, ausencias, servicios y clientes | Implementado | Suite backend MySQL y pruebas frontend de conexión con API. |
+| Atención, cobros, caja y comisiones | Implementado | Suite backend MySQL; transiciones y reportes se basan en pagos persistidos. |
+| Administración general, soporte y auditoría | Implementado | Suite backend MySQL y pruebas frontend; pagos de suscripción anotados tras cobro externo. |
+| Notificaciones internas y cola durable | Implementado | Persistencia/reintentos MySQL probados; entrega efectiva depende de proveedores configurados. |
+| SMTP y WhatsApp | Parcial | Pruebas de API y servicio pasan; no hubo entrega real con credenciales de producción. |
+| Rendimiento, logros y pronóstico | Implementado | Datos y endpoints incluidos en suite backend MySQL; pronóstico estadístico simple, sin modelo entrenado. |
+| PWA | Implementado | Suite frontend verifica service worker, caché y enlaces privados; sin matriz completa de dispositivos/navegadores. |
+| Inteligencia artificial | Parcial | El pronóstico es descriptivo y no usa modelo generativo o entrenado. |
+| Despliegue y operación de producción | Pendiente de validación | No se desplegó ni se validaron Compose/proveedores en producción; no se publicó ningún cambio a producción. |
 
 Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombre termine en `_test`, establece `TEST_DATABASE_URL=mysql+pymysql://...` y ejecuta `python -m pytest backend/tests -q`. La fixture rechaza URLs que no sean MySQL o que no terminen en `_test`.
 
@@ -70,4 +84,4 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 - Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
 - Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-El trabajo está en la rama `codex/kingflow-completion`. Los cambios locales aún no están comprometidos ni publicados.
+El trabajo está en la rama `codex/kingflow-completion`, sincronizada con GitHub en el commit indicado. `main` permanece intacta.
