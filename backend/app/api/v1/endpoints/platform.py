@@ -14,11 +14,11 @@ import os
 import re
 import secrets
 import smtplib
-import time
 import unicodedata
 from typing import Optional
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from time import sleep as sleep_seconds
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import case, or_, update
@@ -526,22 +526,21 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
 def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
     # Insert and lock both rows as one ordered MySQL operation. Separate
     # first-use inserts can deadlock when many identical logins race to create
-    # the email and IP buckets at the same time.
+    # the email and IP buckets at the same time. Commit each single-row ensure
+    # independently, then lock the existing pair in a stable order.
     ordered = sorted(buckets)
-    statement = mysql_insert(LoginAttempt).values([
-        {
-            "key_hash": key_hash,
-            "failed_count": 0,
-            "window_started_at": now,
-            "last_attempt_at": now,
-            "created_at": now,
-            "updated_at": now,
-            "is_deleted": False,
-        }
-        for key_hash, _ in ordered
-    ]).prefix_with("IGNORE")
     def lock_buckets():
-        db.execute(statement)
+        for key_hash, _ in ordered:
+            db.execute(mysql_insert(LoginAttempt).values(
+                key_hash=key_hash,
+                failed_count=0,
+                window_started_at=now,
+                last_attempt_at=now,
+                created_at=now,
+                updated_at=now,
+                is_deleted=False,
+            ).prefix_with("IGNORE"))
+            db.commit()
         return db.query(LoginAttempt).filter(
             LoginAttempt.key_hash.in_([key_hash for key_hash, _ in ordered]),
             LoginAttempt.is_deleted == False,
@@ -565,7 +564,7 @@ def _retry_login_deadlock(db: Session, operation):
             if error_code not in {1205, 1213} or retry == 3:
                 raise
             db.rollback()
-            time.sleep(0.01 * (retry + 1))
+            sleep_seconds(0.01 * (retry + 1))
     raise RuntimeError("No se pudo adquirir el bloqueo de autenticación")
 
 
