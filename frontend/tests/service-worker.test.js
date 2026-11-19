@@ -354,6 +354,42 @@ test("does not persist navigations whose query carries a tracking token", async 
   assert.deepEqual(worker.writes, []);
 });
 
+test("leaves authenticated requests to the network without caching them", () => {
+  const worker = createWorker();
+  let intercepted = false;
+  worker.listeners.get("fetch")({
+    request: {
+      method: "GET",
+      url: "https://kingflow.test/admin.html",
+      mode: "navigate",
+      headers: { has: (name) => name.toLowerCase() === "authorization" },
+    },
+    respondWith() { intercepted = true; },
+  });
+  assert.equal(intercepted, false);
+  assert.deepEqual(worker.writes, []);
+});
+
+test("does not persist recovery links containing one-time secrets", async () => {
+  for (const queryKey of ["token", "code"]) {
+    const worker = createWorker(async () => ({ status: 200 }));
+    let responsePromise;
+    worker.listeners.get("fetch")({
+      request: {
+        method: "GET",
+        url: `https://kingflow.test/reset-password.html?${queryKey}=one-time-secret`,
+        mode: "navigate",
+        headers: { has: () => false },
+      },
+      respondWith(promise) { responsePromise = promise; },
+    });
+
+    const response = await responsePromise;
+    assert.equal(response.status, 200);
+    assert.deepEqual(worker.writes, []);
+  }
+});
+
 test("leaves API requests to the browser network without caching them", () => {
   const worker = createWorker();
   let intercepted = false;
