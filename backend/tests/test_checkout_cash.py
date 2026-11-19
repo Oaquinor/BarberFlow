@@ -105,6 +105,59 @@ def test_service_requires_payment_and_cash_close_reconciles(client: TestClient, 
     assert "cash.closed" in audit_actions
 
 
+def test_owner_close_blocks_barber_checkout_for_the_same_business_day(
+    client: TestClient, test_db: Session,
+):
+    shop = Barbershop(
+        name="Caja General", slug="owner-close-cash-test", email="owner-close@example.com",
+        phone="8095551010", address_line1="Calle 20", city="Santo Domingo",
+        state="DN", postal_code="10110", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP",
+    )
+    test_db.add(shop)
+    test_db.flush()
+    owner = User(
+        email="owner-close-owner@example.com", password_hash="unused", first_name="Dueño",
+        last_name="Caja", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
+    )
+    barber = User(
+        email="owner-close-barber@example.com", password_hash="unused", first_name="Barbero",
+        last_name="Caja", role="barber", is_active=True, barbershop_id=shop.id,
+    )
+    customer = User(
+        email="owner-close-client@example.com", password_hash="unused", first_name="Cliente",
+        last_name="Caja", role="client", is_active=True, barbershop_id=shop.id,
+    )
+    test_db.add_all([owner, barber, customer])
+    test_db.flush()
+    now = utc_now_naive()
+    appointment = Appointment(
+        barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
+        scheduled_time=now, estimated_duration=30, service_type="Corte",
+        service_price=18000, status="in_progress", actual_start_time=now - timedelta(minutes=10),
+    )
+    test_db.add(appointment)
+    test_db.commit()
+
+    owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id), 'role': barber.role})}"}
+    summary = client.get("/api/v1/barber/cash/today", headers=owner_headers)
+    assert summary.status_code == 200
+    closed = client.post("/api/v1/barber/cash/close", headers=owner_headers, json={
+        "business_date": summary.json()["business_date"], "declared_cash_cents": 0,
+    })
+    assert closed.status_code == 201
+
+    checkout = client.post(
+        f"/api/v1/barber/appointments/{appointment.id}/payment",
+        headers=barber_headers, json={"method": "card", "tip_cents": 0},
+    )
+    assert checkout.status_code == 409
+    assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 0
+    test_db.refresh(appointment)
+    assert appointment.status == "in_progress"
+
+
 def test_future_appointment_cannot_be_marked_no_show(client: TestClient, test_db: Session):
     shop = Barbershop(
         name="No Show Test", slug="no-show-test", email="noshow-shop@example.com",

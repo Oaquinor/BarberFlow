@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
-from sqlalchemy import case, update
+from sqlalchemy import case, or_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -182,6 +182,26 @@ def _utc_aware(value: datetime) -> datetime:
 def _business_date_for_appointment(appointment: Appointment, shop: Barbershop):
     """Return the appointment's calendar date in its barbershop's timezone."""
     return _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).date()
+
+
+def _cash_register_closed_for_user(
+    db: Session, user: User, barbershop_id: int, business_date: datetime,
+) -> bool:
+    query = db.query(CashRegisterClose.id).join(
+        User, User.id == CashRegisterClose.closed_by_user_id,
+    ).filter(
+        CashRegisterClose.barbershop_id == barbershop_id,
+        CashRegisterClose.business_date == business_date,
+        CashRegisterClose.is_deleted == False,
+    )
+    if user.role == "barber":
+        query = query.filter(or_(
+            CashRegisterClose.closed_by_user_id == user.id,
+            (User.role == "barbershop_owner") & (User.barbershop_id == barbershop_id),
+        ))
+    else:
+        query = query.filter(CashRegisterClose.closed_by_user_id == user.id)
+    return query.first() is not None
 
 
 def _service_progress_percent(appointment: Appointment, now_utc: datetime) -> int:
@@ -2204,13 +2224,9 @@ def owner_pay_barber_commission(
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
     if data.payment_method == "cash":
         business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
-        closed_today = db.query(CashRegisterClose.id).filter(
-            CashRegisterClose.barbershop_id == shop.id,
-            CashRegisterClose.closed_by_user_id == owner.id,
-            CashRegisterClose.business_date == datetime.combine(business_date, time.min),
-            CashRegisterClose.is_deleted == False,
-        ).first()
-        if closed_today:
+        if _cash_register_closed_for_user(
+            db, owner, shop.id, datetime.combine(business_date, time.min),
+        ):
             raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se puede registrar un pago en efectivo")
     commission = db.query(BarberCommission).filter(
         BarberCommission.id == commission_id,
@@ -2595,12 +2611,7 @@ def barber_record_appointment_payment(
         raise HTTPException(status_code=409, detail="Configura la moneda de la barbería antes de cobrar")
     business_day = _utc_aware(now).astimezone(_get_timezone(shop)).date()
     close_key = datetime.combine(business_day, time.min)
-    if db.query(CashRegisterClose.id).filter(
-        CashRegisterClose.barbershop_id == shop.id,
-        CashRegisterClose.closed_by_user_id == user.id,
-        CashRegisterClose.business_date == close_key,
-        CashRegisterClose.is_deleted == False,
-    ).first():
+    if _cash_register_closed_for_user(db, user, shop.id, close_key):
         raise HTTPException(status_code=409, detail="La caja de hoy ya fue cerrada; no se pueden registrar más cobros")
     amount_cents = int(appointment.service_price or 0)
     if amount_cents <= 0:
