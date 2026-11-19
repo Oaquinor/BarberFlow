@@ -65,6 +65,15 @@ def _get_barbershop(db: Session, tenant_id: int) -> Barbershop:
     return shop
 
 
+def _lock_barbershop(db: Session, tenant_id: int) -> Barbershop:
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == tenant_id, Barbershop.is_deleted == False
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    return shop
+
+
 @router.post("/complete", response_model=BarbershopProfile)
 def complete_onboarding(
     data: OnboardingComplete,
@@ -74,8 +83,38 @@ def complete_onboarding(
 ):
     _require_owner(current_user)
     tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous = {
+        "name": shop.name,
+        "primary_color": shop.primary_color,
+        "secondary_color": shop.secondary_color,
+        "style": shop.style,
+        "primary_goal": shop.primary_goal,
+        "team_size": shop.team_size,
+        "avg_service_duration": shop.avg_service_duration,
+        "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
+        "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
+        "personality": shop.personality,
+    }
     try:
-        shop = OnboardingService.complete_onboarding(db, tenant_id, data)
+        shop = OnboardingService.complete_onboarding(db, tenant_id, data, commit=False)
+        record_audit(
+            db, current_user, "onboarding.completed", "barbershop", shop.id, shop.id,
+            {"previous": previous, "updated": {
+                "name": data.barbershop_name,
+                "primary_color": data.primary_color,
+                "secondary_color": data.secondary_color,
+                "style": data.style,
+                "primary_goal": data.primary_goal,
+                "team_size": data.team_size,
+                "avg_service_duration": data.avg_service_duration,
+                "opening_time": data.opening_time,
+                "closing_time": data.closing_time,
+                "personality": data.personality,
+            }},
+        )
+        db.commit()
+        db.refresh(shop)
         return BarbershopProfile.model_validate(shop)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -152,7 +191,7 @@ async def upload_logo(
     ):
         raise HTTPException(status_code=400, detail="El contenido no coincide con el tipo de imagen")
 
-    shop = _get_barbershop(db, tenant_id)
+    shop = _lock_barbershop(db, tenant_id)
     directory = UPLOAD_ROOT / str(tenant_id)
     filename = f"{uuid4().hex}{extension}"
     destination = directory / filename
@@ -204,10 +243,19 @@ def update_brand_colors(
 ):
     _require_owner(current_user)
     tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous = {"primary_color": shop.primary_color, "secondary_color": shop.secondary_color}
     try:
         shop = OnboardingService.update_brand_colors(
-            db, tenant_id, data.primary_color, data.secondary_color
+            db, tenant_id, data.primary_color, data.secondary_color, commit=False
         )
+        updated = {"primary_color": shop.primary_color, "secondary_color": shop.secondary_color}
+        if previous != updated:
+            record_audit(
+                db, current_user, "business.brand_colors_updated", "barbershop", shop.id,
+                shop.id, {"previous": previous, "updated": updated},
+            )
+        db.commit()
         return {"success": True, "primary_color": shop.primary_color,
                 "secondary_color": shop.secondary_color, "message": "Colores actualizados"}
     except ValueError as exc:
@@ -257,9 +305,16 @@ def update_business_settings(
     return BarbershopProfile.model_validate(shop)
 
 
-def _save_step(db: Session, tenant_id: int, field: str, value) -> dict:
-    shop = _get_barbershop(db, tenant_id)
+def _save_step(db: Session, current_user, tenant_id: int, field: str, value) -> dict:
+    shop = _lock_barbershop(db, tenant_id)
+    previous = getattr(shop, field)
     setattr(shop, field, value)
+    if previous != value:
+        record_audit(
+            db, current_user, f"onboarding.{field}_updated", "barbershop", shop.id,
+            shop.id, {"previous": previous.isoformat() if hasattr(previous, "isoformat") else previous,
+                      "updated": value.isoformat() if hasattr(value, "isoformat") else value},
+        )
     db.commit()
     return {"success": True, "message": "Paso guardado"}
 
@@ -272,7 +327,7 @@ def _step_context(current_user, db, barbershop_id):
 @router.post("/step/1")
 def onboarding_step_1(data: OnboardingStep1, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "name", data.barbershop_name)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "name", data.barbershop_name)
 
 
 @router.post("/step/3")
@@ -286,32 +341,36 @@ def onboarding_step_3(data: OnboardingStep3, current_user: CurrentUser,
 @router.post("/step/4")
 def onboarding_step_4(data: OnboardingStep4, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "style", data.style)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "style", data.style)
 
 
 @router.post("/step/5")
 def onboarding_step_5(data: OnboardingStep5, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "primary_goal", data.primary_goal)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "primary_goal", data.primary_goal)
 
 
 @router.post("/step/6")
 def onboarding_step_6(data: OnboardingStep6, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "team_size", data.team_size)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "team_size", data.team_size)
 
 
 @router.post("/step/7")
 def onboarding_step_7(data: OnboardingStep7, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "avg_service_duration", data.avg_service_duration)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "avg_service_duration", data.avg_service_duration)
 
 
 @router.post("/step/8")
 def onboarding_step_8(data: OnboardingStep8, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
     tenant_id = _step_context(current_user, db, barbershop_id)
-    shop = _get_barbershop(db, tenant_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous_hours = {
+        "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
+        "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
+    }
     try:
         shop.opening_time = time.fromisoformat(data.opening_time)
         shop.closing_time = time.fromisoformat(data.closing_time)
@@ -319,6 +378,12 @@ def onboarding_step_8(data: OnboardingStep8, current_user: CurrentUser,
         raise HTTPException(status_code=422, detail="Formato de horario inválido") from exc
     if shop.opening_time >= shop.closing_time:
         raise HTTPException(status_code=422, detail="La hora de apertura debe preceder al cierre")
+    record_audit(
+        db, current_user, "onboarding.business_hours_updated", "barbershop", shop.id,
+        shop.id, {"previous": previous_hours,
+                  "updated": {"opening_time": shop.opening_time.isoformat(),
+                              "closing_time": shop.closing_time.isoformat()}},
+    )
     db.commit()
     return {"success": True, "message": "Paso guardado"}
 
@@ -326,4 +391,4 @@ def onboarding_step_8(data: OnboardingStep8, current_user: CurrentUser,
 @router.post("/step/9")
 def onboarding_step_9(data: OnboardingStep9, current_user: CurrentUser,
                       db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
-    return _save_step(db, _step_context(current_user, db, barbershop_id), "personality", data.personality)
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "personality", data.personality)

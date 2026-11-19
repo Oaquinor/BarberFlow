@@ -47,7 +47,8 @@ class OnboardingService:
     def complete_onboarding(
         db: Session,
         barbershop_id: int,
-        data: OnboardingComplete
+        data: OnboardingComplete,
+        commit: bool = True,
     ) -> Barbershop:
         """Complete onboarding process and update barbershop profile."""
 
@@ -73,8 +74,11 @@ class OnboardingService:
         barbershop.opening_time = time(int(opening_parts[0]), int(opening_parts[1]))
         barbershop.closing_time = time(int(closing_parts[0]), int(closing_parts[1]))
 
-        db.commit()
-        db.refresh(barbershop)
+        if commit:
+            db.commit()
+            db.refresh(barbershop)
+        else:
+            db.flush()
 
         return barbershop
 
@@ -266,7 +270,8 @@ class OnboardingService:
         db: Session,
         barbershop_id: int,
         primary_color: str,
-        secondary_color: str
+        secondary_color: str,
+        commit: bool = True,
     ) -> Barbershop:
         """Update barbershop brand colors."""
 
@@ -277,7 +282,10 @@ class OnboardingService:
 
         barbershop.primary_color = primary_color
         barbershop.secondary_color = secondary_color
-        db.commit()
-        db.refresh(barbershop)
+        if commit:
+            db.commit()
+            db.refresh(barbershop)
+        else:
+            db.flush()
 
         return barbershop

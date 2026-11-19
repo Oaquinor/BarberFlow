@@ -179,6 +179,43 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
         "/api/v1/onboarding/business-settings", headers=owner_headers, json=invalid_timezone,
     ).status_code == 422
 
+    colors = {"primary_color": "#112233", "secondary_color": "#445566"}
+    color_response = client.put("/api/v1/onboarding/brand-colors", headers=owner_headers, json=colors)
+    assert color_response.status_code == 200
+    color_audit = test_db.query(AuditLog).filter_by(
+        barbershop_id=shop.id, action="business.brand_colors_updated", entity_id=shop.id,
+    ).one()
+    assert color_audit.actor_user_id == owner.id
+    assert color_audit.details == {
+        "previous": {"primary_color": "#AABBCC", "secondary_color": "#DDEEFF"},
+        "updated": colors,
+    }
+
+    step = client.post(
+        "/api/v1/onboarding/step/1", headers=owner_headers,
+        json={"barbershop_name": "Nombre del onboarding"},
+    )
+    assert step.status_code == 200
+    step_audit = test_db.query(AuditLog).filter_by(
+        barbershop_id=shop.id, action="onboarding.name_updated", entity_id=shop.id,
+    ).one()
+    assert step_audit.details == {"previous": updated["name"], "updated": "Nombre del onboarding"}
+
+    complete_data = {
+        "barbershop_name": "Onboarding Completo", "primary_color": "#223344",
+        "secondary_color": "#556677", "style": "modern", "primary_goal": "organization",
+        "team_size": 3, "avg_service_duration": 30, "opening_time": "09:00",
+        "closing_time": "18:00", "personality": "professional", "logo_uploaded": False,
+    }
+    completed = client.post("/api/v1/onboarding/complete", headers=owner_headers, json=complete_data)
+    assert completed.status_code == 200
+    completion_audit = test_db.query(AuditLog).filter_by(
+        barbershop_id=shop.id, action="onboarding.completed", entity_id=shop.id,
+    ).one()
+    assert completion_audit.actor_user_id == owner.id
+    assert completion_audit.details["previous"]["name"] == "Nombre del onboarding"
+    assert completion_audit.details["updated"]["name"] == complete_data["barbershop_name"]
+
 
 def test_owner_can_edit_and_deactivate_client_without_losing_history(client: TestClient, test_db: Session):
     shop = Barbershop(
