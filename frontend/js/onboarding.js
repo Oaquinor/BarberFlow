@@ -6,7 +6,7 @@
 const APP_CONFIG = window.KINGFLOW_CONFIG || {};
 const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/, '');
 const API_BASE = `${API_ROOT}/api/v1`;
-const accessToken = localStorage.getItem('token');
+const accessToken = sessionStorage.getItem('token');
 let currentStep = 1;
 let logoUploadPending = false;
 let onboardingData = {

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v11`;
+const CACHE_NAME = `${CACHE_PREFIX}v12`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -12,7 +12,7 @@ const ASSETS_TO_CACHE = [
   '/manifest.webmanifest',
   '/css/styles.css',
   '/css/account-security.css',
-  '/js/main.js',
+  '/js/main.js?v=20261119-session-tokens',
   '/js/security.js',
   '/js/config.js',
   '/js/auth.js',

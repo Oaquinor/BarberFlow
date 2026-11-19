@@ -1762,7 +1762,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     }
 });
 
-accessToken = localStorage.getItem('token');
+accessToken = sessionStorage.getItem('token');
 setupLoginSupportPanel();
 
 if (sessionStorage.getItem('kingflow-password-changed') === '1') {

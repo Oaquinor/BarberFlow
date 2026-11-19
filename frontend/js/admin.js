@@ -7,7 +7,7 @@
 const APP_CONFIG = window.KINGFLOW_CONFIG || {};
 const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/, '');
 
-let accessToken = localStorage.getItem('token');
+let accessToken = sessionStorage.getItem('token');
 let currentTenants = [];
 let supportTicketsOffset = 0;
 const SUPPORT_TICKETS_PAGE_SIZE = 50;
