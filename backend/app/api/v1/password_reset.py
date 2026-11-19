@@ -40,9 +40,9 @@ def _deliver_reset_email(recipient: str, first_name: str, reset_url: str) -> Non
     )
 
 
-def _email_hash(email: str, client_ip: str) -> str:
+def _email_hash(email: str) -> str:
     secret = get_settings().SECRET_KEY
-    return sha256(f"password-reset:{email}:{client_ip}:{secret}".encode("utf-8")).hexdigest()
+    return sha256(f"password-reset:{email}:{secret}".encode("utf-8")).hexdigest()
 
 
 def _ip_hash(client_ip: str) -> str:
@@ -78,7 +78,7 @@ def _consume_bucket(db: Session, key_hash: str, limit: int, now) -> None:
 
 
 def _consume_request_quota(db: Session, email: str, client_ip: str, now) -> None:
-    _consume_bucket(db, _email_hash(email, client_ip), RESET_RATE_LIMIT, now)
+    _consume_bucket(db, _email_hash(email), RESET_RATE_LIMIT, now)
     _consume_bucket(db, _ip_hash(client_ip), RESET_IP_RATE_LIMIT, now)
 
 

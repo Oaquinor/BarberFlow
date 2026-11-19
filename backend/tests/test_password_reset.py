@@ -147,6 +147,22 @@ def test_password_reset_requests_are_rate_limited_per_email_and_ip(client: TestC
     assert client.post("/api/v1/auth/password-reset/request", json=payload).status_code == 429
 
 
+def test_password_reset_email_quota_is_shared_across_source_ips(test_db: Session):
+    from fastapi import HTTPException
+    import pytest
+
+    from app.api.v1.password_reset import _consume_request_quota
+
+    now = utc_now_naive()
+    for index in range(5):
+        _consume_request_quota(test_db, "target@example.com", f"192.0.2.{index + 1}", now)
+
+    with pytest.raises(HTTPException) as error:
+        _consume_request_quota(test_db, "target@example.com", "198.51.100.9", now)
+
+    assert error.value.status_code == 429
+
+
 def test_password_reset_requests_have_a_global_per_ip_limit(client: TestClient):
     for index in range(30):
         response = client.post(
