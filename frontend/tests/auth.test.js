@@ -62,3 +62,29 @@ test("auth tokens stay in session storage and refresh after an expired access to
   assert.equal(sessionStorage.getItem("token"), null);
   assert.equal(sessionStorage.getItem("refresh_token"), null);
 });
+
+test("expired refresh credentials emit the session-expired event", async () => {
+  const sessionStorage = createStorage();
+  const events = [];
+  const sandbox = {
+    localStorage: createStorage(),
+    sessionStorage,
+    Headers,
+    Event,
+    fetch: async () => ({ ok: false, status: 401 }),
+    window: {
+      KINGFLOW_CONFIG: {},
+      location: { origin: "https://kingflow.test" },
+      dispatchEvent(event) { events.push(event.type); },
+    },
+  };
+  vm.runInNewContext(authSource, sandbox, { filename: "auth.js" });
+  sandbox.window.KingFlowAuth.setTokens("expired-access", "expired-refresh");
+
+  const response = await sandbox.window.KingFlowAuth.fetch("https://kingflow.test/api/private");
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(events, ["kingflow:auth-expired"]);
+  assert.equal(sessionStorage.getItem("token"), null);
+  assert.equal(sessionStorage.getItem("refresh_token"), null);
+});

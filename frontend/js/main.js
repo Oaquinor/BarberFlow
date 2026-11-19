@@ -1415,8 +1415,7 @@ document.getElementById('notificationInboxItems')?.addEventListener('click', asy
     }
 });
 
-function logout() {
-    KingFlowAuth.logout();
+function resetSessionInterface(message = '') {
     if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
     notificationRefreshTimer = null;
     if (serviceTimerInterval) clearInterval(serviceTimerInterval);
@@ -1425,14 +1424,37 @@ function logout() {
     accessToken = null;
     currentUser = null;
 
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('loginSection').style.display = 'flex';
-    document.getElementById('userInfo').style.display = 'none';
-    document.getElementById('notificationInboxButton').hidden = true;
-    document.getElementById('inAppNotificationInbox').hidden = true;
+    const dashboard = document.getElementById('dashboardSection');
+    if (dashboard) dashboard.style.display = 'none';
+    const login = document.getElementById('loginSection');
+    if (login) login.style.display = 'flex';
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo) userInfo.style.display = 'none';
+    const notificationButton = document.getElementById('notificationInboxButton');
+    if (notificationButton) notificationButton.hidden = true;
+    const inbox = document.getElementById('inAppNotificationInbox');
+    if (inbox) inbox.hidden = true;
 
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
+    const email = document.getElementById('loginEmail');
+    if (email) email.value = '';
+    const password = document.getElementById('loginPassword');
+    if (password) password.value = '';
+    const notice = document.getElementById('sessionExpiredNotice');
+    if (notice) {
+        notice.textContent = message;
+        notice.hidden = !message;
+    }
+    const passwordDialog = document.getElementById('passwordChangeDialog');
+    if (passwordDialog?.open) passwordDialog.close();
+}
+
+window.addEventListener('kingflow:auth-expired', () => {
+    resetSessionInterface('Tu sesión expiró. Inicia sesión nuevamente para continuar.');
+});
+
+function logout() {
+    KingFlowAuth.logout();
+    resetSessionInterface();
 
     alert('👋 Sesión cerrada exitosamente');
 }
