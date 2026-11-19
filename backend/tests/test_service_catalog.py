@@ -98,6 +98,7 @@ def test_superadmin_can_suspend_tenant_and_cannot_disable_self(client: TestClien
     )
     assert disabled.status_code == 200
     assert client.get("/api/v1/services/", headers=owner_headers).status_code == 403
+    assert client.get("/api/v1/owner/barbers", headers=owner_headers).status_code == 403
     self_disable = client.put(
         f"/api/v1/admin/users/{admin.id}/status", headers=admin_headers, json={"is_active": False}
     )
