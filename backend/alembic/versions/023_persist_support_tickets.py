@@ -48,6 +48,6 @@ def downgrade():
             "Refusing to drop support_tickets because it contains support history; "
             "export or archive the tickets before reverting this migration."
         )
-    op.drop_index("ix_support_tickets_status_created", table_name="support_tickets")
-    op.drop_index("ix_support_tickets_barbershop_id", table_name="support_tickets")
+    # Dropping the table also removes its indexes and foreign key together.
+    # MySQL refuses to drop the barbershop_id index while the FK still uses it.
     op.drop_table("support_tickets")
