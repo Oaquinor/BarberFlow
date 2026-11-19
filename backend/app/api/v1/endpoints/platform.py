@@ -3532,9 +3532,25 @@ def admin_update_tenant_status(
     ).with_for_update().first()
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    previous_status = shop.is_active
+    if previous_status != data.is_active:
+        now = utc_now_naive()
+        tenant_user_ids = db.query(User.id).filter(
+            User.barbershop_id == shop.id,
+            User.is_deleted == False,
+        )
+        db.query(User).filter(
+            User.barbershop_id == shop.id,
+            User.is_deleted == False,
+        ).update({User.auth_version: User.auth_version + 1}, synchronize_session=False)
+        db.query(RefreshSession).filter(
+            RefreshSession.user_id.in_(tenant_user_ids),
+            RefreshSession.revoked_at.is_(None),
+            RefreshSession.is_deleted == False,
+        ).update({RefreshSession.revoked_at: now}, synchronize_session=False)
     shop.is_active = data.is_active
     _audit(db, admin, "tenant.status_changed", "barbershop", shop.id, shop.id,
-           {"is_active": data.is_active})
+           {"previous_is_active": previous_status, "is_active": data.is_active})
     db.commit()
     return {"success": True, "barbershop_id": shop.id, "is_active": shop.is_active}
 

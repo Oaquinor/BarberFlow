@@ -3,8 +3,8 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token
-from app.models import AuditLog, Barbershop, Service, User
+from app.core.security import create_access_token, hash_password
+from app.models import AuditLog, Barbershop, RefreshSession, Service, User
 
 
 def test_owner_can_manage_only_own_service_catalog(client: TestClient, test_db: Session):
@@ -81,7 +81,7 @@ def test_superadmin_can_suspend_tenant_and_cannot_disable_self(client: TestClien
     test_db.add(shop)
     test_db.flush()
     owner = User(
-        email="suspend-owner@example.com", password_hash="unused", first_name="Dueño",
+        email="suspend-owner@example.com", password_hash=hash_password("StrongPassword123"), first_name="Dueño",
         last_name="Suspendido", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
     )
     admin = User(
@@ -93,12 +93,36 @@ def test_superadmin_can_suspend_tenant_and_cannot_disable_self(client: TestClien
 
     admin_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': admin.role})}"}
     owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
+    login = client.post("/api/v1/auth/login", json={
+        "email": owner.email, "password": "StrongPassword123",
+    })
+    assert login.status_code == 200
+    session_tokens = login.json()
     disabled = client.put(
         f"/api/v1/admin/tenants/{shop.id}/status", headers=admin_headers, json={"is_active": False}
     )
     assert disabled.status_code == 200
-    assert client.get("/api/v1/services/", headers=owner_headers).status_code == 403
-    assert client.get("/api/v1/owner/barbers", headers=owner_headers).status_code == 403
+    test_db.refresh(owner)
+    assert owner.auth_version == 1
+    assert test_db.query(RefreshSession).filter(
+        RefreshSession.user_id == owner.id,
+        RefreshSession.revoked_at.is_(None),
+    ).count() == 0
+    assert client.get("/api/v1/services/", headers=owner_headers).status_code == 401
+    assert client.post("/api/v1/auth/refresh", json={
+        "refresh_token": session_tokens["refresh_token"],
+    }).status_code == 401
+    assert client.get("/api/v1/owner/barbers", headers=owner_headers).status_code == 401
+    enabled = client.put(
+        f"/api/v1/admin/tenants/{shop.id}/status", headers=admin_headers, json={"is_active": True}
+    )
+    assert enabled.status_code == 200
+    test_db.refresh(owner)
+    assert owner.auth_version == 2
+    assert client.get("/api/v1/services/", headers=owner_headers).status_code == 401
+    assert client.post("/api/v1/auth/login", json={
+        "email": owner.email, "password": "StrongPassword123",
+    }).status_code == 200
     self_disable = client.put(
         f"/api/v1/admin/users/{admin.id}/status", headers=admin_headers, json={"is_active": False}
     )
