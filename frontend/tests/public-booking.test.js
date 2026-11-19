@@ -15,3 +15,14 @@ test('appointment tracking requests replacement slots for each appointment durat
   assert.match(clientScript, /const duration = Number\(item\.estimated_duration\)/);
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);
 });
+
+test('booking prevents duplicate submissions and explains an uncertain network result', () => {
+  assert.match(clientScript, /bookBtn\.disabled = true/);
+  assert.match(clientScript, /finally \{\s*bookBtn\.disabled = false/);
+  assert.match(clientScript, /Revisa tus citas con el código de seguimiento antes de volver a reservar/);
+});
+
+test('reschedule and cancellation recover from network failures without hiding uncertainty', () => {
+  assert.match(clientScript, /No pudimos confirmar el cambio\. Actualiza el seguimiento antes de intentarlo otra vez/);
+  assert.match(clientScript, /No pudimos confirmar la cancelación\. Actualiza el seguimiento antes de intentarlo otra vez/);
+});

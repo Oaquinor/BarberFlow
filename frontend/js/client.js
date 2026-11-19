@@ -170,32 +170,39 @@ async function bookAppointment() {
     notes: notes || null,
   };
 
-  const res = await fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  bookBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    bookResult.textContent = data.detail || 'No fue posible agendar la cita.';
-    return;
-  }
+    const data = await res.json();
+    if (!res.ok) {
+      bookResult.textContent = data.detail || 'No fue posible agendar la cita.';
+      return;
+    }
 
-  bookResult.replaceChildren();
-  bookResult.append(document.createTextNode(`✅ Cita creada (ID ${Number(data.appointment_id)}). `));
-  const link = document.createElement('a');
-  const trackingUrl = new URL(data.tracking_link, window.location.origin);
-  if (!['http:', 'https:'].includes(trackingUrl.protocol)) {
-    bookResult.textContent = '✅ Cita creada. No fue posible abrir el enlace de seguimiento.';
-    return;
+    bookResult.replaceChildren();
+    bookResult.append(document.createTextNode(`✅ Cita creada (ID ${Number(data.appointment_id)}). `));
+    const link = document.createElement('a');
+    const trackingUrl = new URL(data.tracking_link, window.location.origin);
+    if (!['http:', 'https:'].includes(trackingUrl.protocol)) {
+      bookResult.textContent = '✅ Cita creada. No fue posible abrir el enlace de seguimiento.';
+      return;
+    }
+    link.href = trackingUrl.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Abrir seguimiento privado';
+    bookResult.append(link);
+    await loadSlots();
+  } catch (_) {
+    bookResult.textContent = 'No pudimos confirmar la respuesta. Revisa tus citas con el código de seguimiento antes de volver a reservar.';
+  } finally {
+    bookBtn.disabled = false;
   }
-  link.href = trackingUrl.href;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = 'Abrir seguimiento privado';
-  bookResult.append(link);
-  await loadSlots();
 }
 
 function statusLabel(status) {
@@ -268,15 +275,21 @@ trackList.addEventListener('click', async (event) => {
     const availabilityId = Number(card?.querySelector('.reschedule-slot')?.value);
     if (!availabilityId) return;
     rescheduleButton.disabled = true;
-    const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/reschedule`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: rescheduleButton.dataset.token, availability_id: availabilityId }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
+    try {
+      const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/reschedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: rescheduleButton.dataset.token, availability_id: availabilityId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        rescheduleButton.disabled = false;
+        window.alert(data.detail || 'No se pudo reprogramar la cita.');
+        return;
+      }
+    } catch (_) {
       rescheduleButton.disabled = false;
-      window.alert(data.detail || 'No se pudo reprogramar la cita.');
+      window.alert('No pudimos confirmar el cambio. Actualiza el seguimiento antes de intentarlo otra vez.');
       return;
     }
     await loadSlots();
@@ -286,15 +299,21 @@ trackList.addEventListener('click', async (event) => {
   const button = event.target.closest('.cancel-booking');
   if (!button || !window.confirm('¿Quieres cancelar esta cita?')) return;
   button.disabled = true;
-  const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/cancel`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: button.dataset.token }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
+  try {
+    const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: button.dataset.token }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      button.disabled = false;
+      window.alert(data.detail || 'No se pudo cancelar la cita.');
+      return;
+    }
+  } catch (_) {
     button.disabled = false;
-    window.alert(data.detail || 'No se pudo cancelar la cita.');
+    window.alert('No pudimos confirmar la cancelación. Actualiza el seguimiento antes de intentarlo otra vez.');
     return;
   }
   await loadSlots();
