@@ -28,9 +28,9 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución de GitHub Actions que validó estos cambios corresponde al commit `0bcf75ad2a3cfcfff14ecbc91eeccf1706675614` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
+La ejecución de GitHub Actions que validó estos cambios corresponde al commit `e1beddaebb07ca85ca8f0bc0d1b855c6ae8b4349` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
 
-- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→022; `python -m pytest backend/tests -q` — **75 passed**, 1 warning.
+- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→022; `python -m pytest backend/tests -q` — **76 passed**, 1 warning. Incluye el alta manual de clientes con límites del plan y aislamiento multitenant.
 - Dependencias Python: `pip-audit -r backend/requirements.txt` — **no known vulnerabilities**; CI ejecuta esta auditoría en cada push y pull request.
 - Frontend: `npm test` — **21 passed**. Incluye bloqueo de envíos dobles y manejo de respuestas de red inciertas al reservar, reprogramar o cancelar.
 - WhatsApp: `npm test` — **6 passed**.
@@ -87,4 +87,4 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 - Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
 - Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Los cambios de dependencias quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
+Los cambios de estabilización y alta manual de clientes quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
