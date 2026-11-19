@@ -90,6 +90,31 @@ def test_inactive_user_cannot_login(client: TestClient, test_db: Session):
     assert response.status_code == 401
 
 
+def test_shared_security_dependency_rejects_users_from_inactive_barbershops(test_db: Session):
+    from fastapi import HTTPException
+    from fastapi.security import HTTPAuthorizationCredentials
+    import pytest
+
+    from app.core.security.dependencies import get_current_user as get_core_current_user
+
+    shop = _shop(test_db, "suspended-tenant")
+    shop.is_active = False
+    test_db.commit()
+    owner = _user(test_db, "suspended-owner@example.com", "barbershop_owner", shop.id)
+    token = create_access_token({
+        "sub": str(owner.id),
+        "role": owner.role,
+        "auth_version": owner.auth_version,
+    })
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+
+    with pytest.raises(HTTPException) as error:
+        get_core_current_user(credentials, test_db)
+
+    assert error.value.status_code == 403
+    assert error.value.detail == "Barbershop is inactive"
+
+
 def test_password_change_revokes_refresh_sessions_and_requires_new_password(
     client: TestClient, test_db: Session,
 ):

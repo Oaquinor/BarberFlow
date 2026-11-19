@@ -75,6 +75,20 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if user.barbershop_id and user.role != "super_admin":
+        from app.models import Barbershop
+
+        active_shop = db.query(Barbershop.id).filter(
+            Barbershop.id == user.barbershop_id,
+            Barbershop.is_active == True,
+            Barbershop.is_deleted == False,
+        ).first()
+        if not active_shop:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Barbershop is inactive",
+            )
+
     return user
 
 
