@@ -514,8 +514,8 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
         created_at=now,
         updated_at=now,
         is_deleted=False,
-    )
-    db.execute(statement.on_duplicate_key_update(key_hash=statement.inserted.key_hash))
+    ).prefix_with("IGNORE")
+    db.execute(statement)
     return db.query(LoginAttempt).filter(
         LoginAttempt.key_hash == key_hash,
         LoginAttempt.is_deleted == False,
@@ -525,15 +525,20 @@ def _lock_or_create_login_attempt(db: Session, key_hash: str, now: datetime) -> 
 def _check_login_throttle(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
     # Lock or create each bucket before password verification. Without this,
     # parallel requests can all pass the read before any failure is recorded.
-    for key_hash, _ in buckets:
+    for key_hash, _ in sorted(buckets):
         attempt = _lock_or_create_login_attempt(db, key_hash, now)
         if attempt and attempt.locked_until and attempt.locked_until > now:
             raise HTTPException(status_code=429, detail="Demasiados intentos. Espera 15 minutos y vuelve a intentar.")
 
 
 def _record_login_failure(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
-    for key_hash, limit in buckets:
-        attempt = _lock_or_create_login_attempt(db, key_hash, now)
+    # The check already created and locked these rows. Re-entering through an
+    # upsert here can deadlock concurrent MySQL inserts for the same bucket set.
+    for key_hash, limit in sorted(buckets):
+        attempt = db.query(LoginAttempt).filter(
+            LoginAttempt.key_hash == key_hash,
+            LoginAttempt.is_deleted == False,
+        ).with_for_update().one()
         if now - attempt.window_started_at >= LOGIN_FAILURE_WINDOW:
             attempt.failed_count = 0
             attempt.window_started_at = now
@@ -546,7 +551,7 @@ def _record_login_failure(db: Session, buckets: list[tuple[str, int]], now: date
 
 
 def _clear_login_failures(db: Session, buckets: list[tuple[str, int]], now: datetime) -> None:
-    for key_hash, _ in buckets:
+    for key_hash, _ in sorted(buckets):
         attempt = db.query(LoginAttempt).filter(
             LoginAttempt.key_hash == key_hash,
             LoginAttempt.is_deleted == False,
