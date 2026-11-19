@@ -2,6 +2,8 @@
 
 **NOVENTIA GROUP - Enterprise Development Standards**
 
+> Estas son convenciones generales. Para la arquitectura implementada, consulta `docs/ARCHITECTURE.md`. KingFlow usa frontend JavaScript/PWA, FastAPI, SQLAlchemy síncrono y MySQL 8 mediante PyMySQL. No copies ejemplos que dependan de `AsyncSession`, SQLite o módulos no conectados.
+
 ---
 
 ## 🎯 Philosophy
@@ -160,74 +162,18 @@ notification_manager.py
 
 ## 🏗️ Architecture Layers
 
-### 1. Models (`models/`)
-**Responsibility:** Database entities
+Follow the structure that exists in the repository; do not add layers only to match a sample architecture.
 
-```python
-class Appointment(Base):
-    """Database model for appointments."""
-    __tablename__ = "appointments"
+- `models/`: SQLAlchemy entities and relationships.
+- `schemas/`: Pydantic request and response validation.
+- `api/v1/`: FastAPI routes registered in `app/api/v1/__init__.py`. Enforce authentication, role, and tenant checks on the server.
+- `services/`: use case logic when shared or substantial orchestration warrants it. Several active platform flows currently live in `api/v1/endpoints/platform.py`.
+- `core/database/`: synchronous SQLAlchemy sessions backed only by MySQL 8 through `mysql+pymysql://`.
+- `alembic/`: all schema changes must be versioned migrations.
 
-    id = Column(Integer, primary_key=True)
-    client_id = Column(Integer, ForeignKey("clients.id"))
-    barber_id = Column(Integer, ForeignKey("barbers.id"))
-```
+Do not assume a file is active because it exists. Verify router registration and actual imports. In particular, `api/v1/appointments.py` is not mounted and its async database handlers are incompatible with the configured synchronous session. It is not a template for new endpoints.
 
-### 2. Schemas (`schemas/`)
-**Responsibility:** Input/output validation (DTOs)
-
-```python
-class AppointmentCreate(BaseModel):
-    """Schema for creating appointments."""
-    client_id: int
-    barber_id: int
-    scheduled_time: datetime
-```
-
-### 3. Repositories (`repositories/`)
-**Responsibility:** Data access only
-
-```python
-class AppointmentRepository:
-    """Handles appointment data access."""
-
-    async def create(self, data: AppointmentCreate) -> Appointment:
-        """Create appointment in database."""
-        pass
-
-    async def get_by_id(self, appointment_id: int) -> Appointment:
-        """Retrieve appointment by ID."""
-        pass
-```
-
-### 4. Services (`services/`)
-**Responsibility:** Business logic ONLY
-
-```python
-class AppointmentService:
-    """Handles appointment business logic."""
-
-    async def create_appointment(self, data: AppointmentCreate) -> Appointment:
-        """Create appointment with business validations."""
-        # Business rules
-        # Validations
-        # Orchestration
-        pass
-```
-
-### 5. API (`api/`)
-**Responsibility:** HTTP layer only
-
-```python
-@router.post("/appointments")
-async def create_appointment(
-    data: AppointmentCreate,
-    service: AppointmentService = Depends()
-) -> StandardResponse:
-    """Endpoint to create appointment."""
-    result = await service.create_appointment(data)
-    return StandardResponse(success=True, data=result)
-```
+Active request handlers use synchronous database operations (`Session.query`, `Session.execute`, `commit`, `rollback`). FastAPI endpoints may be declared `async` for async I/O, but synchronous SQLAlchemy calls must not be awaited. Prefer ordinary `def` handlers for database-bound synchronous work where appropriate.
 
 ---
 
