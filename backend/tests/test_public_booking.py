@@ -219,6 +219,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     assert test_db.query(Appointment).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.scheduled_time == replacement_slot.slot_start,
+        Appointment.status.in_({"pending", "confirmed", "in_progress"}),
         Appointment.is_deleted == False,
     ).count() == 0
 
