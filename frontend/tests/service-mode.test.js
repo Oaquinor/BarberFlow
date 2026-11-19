@@ -53,3 +53,27 @@ test('active service timer renders elapsed time and updates estimated progress',
   assert.equal(nodeFor('elapsedTime').textContent, '00:00:00');
   assert.equal(intervals.size, 0);
 });
+
+test('dashboard clears the previous next appointment when there are no upcoming bookings', () => {
+  const renderSource = source.match(/function renderNextAppointment\(next\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(renderSource, 'next appointment renderer must exist');
+  const nodes = new Map();
+  const nodeFor = (id) => {
+    if (!nodes.has(id)) nodes.set(id, { textContent: 'stale appointment' });
+    return nodes.get(id);
+  };
+  const sandbox = {
+    document: { getElementById: nodeFor },
+    setText: (id, value) => { nodeFor(id).textContent = value; },
+    fmtHour: (value) => value,
+  };
+
+  vm.runInNewContext(`${renderSource}\nthis.renderNextAppointment = renderNextAppointment;`, sandbox);
+  sandbox.renderNextAppointment(null);
+
+  assert.equal(nodeFor('nextAppointmentTime').textContent, '--:--');
+  assert.equal(nodeFor('nextAppointmentEta').textContent, 'Sin próxima cita');
+  assert.equal(nodeFor('nextAppointmentClient').textContent, 'Agenda del día');
+  assert.equal(nodeFor('nextAppointmentService').textContent, 'No tienes citas próximas');
+  assert.equal(nodeFor('nextAppointmentDuration').textContent, '⏱️ -- min estimados');
+});

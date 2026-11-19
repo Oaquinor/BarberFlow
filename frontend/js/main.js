@@ -84,6 +84,27 @@ function setTrend(id, delta, suffix, currency = false) {
     el.textContent = `${delta >= 0 ? '↗️' : '↘️'} ${delta >= 0 ? '+' : ''}${delta}${suffix}`;
 }
 
+function renderNextAppointment(next) {
+    if (!next) {
+        setText('nextAppointmentTime', '--:--');
+        setText('nextAppointmentEta', 'Sin próxima cita');
+        setText('nextAppointmentClient', 'Agenda del día');
+        setText('nextAppointmentService', 'No tienes citas próximas');
+        setText('nextAppointmentDuration', '⏱️ -- min estimados');
+        return;
+    }
+
+    setText('nextAppointmentTime', fmtHour(next.scheduled_time));
+    setText('nextAppointmentClient', next.client_name || 'Cliente');
+    setText('nextAppointmentService', next.service_type || 'Servicio');
+    setText('nextAppointmentDuration', `⏱️ ${next.estimated_duration || 0} min estimados`);
+    const etaEl = document.getElementById('nextAppointmentEta');
+    if (etaEl) {
+        const minutesUntil = Math.max(0, Math.round((new Date(next.scheduled_time) - new Date()) / 60000));
+        etaEl.textContent = minutesUntil <= 1 ? 'Ahora' : `En ${minutesUntil} minutos`;
+    }
+}
+
 function renderWeeklyChart(weeklyCounts) {
     const chartBars = document.getElementById('performanceChartBars');
     if (!chartBars) return;
@@ -747,19 +768,7 @@ async function loadBarberDashboardData() {
             setText('activeServiceAlert', '⏳ Sin servicio activo en este momento');
         }
 
-        const next = data.next_appointment;
-        if (next) {
-            setText('nextAppointmentTime', fmtHour(next.scheduled_time));
-            setText('nextAppointmentClient', next.client_name || 'Cliente');
-            setText('nextAppointmentService', next.service_type || 'Servicio');
-            setText('nextAppointmentDuration', `⏱️ ${next.estimated_duration || 0} min estimados`);
-
-            const etaEl = document.getElementById('nextAppointmentEta');
-            if (etaEl) {
-                const mins = Math.max(0, Math.round((new Date(next.scheduled_time) - new Date()) / 60000));
-                etaEl.textContent = mins <= 1 ? 'Ahora' : `En ${mins} minutos`;
-            }
-        }
+        renderNextAppointment(data.next_appointment);
 
         if (selectedAppointmentsView === 'day' && selectedAppointmentsDate === businessDate) {
             renderAppointmentDay(businessDate, data.appointments);
