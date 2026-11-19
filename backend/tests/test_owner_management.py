@@ -25,13 +25,24 @@ def test_owner_can_manage_only_plan_limited_staff(client: TestClient, test_db: S
         postal_code="10103", country="DO", timezone="America/Santo_Domingo", currency="DOP",
         subscription_id=subscription.id,
     )
-    test_db.add(shop)
+    foreign_shop = Barbershop(
+        name="Owner Management Other", slug="owner-management-other-test",
+        email="owner-management-other@example.com", phone="8095553002",
+        address_line1="Calle 21", city="Santo Domingo", state="DN", postal_code="10104",
+        country="DO", timezone="America/Santo_Domingo", currency="DOP",
+    )
+    test_db.add_all([shop, foreign_shop])
     test_db.flush()
     owner = User(
         email="owner-management@example.com", password_hash="unused", first_name="Owner",
         last_name="Test", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
     )
-    test_db.add(owner)
+    foreign_barber = User(
+        email="owner-management-foreign-barber@example.com", password_hash="unused",
+        first_name="Foreign", last_name="Barber", role="barber", is_active=True,
+        barbershop_id=foreign_shop.id,
+    )
+    test_db.add_all([owner, foreign_barber])
     test_db.commit()
 
     headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
@@ -40,13 +51,36 @@ def test_owner_can_manage_only_plan_limited_staff(client: TestClient, test_db: S
         "first_name": "Barber", "last_name": "One", "phone": "8095553001",
     })
     assert created.status_code == 201
+    barber_id = created.json()["id"]
+    updated = client.put(
+        f"/api/v1/owner/barbers/{barber_id}", headers=headers,
+        json={"first_name": "Edited", "last_name": "Barber", "phone": "+1 (809) 555-3003"},
+    )
+    assert updated.status_code == 200
+    assert updated.json() == {"id": barber_id, "full_name": "Edited Barber", "phone": "18095553003"}
+    assert test_db.get(User, barber_id).first_name == "Edited"
+    assert client.put(
+        f"/api/v1/owner/barbers/{foreign_barber.id}", headers=headers,
+        json={"first_name": "Changed", "last_name": "Elsewhere", "phone": None},
+    ).status_code == 404
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber_id)})}"}
+    assert client.put(
+        f"/api/v1/owner/barbers/{barber_id}", headers=barber_headers,
+        json={"first_name": "Changed", "last_name": "By Barber", "phone": None},
+    ).status_code == 403
+    audit = test_db.query(AuditLog).filter_by(
+        action="barber.profile_updated", entity_id=barber_id, barbershop_id=shop.id,
+    ).one()
+    assert audit.actor_user_id == owner.id
+    assert audit.details["updated_fields"] == ["first_name", "last_name", "phone"]
 
     listed = client.get("/api/v1/owner/barbers", headers=headers)
     assert listed.status_code == 200
     assert [row["email"] for row in listed.json()["items"]] == ["owner-created-barber@example.com"]
+    assert listed.json()["items"][0]["first_name"] == "Edited"
 
     deactivated = client.put(
-        f"/api/v1/owner/barbers/{created.json()['id']}/status",
+        f"/api/v1/owner/barbers/{barber_id}/status",
         headers=headers, json={"is_active": False},
     )
     assert deactivated.status_code == 200

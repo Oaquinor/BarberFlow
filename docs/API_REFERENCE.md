@@ -83,6 +83,7 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 |---|---|---|
 | `GET` | `/owner/barbers` | Lista los barberos de la barbería |
 | `POST` | `/owner/barbers` | Crea acceso con contraseña inicial y aplica el límite del plan |
+| `PUT` | `/owner/barbers/{barber_id}` | Actualiza nombre y teléfono de un barbero del tenant, con auditoría |
 | `PUT` | `/owner/barbers/{barber_id}/status` | Activa o desactiva un barbero del mismo tenant |
 | `GET` | `/owner/clients?limit=50&offset=0` | Lista clientes con citas y total efectivamente pagado |
 | `POST` | `/owner/clients` | Registra un cliente manual en el tenant, aplica el límite del plan y audita el alta |

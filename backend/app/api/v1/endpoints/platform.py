@@ -86,6 +86,7 @@ from app.schemas.platform import (
     AdminUserSupportToggleRequest,
     AdminStatusUpdateRequest,
     OwnerCreateBarberRequest,
+    OwnerBarberUpdateRequest,
     OwnerClientCreateRequest,
     OwnerClientUpdateRequest,
     AdminAffiliateCreateRequest,
@@ -1883,6 +1884,7 @@ def owner_list_barbers(
         User.is_deleted == False,
     ).order_by(User.first_name.asc(), User.last_name.asc()).all()
     return {"items": [{"id": barber.id, "email": barber.email,
+                       "first_name": barber.first_name, "last_name": barber.last_name,
                        "full_name": barber.full_name, "phone": barber.phone,
                        "is_active": barber.is_active,
                        "commission_rate_basis_points": barber.commission_rate_basis_points}
@@ -1962,6 +1964,33 @@ def owner_update_barber_status(
            {"is_active": data.is_active})
     db.commit()
     return {"success": True, "barber_id": barber.id, "is_active": barber.is_active}
+
+
+@router.put("/owner/barbers/{barber_id}")
+def owner_update_barber(
+    barber_id: int,
+    data: OwnerBarberUpdateRequest,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    owner = _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el propietario puede gestionar su equipo")
+    barber = db.query(User).filter(
+        User.id == barber_id,
+        User.barbershop_id == owner.barbershop_id,
+        User.role == "barber",
+        User.is_deleted == False,
+    ).with_for_update().first()
+    if not barber:
+        raise HTTPException(status_code=404, detail="Barbero no encontrado")
+    barber.first_name = data.first_name
+    barber.last_name = data.last_name
+    barber.phone = _normalize_phone(data.phone or "") or None
+    _audit(db, owner, "barber.profile_updated", "user", barber.id, owner.barbershop_id,
+           {"updated_fields": ["first_name", "last_name", "phone"]})
+    db.commit()
+    return {"id": barber.id, "full_name": barber.full_name, "phone": barber.phone}
 
 
 @router.put("/owner/barbers/{barber_id}/commission-rate")

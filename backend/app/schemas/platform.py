@@ -316,6 +316,30 @@ class OwnerCreateBarberRequest(BaseModel):
         return value
 
 
+class OwnerBarberUpdateRequest(BaseModel):
+    first_name: str = Field(..., min_length=2, max_length=100)
+    last_name: str = Field(..., min_length=2, max_length=100)
+    phone: Optional[str] = Field(None, max_length=20)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("El nombre debe tener al menos dos caracteres")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None:
+            digits = "".join(character for character in value if character.isdigit())
+            if digits and not 6 <= len(digits) <= 20:
+                raise ValueError("El teléfono debe contener entre 6 y 20 dígitos")
+            return digits or None
+        return None
+
+
 class OwnerClientCreateRequest(BaseModel):
     first_name: str = Field(..., min_length=2, max_length=100)
     last_name: str = Field(..., min_length=2, max_length=100)

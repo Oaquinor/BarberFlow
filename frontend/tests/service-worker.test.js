@@ -295,6 +295,15 @@ test("owner client actions are wired to scoped edit and status endpoints", () =>
   assert.match(script, /su historial de citas y cobros se conserva/);
 });
 
+test("owner can edit a barber profile through the tenant-scoped API", () => {
+  const page = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const script = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");
+  assert.match(page, /id="ownerBarberEditForm"/);
+  assert.match(script, /ownerFetch\(`\/owner\/barbers\/\$\{barberId\}`/);
+  assert.match(script, /barber\.first_name/);
+  assert.match(script, /barber\.last_name/);
+});
+
 test("owner subscription panel reads period status and plan usage from the API", () => {
   const page = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const script = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");

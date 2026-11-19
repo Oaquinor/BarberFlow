@@ -12,6 +12,7 @@ let selectedAppointmentsView = 'day';
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 const ownerClientCache = new Map();
+const ownerBarberCache = new Map();
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -798,8 +799,11 @@ async function loadOwnerManagement() {
                 <td>${escapeHtml(barber.phone || '—')}</td>
                 <td><form class="owner-barber-rate-form" data-id="${Number(barber.id)}"><input aria-label="Tasa de comisión porcentual" type="number" min="0" max="100" step="0.01" value="${(Number(barber.commission_rate_basis_points || 0) / 100).toFixed(2)}" style="width:82px"><button class="btn-secondary" type="submit">Guardar</button></form></td>
                 <td>${barber.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td><button class="btn-secondary owner-barber-status" type="button" data-id="${Number(barber.id)}" data-active="${barber.is_active}">${barber.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
+                <td><button class="btn-secondary owner-barber-edit" type="button" data-id="${Number(barber.id)}">Editar</button>
+                    <button class="btn-secondary owner-barber-status" type="button" data-id="${Number(barber.id)}" data-active="${barber.is_active}">${barber.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
+        ownerBarberCache.clear();
+        (barberData.items || []).forEach(barber => ownerBarberCache.set(Number(barber.id), barber));
         renderOwnerCommissions(commissionData);
         const clients = clientData.items || [];
         ownerClientCache.clear();
@@ -1090,6 +1094,18 @@ async function createOwnerBarber(event) {
 document.getElementById('createBarberForm')?.addEventListener('submit', createOwnerBarber);
 document.getElementById('refreshOwnerManagement')?.addEventListener('click', loadOwnerManagement);
 document.getElementById('ownerBarbersBody')?.addEventListener('click', async event => {
+    const editButton = event.target.closest('.owner-barber-edit');
+    if (editButton && currentUser?.role === 'barbershop_owner') {
+        const barber = ownerBarberCache.get(Number(editButton.dataset.id));
+        if (!barber) return;
+        document.getElementById('ownerBarberEditId').value = String(barber.id);
+        document.getElementById('ownerBarberFirstName').value = barber.first_name || '';
+        document.getElementById('ownerBarberLastName').value = barber.last_name || '';
+        document.getElementById('ownerBarberPhone').value = barber.phone || '';
+        document.getElementById('ownerBarberEditForm').hidden = false;
+        document.getElementById('ownerBarbersResult').textContent = '';
+        return;
+    }
     const button = event.target.closest('.owner-barber-status');
     if (!button) return;
     button.disabled = true;
@@ -1104,6 +1120,37 @@ document.getElementById('ownerBarbersBody')?.addEventListener('click', async eve
         const result = document.getElementById('createBarberResult');
         if (result) result.textContent = error.message;
     }
+});
+document.getElementById('ownerBarberEditForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (currentUser?.role !== 'barbershop_owner') return;
+    const form = document.getElementById('ownerBarberEditForm');
+    const button = form.querySelector('button[type="submit"]');
+    const result = document.getElementById('ownerBarbersResult');
+    button.disabled = true;
+    try {
+        const barberId = Number(document.getElementById('ownerBarberEditId').value);
+        await ownerFetch(`/owner/barbers/${barberId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                first_name: document.getElementById('ownerBarberFirstName').value.trim(),
+                last_name: document.getElementById('ownerBarberLastName').value.trim(),
+                phone: document.getElementById('ownerBarberPhone').value.trim() || null,
+            }),
+        });
+        form.hidden = true;
+        await loadOwnerManagement();
+        result.textContent = 'Ficha del barbero guardada.';
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo guardar la ficha del barbero.';
+    } finally {
+        button.disabled = false;
+    }
+});
+document.getElementById('cancelOwnerBarberEdit')?.addEventListener('click', () => {
+    const form = document.getElementById('ownerBarberEditForm');
+    form.reset();
+    form.hidden = true;
 });
 document.getElementById('ownerBarbersBody')?.addEventListener('submit', async event => {
     const form = event.target.closest('.owner-barber-rate-form');

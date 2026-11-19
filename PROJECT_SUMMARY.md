@@ -17,7 +17,7 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 - Página pública: catálogo, turnos calculados para la duración del servicio y filtrados por citas/ausencias, reserva sin cuenta, seguimiento mediante token, reprogramación y cancelación.
 - Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión.
 - Disponibilidad y ausencias: el barbero genera turnos y registra bloqueos futuros; el backend protege los rangos contra citas existentes y nuevas reservas.
-- Operación de negocio: personal, gestión de clientes (alta manual, edición y estado con historial conservado), servicios, caja diaria, cierre y comisiones.
+- Operación de negocio: equipo (alta, perfil, estado y comisiones), clientes (alta manual, edición y estado con historial conservado), servicios, caja diaria y cierre.
 - Configuración del negocio: owner edita nombre, horarios, zona horaria y marca; los cambios se auditan y se reflejan en el perfil.
 - Superadministración: overview global, tenants, usuarios, suscripciones, parámetros de registro y periodo inicial, pagos externos registrados, afiliados, comisiones y auditoría.
 - El owner puede consultar el estado efectivo del periodo de suscripción y el uso real de límites por barbería.
@@ -50,7 +50,7 @@ La ejecución de GitHub Actions que validó estos cambios corresponde al commit 
 | Aislamiento multitenant y permisos por rol | Implementado | Suite backend en MySQL 8.4; no equivale a una certificación de seguridad. |
 | Registro SaaS, planes y configuración de plataforma | Parcial | APIs y controles probados; suscripciones y comisiones se registran tras cobro externo, sin pasarela conectada. |
 | Reserva pública, disponibilidad, seguimiento y cambios | Implementado | Suite backend MySQL y pruebas frontend; la concurrencia está cubierta en CI MySQL. |
-| Agenda, ausencias, servicios y clientes | Implementado | Suite backend MySQL y pruebas frontend de conexión con API; alta manual sujeta a límite del plan. |
+| Equipo, agenda, ausencias, servicios y clientes | Implementado | Suite backend MySQL y pruebas frontend; perfiles y acciones son tenant-scoped, alta manual sujeta a límite del plan. |
 | Atención, cobros, caja y comisiones | Implementado | Suite backend MySQL; transiciones y reportes se basan en pagos persistidos. |
 | Administración general, soporte y auditoría | Implementado | Suite backend MySQL y pruebas frontend; pagos de suscripción anotados tras cobro externo. |
 | Notificaciones internas y cola durable | Implementado | Persistencia/reintentos MySQL probados; entrega efectiva depende de proveedores configurados. |

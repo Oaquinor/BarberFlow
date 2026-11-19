@@ -735,6 +735,14 @@
                 <section class="card">
                     <div class="services-header"><h3>Barberos</h3><button id="refreshOwnerManagement" class="btn-secondary" type="button">Actualizar</button></div>
                     <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Comisión (%)</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="ownerBarbersBody"></tbody></table></div>
+                    <form id="ownerBarberEditForm" class="grid" hidden style="margin-top:16px;">
+                        <input id="ownerBarberEditId" type="hidden">
+                        <div class="field"><label for="ownerBarberFirstName">Nombre</label><input id="ownerBarberFirstName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerBarberLastName">Apellido</label><input id="ownerBarberLastName" required minlength="2" maxlength="100"></div>
+                        <div class="field"><label for="ownerBarberPhone">Teléfono</label><input id="ownerBarberPhone" type="tel" maxlength="20" autocomplete="tel"></div>
+                        <div class="field"><button class="btn-primary" type="submit">Guardar ficha</button><button id="cancelOwnerBarberEdit" class="btn-secondary" type="button">Cancelar</button></div>
+                    </form>
+                    <p id="ownerBarbersResult" role="status" aria-live="polite"></p>
                 </section>
                 <section class="card">
                     <div class="services-header"><h3>Comisiones del equipo</h3><button id="refreshOwnerCommissions" class="btn-secondary" type="button">Actualizar</button></div>
