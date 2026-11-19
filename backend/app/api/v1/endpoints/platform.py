@@ -811,6 +811,8 @@ def auth_change_password(
         RefreshSession.user_id == user.id,
         RefreshSession.revoked_at.is_(None),
     ).update({RefreshSession.revoked_at: now}, synchronize_session=False)
+    _audit(db, user, "auth.password_changed", "user", user.id, user.barbershop_id,
+           {"method": "authenticated"})
     db.commit()
     return {"success": True, "message": "Contraseña actualizada; inicia sesión de nuevo en tus otros dispositivos"}
 

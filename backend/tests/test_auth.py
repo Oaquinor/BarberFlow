@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password
 from app.main import app
-from app.models import Appointment, Barbershop, User
+from app.models import Appointment, AuditLog, Barbershop, User
 from app.utils.datetime import utc_now_naive
 
 
@@ -137,6 +137,12 @@ def test_password_change_revokes_refresh_sessions_and_requires_new_password(
         },
     )
     assert changed.status_code == 200
+    audit = test_db.query(AuditLog).filter_by(
+        actor_user_id=user.id,
+        action="auth.password_changed",
+        entity_id=user.id,
+    ).one()
+    assert audit.details == {"method": "authenticated"}
     assert test_db.query(RefreshSession).filter(
         RefreshSession.user_id == user.id,
         RefreshSession.revoked_at.is_(None),
