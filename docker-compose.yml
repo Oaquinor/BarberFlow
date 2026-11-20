@@ -44,6 +44,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: kingflow_backend
+    # Local source and upload bind mounts are owned by the developer account.
+    user: "0:0"
     environment:
       - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-kingflow}:${MYSQL_PASSWORD:-kingflow-local}@db:3306/${MYSQL_DATABASE:-kingflow_barber}
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:8000}

@@ -24,6 +24,7 @@ services:
   whatsapp:
     build: ./whatsapp-service
     restart: always
+    user: "node"
     environment:
       WHATSAPP_BIND_HOST: 0.0.0.0
       WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:?Set WHATSAPP_API_TOKEN}
@@ -44,6 +45,7 @@ services:
       dockerfile: backend/Dockerfile
     container_name: kingflow_backend
     restart: always
+    user: "10001:10001"
     environment:
       - DATABASE_URL=${DATABASE_URL:?Set DATABASE_URL to the MySQL service}
       - SECRET_KEY=${SECRET_KEY:?Set a strong SECRET_KEY}
@@ -80,6 +82,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     restart: always
+    user: "10001:10001"
     environment:
       - DATABASE_URL=${DATABASE_URL:?Set DATABASE_URL to the MySQL service}
       - SMTP_HOST=${SMTP_HOST:-}

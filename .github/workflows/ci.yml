@@ -8,6 +8,20 @@ permissions:
   contents: read
 
 jobs:
+  container-images:
+    name: Production container images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API and worker image
+        run: docker build -f backend/Dockerfile -t kingflow-api:ci .
+      - name: Verify API image defaults to an unprivileged user
+        run: test "$(docker image inspect kingflow-api:ci --format '{{.Config.User}}')" = "10001:10001"
+      - name: Build WhatsApp image
+        run: docker build -t kingflow-whatsapp:ci ./whatsapp-service
+      - name: Verify WhatsApp image defaults to an unprivileged user
+        run: test "$(docker image inspect kingflow-whatsapp:ci --format '{{.Config.User}}')" = "node"
+
   backend:
     name: Backend (MySQL 8.4)
     runs-on: ubuntu-latest

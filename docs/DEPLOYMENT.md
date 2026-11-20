@@ -50,6 +50,13 @@ docker compose -f docker-compose.prod.yml exec backend python -m scripts.create_
 
 The backend port is bound to `127.0.0.1:8000`; terminate TLS at a trusted reverse proxy on the same host and configure backups for the MySQL volume and `frontend/uploads`. The Compose stack does not configure a TLS proxy or automated backups by itself.
 
+The production API and notification worker run as UID/GID `10001`, and the WhatsApp service runs as the image's unprivileged `node` user. Before starting Compose, create writable host directories for the API's bind mounts:
+
+```bash
+sudo mkdir -p backend/logs frontend/uploads
+sudo chown -R 10001:10001 backend/logs frontend/uploads
+```
+
 ---
 
 ### Option 2: VPS Deployment (Manual)
