@@ -309,6 +309,24 @@ def list_in_app_notifications(
     }
 
 
+@router.get("/notifications/unread-count")
+def get_in_app_notification_unread_count(
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return only the authenticated user's tenant-scoped unread count."""
+    user = _get_current_user(db, authorization)
+    if not user.barbershop_id:
+        raise HTTPException(status_code=403, detail="El usuario no tiene una barbería asignada")
+    unread_count = db.query(func.count(InAppNotification.id)).filter(
+        InAppNotification.barbershop_id == user.barbershop_id,
+        InAppNotification.recipient_user_id == user.id,
+        InAppNotification.read_at.is_(None),
+        InAppNotification.is_deleted == False,
+    ).scalar() or 0
+    return {"unread_count": int(unread_count)}
+
+
 @router.post("/notifications/{notification_id}/read")
 def mark_in_app_notification_read(
     notification_id: int,

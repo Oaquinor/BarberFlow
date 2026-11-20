@@ -43,7 +43,7 @@ Los límites por IP de login, recuperación de contraseña, solicitudes de sopor
 
 ## Notificaciones y tareas de fondo
 
-Las operaciones relevantes escriben notificaciones internas y entregas email/WhatsApp en una outbox MySQL. El worker procesa entregas con idempotencia, leases y reintentos. La disponibilidad externa depende de la configuración del proveedor. La bandeja del frontend consulta periódicamente; no existe una ruta WebSocket activa. `backend/app/websocket/manager.py` es un prototipo desconectado.
+Las operaciones relevantes escriben notificaciones internas y entregas email/WhatsApp en una outbox MySQL. El worker procesa entregas con idempotencia, leases y reintentos. La disponibilidad externa depende de la configuración del proveedor. La bandeja del frontend consulta periódicamente; cuando está cerrada solo actualiza el contador de no leídas y, cuando está abierta, renueva la lista. No existe una ruta WebSocket activa. `backend/app/websocket/manager.py` es un prototipo desconectado.
 
 ## Analítica
 

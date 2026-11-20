@@ -1417,6 +1417,30 @@ async function loadNotificationInbox() {
     }
 }
 
+async function loadNotificationUnreadCount() {
+    const count = document.getElementById('notificationUnreadCount');
+    if (!count || !currentUser) return;
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/notifications/unread-count`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar el contador');
+        count.textContent = String(Number(data.unread_count) || 0);
+    } catch (error) {
+        const panel = document.getElementById('inAppNotificationInbox');
+        const result = document.getElementById('notificationInboxResult');
+        if (panel && !panel.hidden && result) result.textContent = error.message;
+    }
+}
+
+async function refreshNotificationInbox() {
+    const panel = document.getElementById('inAppNotificationInbox');
+    if (panel && !panel.hidden) {
+        await loadNotificationInbox();
+    } else {
+        await loadNotificationUnreadCount();
+    }
+}
+
 document.getElementById('notificationInboxButton')?.addEventListener('click', async () => {
     const panel = document.getElementById('inAppNotificationInbox');
     const button = document.getElementById('notificationInboxButton');
@@ -1848,9 +1872,11 @@ document.getElementById('loginForm').addEventListener('submit', async function (
         document.getElementById('userName').textContent = currentUser.name;
         const notificationButton = document.getElementById('notificationInboxButton');
         if (notificationButton) notificationButton.hidden = false;
-        await loadNotificationInbox();
-        if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
-        notificationRefreshTimer = setInterval(loadNotificationInbox, 60000);
+        if (notificationButton) {
+            await loadNotificationUnreadCount();
+            if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
+            notificationRefreshTimer = setInterval(refreshNotificationInbox, 60000);
+        }
 
         await loadShareLink();
 

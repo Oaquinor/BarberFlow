@@ -61,6 +61,7 @@ Las rutas de consulta, servicios, disponibilidad y reserva requieren una suscrip
 | Método | Ruta | Función |
 |---|---|---|
 | `GET` | `/notifications?limit=50&unread_only=false` | Lista notificaciones del usuario autenticado y su contador de no leídas |
+| `GET` | `/notifications/unread-count` | Devuelve solo el contador de no leídas para actualizar el indicador sin descargar la bandeja |
 | `POST` | `/notifications/{notification_id}/read` | Marca una notificación propia como leída |
 
 El inbox guarda eventos operativos de cita para el barbero asignado y los propietarios activos de la barbería. La consulta y lectura requieren identidad autenticada y filtran por destinatario y tenant. Las filas se crean junto con la operación de negocio; claves únicas por evento y destinatario evitan duplicados.

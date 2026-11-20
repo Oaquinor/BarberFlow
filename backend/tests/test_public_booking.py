@@ -262,15 +262,25 @@ def test_public_booking_tracking_and_cancel_are_connected(
     owner_inbox = client.get("/api/v1/notifications", headers=owner_headers)
     assert barber_inbox.status_code == owner_inbox.status_code == 200
     assert barber_inbox.json()["unread_count"] == owner_inbox.json()["unread_count"] == 1
+    assert client.get(
+        "/api/v1/notifications/unread-count", headers=barber_headers,
+    ).json() == {"unread_count": 1}
+    assert client.get("/api/v1/notifications/unread-count").status_code == 401
     notification_id = barber_inbox.json()["items"][0]["id"]
     assert barber_inbox.json()["items"][0]["event_type"] == "appointment_booked"
     client_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(public_client.id), 'role': public_client.role})}"}
+    assert client.get(
+        "/api/v1/notifications/unread-count", headers=client_headers,
+    ).json() == {"unread_count": 0}
     private_read = client.post(
         f"/api/v1/notifications/{notification_id}/read", headers=client_headers,
     )
     assert private_read.status_code == 404
     marked = client.post(f"/api/v1/notifications/{notification_id}/read", headers=barber_headers)
     assert marked.status_code == 200
+    assert client.get(
+        "/api/v1/notifications/unread-count", headers=barber_headers,
+    ).json() == {"unread_count": 0}
     assert client.get("/api/v1/notifications?unread_only=true", headers=barber_headers).json()["items"] == []
     tracking_token = parse_qs(urlparse(booking["tracking_link"]).query)["track_token"][0]
     assert urlparse(booking["tracking_link"]).netloc == "localhost:8000"
