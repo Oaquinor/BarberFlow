@@ -25,7 +25,7 @@ Configura `DATABASE_URL` como `mysql+pymysql://usuario:contraseña@host:3306/bas
 
 Los endpoints que acceden a datos usan `sqlalchemy.orm.Session` síncrona. `get_db()` abre la sesión, confirma al finalizar la solicitud, revierte ante excepción y la cierra. Las operaciones que requieren límites transaccionales específicos hacen su propio commit/rollback según el flujo.
 
-Los límites y consultas concurrentes deben respetar las garantías de MySQL. En especial, para insertar o actualizar cuotas/contadores por clave única se usa la sintaxis atómica de MySQL y las filas se bloquean cuando el flujo lo requiere. Las pruebas de integración con SQLite no son equivalentes y no deben usarse para validar estas garantías.
+Los límites y consultas concurrentes deben respetar las garantías de MySQL. En especial, para insertar o actualizar cuotas/contadores por clave única se usa la sintaxis atómica de MySQL y las filas se bloquean cuando el flujo lo requiere. La suite de integración exige una base de pruebas MySQL dedicada; el proyecto no incluye una ruta de pruebas con SQLite.
 
 ## Rutas y flujos
 
