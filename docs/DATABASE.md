@@ -52,8 +52,8 @@ Barbershop subscription plans.
 | max_barbers | INTEGER | Maximum barbers allowed |
 | max_appointments_per_month | INTEGER | Maximum appointments per month |
 | max_clients | INTEGER | Maximum clients |
-| stripe_subscription_id | VARCHAR(255) | Stripe subscription ID |
-| stripe_customer_id | VARCHAR(255) | Stripe customer ID |
+| stripe_subscription_id | VARCHAR(255) | Legacy compatibility column; unused, with no Stripe integration |
+| stripe_customer_id | VARCHAR(255) | Legacy compatibility column; unused, with no Stripe integration |
 | trial_start | TIMESTAMP | Trial period start |
 | trial_end | TIMESTAMP | Trial period end |
 | is_trial | BOOLEAN | Is in trial period |
