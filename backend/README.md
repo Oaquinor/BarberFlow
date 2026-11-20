@@ -20,6 +20,6 @@ CI validates a fresh migration to `head`, rolls the separate disposable migratio
 
 ## Worker
 
-Run `python scripts/notification_worker.py` to process the MySQL notification outbox and due appointment reminders. SMTP and the WhatsApp gateway are optional providers; failed or unconfigured deliveries are recorded in the queue. No Celery or Redis service is used.
+Run `python -m scripts.notification_worker` from the `backend` directory to process the MySQL notification outbox and due appointment reminders. SMTP and the WhatsApp gateway are optional providers; failed or unconfigured deliveries are recorded in the queue. No Celery or Redis service is used.
 
 See [API reference](../docs/API_REFERENCE.md), [database guide](../docs/DATABASE.md), [deployment notes](../docs/DEPLOYMENT.md), and [notification operations](../docs/NOTIFICATIONS_SYSTEM.md).

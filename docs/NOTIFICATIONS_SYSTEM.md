@@ -20,6 +20,6 @@ Configura `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` y `EMAIL_FROM` 
 
 ## Operación
 
-Docker Compose levanta `notification-worker` junto al backend, MySQL y el servicio WhatsApp. Para ejecutar el worker directamente, desde `backend` usa `python scripts/notification_worker.py` con la misma `DATABASE_URL=mysql+pymysql://...` y las variables de proveedor configuradas. La migración `017_notification_delivery_outbox` crea la cola en MySQL.
+Docker Compose levanta `notification-worker` junto al backend, MySQL y el servicio WhatsApp. Para ejecutar el worker directamente, desde `backend` usa `python -m scripts.notification_worker` con la misma `DATABASE_URL=mysql+pymysql://...` y las variables de proveedor configuradas. La migración `017_notification_delivery_outbox` crea la cola en MySQL.
 
 La entrega real depende de credenciales SMTP válidas y de que la sesión autorizada de WhatsApp permanezca conectada. Las pruebas automatizadas verifican persistencia, idempotencia y manejo de la cola, pero no envían mensajes reales.
