@@ -684,11 +684,27 @@ def _flush_tenant_registration(db: Session) -> None:
         raise HTTPException(status_code=409, detail="No se pudo completar el registro con esos datos") from exc
 
 
+def _lock_platform_settings(db: Session) -> PlatformSettings:
+    """Create the singleton defaults if needed, then lock them for signup."""
+    statement = mysql_insert(PlatformSettings).values(
+        id=1,
+        registrations_enabled=True,
+        free_period_days=30,
+        updated_by_user_id=None,
+        created_at=func.now(),
+        updated_at=func.now(),
+        is_deleted=False,
+        deleted_at=None,
+    )
+    db.execute(statement.on_duplicate_key_update(id=statement.inserted.id))
+    return db.query(PlatformSettings).filter(PlatformSettings.id == 1).with_for_update().one()
+
+
 @router.post("/saas/register", response_model=AuthLoginResponse, status_code=201)
 def register_tenant(data: TenantRegistrationRequest, db: Session = Depends(get_db)):
     """Atomically register a barber shop owner, the tenant and a free subscription."""
-    platform_settings = db.get(PlatformSettings, 1)
-    if platform_settings and not platform_settings.registrations_enabled:
+    platform_settings = _lock_platform_settings(db)
+    if not platform_settings.registrations_enabled:
         raise HTTPException(status_code=503, detail="El registro de nuevas barberías está temporalmente cerrado")
     existing_user = db.query(User.id).filter(
         User.email == str(data.owner_email).lower(),
