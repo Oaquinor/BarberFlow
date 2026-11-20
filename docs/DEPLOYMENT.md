@@ -70,7 +70,7 @@ Deploy on Ubuntu 24.04 LTS or another supported Linux release that provides Pyth
 sudo apt update && sudo apt upgrade -y
 
 # Install dependencies
-sudo apt install -y python3.12 python3.12-venv python3-pip nginx certbot curl ca-certificates xz-utils
+sudo apt install -y python3.12 python3.12-venv python3-pip nginx certbot curl ca-certificates xz-utils git
 ```
 
 Install a maintained Node.js 24 LTS release for WhatsApp. Use the current 24.x security patch listed on the [official Node.js downloads page](https://nodejs.org/en/download/) and verify it against the published checksum file. For an x86-64 server:
