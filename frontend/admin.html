@@ -167,7 +167,7 @@
         <div class="card">
             <div class="title">💳 Cobros y suscripción</div>
             <div class="toolbar">
-                <select id="subscriptionTenantSelect">
+                <select id="subscriptionTenantSelect" aria-label="Barbería para consultar la suscripción">
                     <option value="">Selecciona una barbería...</option>
                 </select>
                 <button id="loadSubscriptionBtn">🔍 Cargar</button>
@@ -175,7 +175,7 @@
             <div id="subscriptionPanel" style="display:none;">
                 <div class="toolbar" style="align-items:flex-end;">
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
+                        <label for="subPlan" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
                         <select id="subPlan">
                             <option value="free">Free</option>
                             <option value="basic">Basic</option>
@@ -184,7 +184,7 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de suscripción</label>
+                        <label for="subStatus" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de suscripción</label>
                         <select id="subStatus">
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
@@ -194,11 +194,11 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
+                        <label for="subPeriodEnd" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
                         <input type="date" id="subPeriodEnd" />
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Indicador de auto-renovación</label>
+                        <label for="subAutoRenew" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Indicador de auto-renovación</label>
                         <select id="subAutoRenew">
                             <option value="true">Marcada</option>
                             <option value="false">No</option>
@@ -227,7 +227,7 @@
         <div class="card">
             <div class="title">👥 Usuarios y permisos</div>
             <div class="toolbar">
-                <select id="tenantFilter">
+                <select id="tenantFilter" aria-label="Filtrar usuarios por barbería">
                     <option value="">Todas las barberías</option>
                 </select>
                 <button id="refreshUsersBtn">🔄 Actualizar</button>
@@ -277,7 +277,7 @@
         <div class="card">
             <div class="title">🧾 Auditoría de operaciones</div>
             <div class="toolbar">
-                <select id="auditTenantFilter"><option value="">Todas las barberías</option></select>
+                <select id="auditTenantFilter" aria-label="Filtrar auditoría por barbería"><option value="">Todas las barberías</option></select>
                 <button id="loadAuditBtn" type="button">🔄 Cargar historial</button>
                 <span id="auditResult" role="status" style="color:var(--text-secondary);"></span>
             </div>
@@ -291,10 +291,10 @@
         <div class="card">
             <div class="title">🤝 Programa de afiliados</div>
             <form id="affiliateForm" class="toolbar">
-                <input id="affiliateFirstName" required minlength="2" maxlength="100" placeholder="Nombre">
-                <input id="affiliateLastName" required minlength="2" maxlength="100" placeholder="Apellido">
-                <input id="affiliateEmail" type="email" required placeholder="Correo">
-                <input id="affiliatePhone" maxlength="20" placeholder="Teléfono">
+                <input id="affiliateFirstName" aria-label="Nombre del afiliado" required minlength="2" maxlength="100" placeholder="Nombre">
+                <input id="affiliateLastName" aria-label="Apellido del afiliado" required minlength="2" maxlength="100" placeholder="Apellido">
+                <input id="affiliateEmail" aria-label="Correo del afiliado" type="email" required placeholder="Correo">
+                <input id="affiliatePhone" aria-label="Teléfono del afiliado" maxlength="20" placeholder="Teléfono">
                 <label>Comisión % <input id="affiliateRate" type="number" min="0.01" max="100" step="0.01" value="15" required></label>
                 <button type="submit">Crear afiliado</button>
             </form>
@@ -303,7 +303,7 @@
                 <table><thead><tr><th>Afiliado</th><th>Código</th><th>Estado</th><th>Referidos</th><th>Comisiones por moneda</th><th>Acciones</th></tr></thead><tbody id="affiliatesBody"></tbody></table>
             </div>
             <div class="toolbar" style="margin-top:18px;">
-                <select id="affiliateCommissionSelect"><option value="">Selecciona afiliado para ver comisiones</option></select>
+                <select id="affiliateCommissionSelect" aria-label="Afiliado para consultar comisiones"><option value="">Selecciona afiliado para ver comisiones</option></select>
                 <button id="loadAffiliateCommissionsBtn" type="button">Ver comisiones</button>
             </div>
             <div class="table-wrap">

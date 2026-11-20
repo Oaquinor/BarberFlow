@@ -206,6 +206,11 @@
             background: rgba(102, 126, 234, 0.05);
         }
 
+        .upload-area:focus-visible {
+            outline: 3px solid #667eea;
+            outline-offset: 3px;
+        }
+
         .upload-area.dragover {
             border-color: #667eea;
             background: rgba(102, 126, 234, 0.1);
@@ -471,7 +476,7 @@
             </div>
 
             <div class="form-group">
-                <label>¿Cuál es el nombre de tu barbería? *</label>
+                <label for="barbershopName">¿Cuál es el nombre de tu barbería? *</label>
                 <input type="text" id="barbershopName" placeholder="Ej: El Rey del Corte, Barbería Moderna..." required>
             </div>
 
@@ -490,13 +495,13 @@
                 <p class="step-subtitle">Lo usaremos en todo el sistema</p>
             </div>
 
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('logoFile').click()">
+            <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" onclick="document.getElementById('logoFile').click()">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Arrastra tu logo aquí o haz click para seleccionar</div>
                 <div class="upload-hint">PNG o JPG • Máx 5MB</div>
             </div>
-            <input type="file" id="logoFile" accept="image/png,image/jpeg,image/jpg" style="display: none" onchange="previewLogo(this)">
-            <img id="logoPreview" class="logo-preview hidden" />
+            <input type="file" id="logoFile" aria-label="Logo de la barbería, archivo PNG o JPG" accept="image/png,image/jpeg,image/jpg" style="display: none" onchange="previewLogo(this)">
+            <img id="logoPreview" class="logo-preview hidden" alt="Vista previa del logo de la barbería" />
             <p id="logoUploadStatus" role="status" aria-live="polite"></p>
 
             <div class="tip-box">
@@ -522,12 +527,12 @@
 
             <div class="color-picker-group">
                 <div class="color-picker">
-                    <label>Color Principal</label>
+                    <label for="primaryColor">Color Principal</label>
                     <input type="color" id="primaryColor" value="#667eea" onchange="updateColorPreview()">
                     <div class="color-preview" id="primaryPreview" style="background: #667eea"></div>
                 </div>
                 <div class="color-picker">
-                    <label>Color Secundario</label>
+                    <label for="secondaryColor">Color Secundario</label>
                     <input type="color" id="secondaryColor" value="#764ba2" onchange="updateColorPreview()">
                     <div class="color-preview" id="secondaryPreview" style="background: #764ba2"></div>
                 </div>
@@ -680,7 +685,7 @@
             </div>
 
             <div class="form-group">
-                <label>Número de barberos</label>
+                <label for="teamSize">Número de barberos</label>
                 <select id="teamSize">
                     <option value="1">Solo yo</option>
                     <option value="2">2 barberos</option>
@@ -709,7 +714,7 @@
             </div>
 
             <div class="form-group">
-                <label>Minutos promedio</label>
+                <label for="avgDuration">Minutos promedio</label>
                 <select id="avgDuration">
                     <option value="15">15 minutos</option>
                     <option value="20">20 minutos</option>
@@ -740,11 +745,11 @@
 
             <div class="time-input-group">
                 <div class="form-group">
-                    <label>Hora de apertura</label>
+                    <label for="openingTime">Hora de apertura</label>
                     <input type="time" id="openingTime" value="09:00">
                 </div>
                 <div class="form-group">
-                    <label>Hora de cierre</label>
+                    <label for="closingTime">Hora de cierre</label>
                     <input type="time" id="closingTime" value="19:00">
                 </div>
             </div>

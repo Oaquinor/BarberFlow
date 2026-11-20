@@ -315,6 +315,13 @@ async function uploadLogo(file) {
 // Drag and drop for logo
 const uploadArea = document.getElementById('uploadArea');
 
+uploadArea.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        document.getElementById('logoFile').click();
+    }
+});
+
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');

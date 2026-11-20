@@ -133,15 +133,15 @@
             <section class="card option-panel" id="bookSection" style="display:none;">
                 <h2 class="title">📅 Agendar cita</h2>
                 <div class="field">
-                    <label>Nombre</label>
+                    <label for="clientName">Nombre</label>
                     <input id="clientName" placeholder="Tu nombre" />
                 </div>
                 <div class="field">
-                    <label>Teléfono</label>
+                    <label for="clientPhone">Teléfono</label>
                     <input id="clientPhone" placeholder="8095550000" />
                 </div>
                 <div class="field">
-                    <label>Servicio</label>
+                    <label for="serviceSelect">Servicio</label>
                     <select id="serviceSelect"></select>
                 </div>
                 <div class="field">
@@ -149,12 +149,12 @@
                     <select id="barberSelect"><option value="">Cualquier barbero</option></select>
                 </div>
                 <div class="field">
-                    <label>Turno disponible</label>
+                    <label for="scheduledTime">Turno disponible</label>
                     <select id="scheduledTime"></select>
                 </div>
                 <button id="refreshSlotsBtn" type="button" class="secondary">Actualizar disponibilidad</button>
                 <div class="field">
-                    <label>Notas (opcional)</label>
+                    <label for="clientNotes">Notas (opcional)</label>
                     <textarea id="clientNotes" placeholder="Ej: corte degradado"></textarea>
                 </div>
                 <button id="bookBtn">Confirmar cita</button>
@@ -164,7 +164,7 @@
             <section class="card option-panel" id="trackSection" style="display:none;">
                 <h2 class="title">🔎 Ver estado de cita</h2>
                 <div class="field">
-                    <label>Código de seguimiento</label>
+                    <label for="trackToken">Código de seguimiento</label>
                     <input id="trackToken" autocomplete="off" placeholder="Pega el código recibido al reservar" />
                 </div>
                 <button id="trackBtn">Consultar</button>
@@ -175,21 +175,21 @@
         <section class="card option-panel" id="supportSection" style="display:none;">
             <h2 class="title">🆘 Contactar soporte</h2>
             <div class="field">
-                <label>Tu nombre</label>
+                <label for="supportName">Tu nombre</label>
                 <input id="supportName" placeholder="Juan Pérez" />
             </div>
             <div class="grid">
                 <div class="field">
-                    <label>Email (opcional)</label>
+                    <label for="supportEmail">Email (opcional)</label>
                     <input id="supportEmail" placeholder="juan@email.com" />
                 </div>
                 <div class="field">
-                    <label>Teléfono (opcional)</label>
+                    <label for="supportPhone">Teléfono (opcional)</label>
                     <input id="supportPhone" placeholder="8095550000" />
                 </div>
             </div>
             <div class="field">
-                <label>Mensaje</label>
+                <label for="supportMessage">Mensaje</label>
                 <textarea id="supportMessage" placeholder="Describe tu situación"></textarea>
             </div>
             <button id="supportBtn">Enviar soporte</button>

@@ -352,11 +352,11 @@
                 <form id="loginForm">
                     <p id="sessionExpiredNotice" role="status" aria-live="polite" hidden></p>
                     <div class="form-group">
-                        <label>📧 Email</label>
+                        <label for="loginEmail">📧 Email</label>
                         <input type="email" id="loginEmail" required placeholder="juanperez@gmail.com" value="">
                     </div>
                     <div class="form-group">
-                        <label>🔒 Contraseña</label>
+                        <label for="loginPassword">🔒 Contraseña</label>
                         <input type="password" id="loginPassword" required placeholder="Contraseña" value="">
                     </div>
                     <button type="submit" class="btn-primary btn-large">Entrar al Sistema</button>
@@ -465,10 +465,10 @@
                 <div style="background:#f8f9fa; border:1px solid #e0e0e0; border-radius:12px; padding:14px; margin-top:14px;">
                     <h4 style="margin-bottom:10px; color:#333;">🗓️ Configurar turnos del día</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
-                        <input type="date" id="slotDate" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
-                        <input type="time" id="slotStart" value="09:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
-                        <input type="time" id="slotEnd" value="18:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
-                        <select id="slotMinutes" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="date" id="slotDate" aria-label="Fecha de los turnos" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="time" id="slotStart" aria-label="Hora de inicio de disponibilidad" value="09:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="time" id="slotEnd" aria-label="Hora de cierre de disponibilidad" value="18:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <select id="slotMinutes" aria-label="Duración de cada turno" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
                             <option value="15">15 min</option>
                             <option value="20">20 min</option>
                             <option value="30" selected>30 min</option>
@@ -525,7 +525,7 @@
                     <h3>⚡ Acciones Rápidas</h3>
                     <div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:12px; margin-bottom:14px;">
                         <div style="font-weight:700; margin-bottom:8px;">🔗 Link público para clientes</div>
-                        <input id="shareLinkInput" type="text" readonly style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px;" placeholder="Cargando link...">
+                        <input id="shareLinkInput" aria-label="Enlace público de reservas" type="text" readonly style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px;" placeholder="Cargando link...">
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button id="copyShareLinkBtn" class="btn-secondary" type="button">Copiar link</button>
                             <button id="shareWhatsappBtn" class="btn-secondary" type="button">Compartir por WhatsApp</button>
@@ -557,10 +557,10 @@
                 <form id="walkInForm" style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:14px;margin-bottom:18px;">
                     <h3 style="margin-bottom:10px;">🚶 Registrar cliente presencial</h3>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
-                        <input id="walkInClientName" required minlength="2" maxlength="120" placeholder="Nombre del cliente">
-                        <input id="walkInClientPhone" required minlength="6" maxlength="30" placeholder="Teléfono">
-                        <select id="walkInServiceSelect" required><option value="">Selecciona un servicio</option></select>
-                        <select id="walkInBarberSelect" required disabled hidden><option value="">Selecciona un barbero</option></select>
+                        <input id="walkInClientName" aria-label="Nombre del cliente presencial" required minlength="2" maxlength="120" placeholder="Nombre del cliente">
+                        <input id="walkInClientPhone" aria-label="Teléfono del cliente presencial" required minlength="6" maxlength="30" placeholder="Teléfono">
+                        <select id="walkInServiceSelect" aria-label="Servicio del turno presencial" required><option value="">Selecciona un servicio</option></select>
+                        <select id="walkInBarberSelect" aria-label="Barbero que atenderá el turno presencial" required disabled hidden><option value="">Selecciona un barbero</option></select>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
                         <button class="btn-primary" type="submit">Iniciar servicio presencial</button>
@@ -686,7 +686,7 @@
 
                 <div class="services-header">
                     <button id="newServiceBtn" class="btn-primary" type="button">➕ Nuevo Servicio</button>
-                    <input id="serviceSearch" type="search" placeholder="🔍 Buscar servicio..." class="search-input">
+                    <input id="serviceSearch" aria-label="Buscar servicios" type="search" placeholder="🔍 Buscar servicio..." class="search-input">
                 </div>
                 <form id="serviceForm" hidden style="max-width:640px; padding:16px; margin:12px 0; border:1px solid #ddd; border-radius:10px;">
                     <h3 id="serviceFormTitle">Nuevo servicio</h3>
