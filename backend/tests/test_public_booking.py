@@ -338,9 +338,16 @@ def test_public_booking_tracking_and_cancel_are_connected(
         Appointment.is_deleted == False,
     ).count() == 0
 
-    barber_events = client.get("/api/v1/notifications", headers=barber_headers).json()["items"]
-    assert {item["event_type"] for item in barber_events} >= {
-        "appointment_booked", "appointment_rescheduled", "appointment_cancelled",
+    selected_barber_events = client.get("/api/v1/notifications", headers=barber_headers).json()["items"]
+    original_barber_headers = {
+        "Authorization": f"Bearer {create_access_token({'sub': str(barber.id), 'role': barber.role})}"
+    }
+    rescheduled_barber_events = client.get(
+        "/api/v1/notifications", headers=original_barber_headers,
+    ).json()["items"]
+    assert "appointment_booked" in {item["event_type"] for item in selected_barber_events}
+    assert {item["event_type"] for item in rescheduled_barber_events} >= {
+        "appointment_rescheduled", "appointment_cancelled",
     }
 
 
