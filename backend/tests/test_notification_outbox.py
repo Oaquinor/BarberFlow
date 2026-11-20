@@ -127,6 +127,7 @@ def test_reminder_recovers_when_recipient_becomes_available(test_db: Session, mo
 
     client.email = "temporarily@client.invalid"
     test_db.commit()
+    monkeypatch.setattr(NotificationService, "_send_whatsapp", lambda *_args: True)
     assert process_due_deliveries(test_db, now=now) == 1
     test_db.refresh(email_row)
     assert email_row.status == "failed"
