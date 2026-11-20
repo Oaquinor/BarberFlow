@@ -255,7 +255,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
         AuditLog.entity_id == booking["appointment_id"],
         AuditLog.barbershop_id == shop.id,
     ).count() == 1
-    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id), 'role': barber.role})}"}
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(preferred_barber.id), 'role': preferred_barber.role})}"}
     owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
     barber_inbox = client.get("/api/v1/notifications", headers=barber_headers)
     owner_inbox = client.get("/api/v1/notifications", headers=owner_headers)
