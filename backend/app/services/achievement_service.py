@@ -234,11 +234,25 @@ class AchievementService:
                     latest_performance.current_streak >= achievement.requirement_value)
 
         elif achievement.requirement_type == "daily_appointments":
-            # Check if any day had this many appointments
+            target_date = None
+            if context_data and context_data.get("business_date"):
+                try:
+                    target_date = date.fromisoformat(context_data["business_date"])
+                except (TypeError, ValueError):
+                    return False
+            if target_date is None:
+                target_date = db.query(BarberPerformance.date).filter(
+                    BarberPerformance.barber_id == user_id,
+                    BarberPerformance.barbershop_id == barbershop_id,
+                ).order_by(BarberPerformance.date.desc()).limit(1).scalar()
+            if target_date is None:
+                return False
+
             performance = db.query(BarberPerformance).filter(
                 and_(
                     BarberPerformance.barber_id == user_id,
                     BarberPerformance.barbershop_id == barbershop_id,
+                    BarberPerformance.date == target_date,
                     BarberPerformance.appointments_completed >= achievement.requirement_value
                 )
             ).first()

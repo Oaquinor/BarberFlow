@@ -3069,7 +3069,10 @@ def barber_record_appointment_payment(
             user_id=appointment.barber_id,
             barbershop_id=appointment.barbershop_id,
             trigger_type="appointment_completed",
-            context_data={"appointment_id": appointment.id},
+            context_data={
+                "appointment_id": appointment.id,
+                "business_date": _business_date_for_appointment(appointment, shop).isoformat(),
+            },
             commit=False,
         )
         db.commit()
