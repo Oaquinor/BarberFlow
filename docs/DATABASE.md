@@ -226,7 +226,7 @@ All tables include:
 
 ## Operación MySQL agregada por migraciones
 
-La cadena vigente termina en `025_unique_barber_performance_day` y todas las conexiones de la aplicación usan `mysql+pymysql`.
+La cadena vigente termina en `025_perf_day_unique` y todas las conexiones de la aplicación usan `mysql+pymysql`.
 
 | Revisión | Cambio |
 |---|---|
@@ -249,7 +249,7 @@ La cadena vigente termina en `025_unique_barber_performance_day` y todas las con
 | `022_auth_record_retention_index` | Índice para depurar en lotes acotados los buckets de autenticación vencidos |
 | `023_persist_support_tickets` | Bandeja MySQL de solicitudes de soporte, estado y vínculo opcional a barbería; downgrade protegido si existen tickets |
 | `024_service_name_100` | Amplía a 100 caracteres el snapshot del servicio de una cita; el downgrade rechaza snapshots más largos |
-| `025_unique_barber_performance_day` | Garantiza una fila diaria por barbería/barbero/fecha; aborta sin borrar ni fusionar datos si detecta duplicados existentes |
+| `025_perf_day_unique` | Garantiza una fila diaria por barbería/barbero/fecha; aborta sin borrar ni fusionar datos si detecta duplicados existentes |
 
 `support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 
