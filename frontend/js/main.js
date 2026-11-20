@@ -756,7 +756,7 @@ async function loadBarberDashboardData() {
         setText('statsCompletedTrend', `${completedDelta >= 0 ? '↗️' : '↘️'} ${completedDelta >= 0 ? '+' : ''}${completedDelta} vs ayer`);
         setText('statsRevenueTrend', `${revenueDeltaCents >= 0 ? '↗️' : '↘️'} ${fmtMoneyFromCents(revenueDeltaCents)} vs ayer`);
         setText('statsEfficiencyTrend', `${efficiencyDelta >= 0 ? '↗️' : '↘️'} ${efficiencyDelta >= 0 ? '+' : ''}${efficiencyDelta}% vs ayer`);
-        const businessDate = data.business_date || new Date().toISOString().slice(0, 10);
+        const businessDate = data.business_date || businessTodayDate();
         dashboardBusinessDate = businessDate;
         if (!selectedAppointmentsDate) selectedAppointmentsDate = businessDate;
 
@@ -1828,7 +1828,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 
         const slotDate = document.getElementById('slotDate');
         if (slotDate && !slotDate.value) {
-            slotDate.value = new Date().toISOString().slice(0, 10);
+            slotDate.value = businessTodayDate();
         }
 
         await loadBarberDashboardData();
