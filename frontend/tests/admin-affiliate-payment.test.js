@@ -68,7 +68,7 @@ test("affiliate payment options match the backend payment contract", () => {
   assert.doesNotMatch(source, /window\.prompt\(/);
 });
 
-test("subscription period date is sent as the selected UTC calendar day", async () => {
+test("subscription period end includes the selected UTC calendar day", async () => {
   const start = source.indexOf("async function saveSubscription() {");
   const end = source.indexOf("document.getElementById('subscriptionPaymentForm')", start);
   const handler = source.slice(start, end);
@@ -85,7 +85,7 @@ test("subscription period date is sent as the selected UTC calendar day", async 
     document: { getElementById: id => values[id] || null },
     fetchJson: async (...args) => {
       calls.push(args);
-      return { plan: "basic", status: "active", current_period_end: "2026-11-20T00:00:00Z" };
+      return { plan: "basic", status: "active", current_period_end: "2026-11-20T23:59:59Z" };
     },
     loadTenants: async () => {},
   };
@@ -94,5 +94,5 @@ test("subscription period date is sent as the selected UTC calendar day", async 
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], "/api/v1/admin/tenants/42/subscription");
-  assert.equal(JSON.parse(calls[0][1].body).current_period_end, "2026-11-20T00:00:00Z");
+  assert.equal(JSON.parse(calls[0][1].body).current_period_end, "2026-11-20T23:59:59Z");
 });
