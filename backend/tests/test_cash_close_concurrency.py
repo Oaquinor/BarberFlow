@@ -15,7 +15,8 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models import (
     Appointment, AuditLog, BarberCommission, BarberPerformance, Barbershop,
-    CashRegisterClose, NotificationDelivery, Payment, User, UserAchievement,
+    CashRegisterClose, InAppNotification, NotificationDelivery, Payment, User,
+    UserAchievement,
 )
 from app.utils.datetime import utc_now_naive
 
@@ -186,6 +187,9 @@ def test_cash_close_uses_latest_mysql_state_after_waiting_for_checkout(
             )
             db.query(NotificationDelivery).filter(
                 NotificationDelivery.appointment_id == appointment_id,
+            ).delete(synchronize_session=False)
+            db.query(InAppNotification).filter(
+                InAppNotification.recipient_user_id.in_(user_ids),
             ).delete(synchronize_session=False)
             db.query(AuditLog).filter(AuditLog.barbershop_id == shop_id).delete(
                 synchronize_session=False,
