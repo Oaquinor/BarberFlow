@@ -16,6 +16,9 @@ const ownerClientCache = new Map();
 const ownerBarberCache = new Map();
 const OWNER_CLIENTS_PAGE_SIZE = 50;
 let ownerClientsOffset = 0;
+let ownerClientsSearch = '';
+let ownerClientsSearchTimer = null;
+let ownerClientsRequestId = 0;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -849,12 +852,9 @@ async function loadOwnerManagement() {
         settingsForm.onsubmit = saveBusinessSettings;
     }
     const barberBody = document.getElementById('ownerBarbersBody');
-    const clientsBody = document.getElementById('ownerClientsBody');
-    const clientsResult = document.getElementById('ownerClientsResult');
     try {
-        const [barberData, clientData, commissionData] = await Promise.all([
+        const [barberData, commissionData] = await Promise.all([
             ownerFetch('/owner/barbers'),
-            ownerFetch(`/owner/clients?limit=${OWNER_CLIENTS_PAGE_SIZE}&offset=${ownerClientsOffset}`),
             ownerFetch('/owner/barber-commissions'),
         ]);
         barberBody.innerHTML = (barberData.items || []).map(barber => `
@@ -868,18 +868,6 @@ async function loadOwnerManagement() {
         ownerBarberCache.clear();
         (barberData.items || []).forEach(barber => ownerBarberCache.set(Number(barber.id), barber));
         renderOwnerCommissions(commissionData);
-        const clients = clientData.items || [];
-        ownerClientCache.clear();
-        clients.forEach(client => ownerClientCache.set(Number(client.id), client));
-        const totalClients = Number(clientData.total) || 0;
-        const pageLabel = document.getElementById('ownerClientsPage');
-        const previousClients = document.getElementById('previousOwnerClients');
-        const nextClients = document.getElementById('nextOwnerClients');
-        if (pageLabel) pageLabel.textContent = totalClients
-            ? `Clientes ${ownerClientsOffset + 1}–${ownerClientsOffset + clients.length} de ${totalClients}`
-            : '0 clientes';
-        if (previousClients) previousClients.disabled = ownerClientsOffset === 0;
-        if (nextClients) nextClients.disabled = ownerClientsOffset + clients.length >= totalClients;
         const walkInBarberSelect = document.getElementById('walkInBarberSelect');
         if (walkInBarberSelect) {
             const selectedBarber = walkInBarberSelect.value;
@@ -891,7 +879,45 @@ async function loadOwnerManagement() {
                 walkInBarberSelect.value = selectedBarber;
             }
         }
-        clientsBody.innerHTML = clients.map(client => `
+        await loadOwnerClients();
+        await loadDemandForecast();
+    } catch (error) {
+        barberBody.textContent = '';
+        const clientsResult = document.getElementById('ownerClientsResult');
+        if (clientsResult) clientsResult.textContent = error.message || 'No se pudo cargar la administración.';
+    }
+}
+
+async function loadOwnerClients() {
+    const body = document.getElementById('ownerClientsBody');
+    const result = document.getElementById('ownerClientsResult');
+    if (!body || !result || currentUser?.role !== 'barbershop_owner') return;
+    const requestId = ++ownerClientsRequestId;
+    const query = new URLSearchParams({
+        limit: String(OWNER_CLIENTS_PAGE_SIZE),
+        offset: String(ownerClientsOffset),
+    });
+    if (ownerClientsSearch) query.set('search', ownerClientsSearch);
+    result.textContent = 'Buscando clientes…';
+    body.replaceChildren();
+    ownerClientCache.clear();
+    const previousClients = document.getElementById('previousOwnerClients');
+    const nextClients = document.getElementById('nextOwnerClients');
+    if (previousClients) previousClients.disabled = true;
+    if (nextClients) nextClients.disabled = true;
+    try {
+        const data = await ownerFetch(`/owner/clients?${query.toString()}`);
+        if (requestId !== ownerClientsRequestId) return;
+        const clients = data.items || [];
+        const totalClients = Number(data.total) || 0;
+        clients.forEach(client => ownerClientCache.set(Number(client.id), client));
+        const pageLabel = document.getElementById('ownerClientsPage');
+        if (pageLabel) pageLabel.textContent = totalClients
+            ? `Clientes ${ownerClientsOffset + 1}–${ownerClientsOffset + clients.length} de ${totalClients}`
+            : '0 clientes';
+        if (previousClients) previousClients.disabled = ownerClientsOffset === 0;
+        if (nextClients) nextClients.disabled = ownerClientsOffset + clients.length >= totalClients;
+        body.innerHTML = clients.map(client => `
             <tr><td data-label="Cliente">${escapeHtml(client.full_name)}</td><td data-label="Teléfono">${escapeHtml(client.phone || '—')}</td>
                 <td data-label="Citas">${Number(client.appointment_count || 0)}</td><td data-label="Completadas">${Number(client.completed_count || 0)}</td>
                 <td data-label="Última visita">${client.last_visit ? escapeHtml(new Date(client.last_visit).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })) : '—'}</td>
@@ -899,25 +925,42 @@ async function loadOwnerManagement() {
                 <td data-label="Acciones"><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
                     <button class="btn-secondary owner-client-status" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
-        clientsResult.textContent = `${clients.length} clientes cargados en esta página`;
-        await loadDemandForecast();
+        result.textContent = ownerClientsSearch
+            ? `${totalClients} cliente(s) coinciden con la búsqueda`
+            : `${clients.length} clientes cargados en esta página`;
     } catch (error) {
-        barberBody.textContent = '';
-        clientsBody.textContent = '';
-        clientsResult.textContent = error.message;
+        if (requestId !== ownerClientsRequestId) return;
+        body.textContent = '';
+        result.textContent = error.message || 'No se pudieron cargar los clientes.';
     }
 }
 
 document.getElementById('previousOwnerClients')?.addEventListener('click', async () => {
     if (ownerClientsOffset <= 0) return;
     ownerClientsOffset = Math.max(0, ownerClientsOffset - OWNER_CLIENTS_PAGE_SIZE);
-    await loadOwnerManagement();
+    await loadOwnerClients();
 });
 
 document.getElementById('nextOwnerClients')?.addEventListener('click', async () => {
     if (document.getElementById('nextOwnerClients')?.disabled) return;
     ownerClientsOffset += OWNER_CLIENTS_PAGE_SIZE;
-    await loadOwnerManagement();
+    await loadOwnerClients();
+});
+
+document.getElementById('ownerClientSearch')?.addEventListener('input', (event) => {
+    ownerClientsSearch = event.currentTarget.value.trim();
+    ownerClientsOffset = 0;
+    ownerClientsRequestId += 1;
+    document.getElementById('ownerClientsBody')?.replaceChildren();
+    const clientsResult = document.getElementById('ownerClientsResult');
+    if (clientsResult) clientsResult.textContent = 'Buscando clientes…';
+    ownerClientCache.clear();
+    const previousClients = document.getElementById('previousOwnerClients');
+    const nextClients = document.getElementById('nextOwnerClients');
+    if (previousClients) previousClients.disabled = true;
+    if (nextClients) nextClients.disabled = true;
+    clearTimeout(ownerClientsSearchTimer);
+    ownerClientsSearchTimer = setTimeout(loadOwnerClients, 250);
 });
 
 async function loadOwnerSubscription() {
@@ -1005,6 +1048,9 @@ document.getElementById('ownerClientCreateForm')?.addEventListener('submit', asy
         form.reset();
         form.hidden = true;
         ownerClientsOffset = 0;
+        ownerClientsSearch = '';
+        const searchInput = document.getElementById('ownerClientSearch');
+        if (searchInput) searchInput.value = '';
         await loadOwnerManagement();
         result.textContent = `Cliente ${created.full_name} registrado.`;
     } catch (error) {

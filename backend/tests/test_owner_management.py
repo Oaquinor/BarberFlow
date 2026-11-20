@@ -315,6 +315,20 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
     assert row["is_active"] is False
     assert row["appointment_count"] == row["completed_count"] == 1
     assert row["total_paid_cents"] == 3000
+    name_search = client.get(
+        "/api/v1/owner/clients?search=New%20Name", headers=owner_headers,
+    )
+    assert name_search.status_code == 200
+    assert name_search.json()["total"] == 1
+    assert name_search.json()["items"][0]["id"] == customer.id
+    phone_search = client.get(
+        "/api/v1/owner/clients?search=3033", headers=owner_headers,
+    )
+    assert phone_search.json()["total"] == 1
+    foreign_search = client.get(
+        "/api/v1/owner/clients?search=Foreign", headers=owner_headers,
+    )
+    assert foreign_search.json()["total"] == 0
     assert test_db.query(AuditLog).filter(
         AuditLog.action.in_(["client.profile_updated", "client.status_changed"]),
         AuditLog.entity_id == customer.id, AuditLog.barbershop_id == shop.id,

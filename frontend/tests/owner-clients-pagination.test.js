@@ -17,13 +17,13 @@ test("owner client pagination requests the next and previous tenant pages", asyn
   const offsets = [];
   const sandbox = {
     document: { getElementById: (id) => ({ previousOwnerClients: previous, nextOwnerClients: next })[id] || null },
-    loadOwnerManagement: async () => { offsets.push(sandbox.offset()); },
+    loadOwnerClients: async () => { offsets.push(sandbox.offset()); },
   };
   vm.runInNewContext(`
     let ownerClientsOffset = 0;
     const OWNER_CLIENTS_PAGE_SIZE = 50;
     const document = globalThis.document;
-    const loadOwnerManagement = globalThis.loadOwnerManagement;
+    const loadOwnerClients = globalThis.loadOwnerClients;
     ${source.slice(start, end)}
     globalThis.offset = () => ownerClientsOffset;
   `, sandbox);

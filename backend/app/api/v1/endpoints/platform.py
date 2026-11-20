@@ -2572,6 +2572,7 @@ def owner_pay_barber_commission(
 def owner_list_clients(
     limit: int = 50,
     offset: int = 0,
+    search: str = Query(default="", max_length=100),
     db: Session = Depends(get_db),
     authorization: Optional[str] = Header(default=None),
 ):
@@ -2585,6 +2586,16 @@ def owner_list_clients(
         User.role == "client",
         User.is_deleted == False,
     )
+    search_term = search.strip()
+    if search_term:
+        pattern = f"%{search_term}%"
+        client_query = client_query.filter(or_(
+            User.first_name.ilike(pattern),
+            User.last_name.ilike(pattern),
+            User.email.ilike(pattern),
+            User.phone.ilike(pattern),
+            func.concat(User.first_name, " ", User.last_name).ilike(pattern),
+        ))
     total = client_query.count()
     clients = client_query.order_by(User.id.desc()).offset(offset).limit(limit).all()
     client_ids = [client.id for client in clients]
