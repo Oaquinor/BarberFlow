@@ -1,6 +1,7 @@
 """Booking, private tracking, reschedule and cancellation tests for MySQL."""
 
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
@@ -64,11 +65,15 @@ def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
         email="closed-slots-barber@example.com", password_hash="unused", first_name="Barbero",
         last_name="Agenda", role="barber", is_active=True, barbershop_id=shop.id,
     )
+    customer = User(
+        email="closed-slots-client@example.com", password_hash="unused", first_name="Cliente",
+        last_name="Agenda", role="client", is_active=True, barbershop_id=shop.id,
+    )
     service = Service(
         barbershop_id=shop.id, name="Corte", duration_minutes=30, price=1800,
         category="haircut", is_active=True,
     )
-    test_db.add_all([owner, barber, service])
+    test_db.add_all([owner, barber, customer, service])
     test_db.flush()
     today_slot_start = datetime(2026, 11, 20, 17, 0)
     future_slot_start = datetime(2026, 11, 21, 17, 0)
@@ -80,7 +85,19 @@ def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
         barbershop_id=shop.id, barber_id=barber.id, slot_start=future_slot_start,
         slot_end=future_slot_start + timedelta(minutes=30), is_active=True, is_booked=False,
     )
-    test_db.add_all([today_slot, future_slot])
+    appointment_slot_start = future_slot_start + timedelta(hours=2)
+    appointment_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id, slot_start=appointment_slot_start,
+        slot_end=appointment_slot_start + timedelta(minutes=30), is_active=True, is_booked=True,
+    )
+    reschedule_token = "r" * 43
+    appointment = Appointment(
+        barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
+        scheduled_time=appointment_slot_start, estimated_duration=30, service_type="Corte",
+        service_price=1800, status="confirmed",
+        tracking_token_hash=sha256(reschedule_token.encode("utf-8")).hexdigest(),
+    )
+    test_db.add_all([today_slot, future_slot, appointment_slot, appointment])
     test_db.add(CashRegisterClose(
         barbershop_id=shop.id, closed_by_user_id=owner.id,
         business_date=datetime(2026, 11, 20), expected_cash_cents=0,
@@ -97,6 +114,10 @@ def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
         "scheduled_time": today_slot_start.replace(tzinfo=timezone.utc).isoformat(),
     })
     assert booking.status_code == 409
+    rescheduled = client.post(f"/api/v1/public/{shop.slug}/appointments/reschedule", json={
+        "token": reschedule_token, "availability_id": today_slot.id,
+    })
+    assert rescheduled.status_code == 409
 
 
 def test_public_booking_tracking_and_cancel_are_connected(

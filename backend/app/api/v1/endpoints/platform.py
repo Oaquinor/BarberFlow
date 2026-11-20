@@ -2021,6 +2021,18 @@ def public_reschedule_appointment(
 
     new_start = new_slot.slot_start
     new_end = new_start + timedelta(minutes=appointment.estimated_duration)
+    reschedule_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    if _utc_aware(new_start).astimezone(_get_timezone(shop)).date() == reschedule_business_date:
+        locked_shop = db.query(Barbershop).filter(
+            Barbershop.id == shop.id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not locked_shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
+        if _cash_register_closed_for_user(
+            db, barber, shop.id, datetime.combine(reschedule_business_date, time.min),
+        ):
+            raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se aceptan cambios de cita para hoy")
     blocked_range = db.query(BarberAvailabilityBlock.id).filter(
         BarberAvailabilityBlock.barbershop_id == shop.id,
         BarberAvailabilityBlock.barber_id == barber.id,
