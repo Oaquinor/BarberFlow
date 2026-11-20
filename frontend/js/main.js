@@ -14,6 +14,8 @@ let notificationRefreshTimer = null;
 let serviceTimerInterval = null;
 const ownerClientCache = new Map();
 const ownerBarberCache = new Map();
+const OWNER_CLIENTS_PAGE_SIZE = 50;
+let ownerClientsOffset = 0;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -852,7 +854,7 @@ async function loadOwnerManagement() {
     try {
         const [barberData, clientData, commissionData] = await Promise.all([
             ownerFetch('/owner/barbers'),
-            ownerFetch('/owner/clients?limit=50&offset=0'),
+            ownerFetch(`/owner/clients?limit=${OWNER_CLIENTS_PAGE_SIZE}&offset=${ownerClientsOffset}`),
             ownerFetch('/owner/barber-commissions'),
         ]);
         barberBody.innerHTML = (barberData.items || []).map(barber => `
@@ -869,6 +871,15 @@ async function loadOwnerManagement() {
         const clients = clientData.items || [];
         ownerClientCache.clear();
         clients.forEach(client => ownerClientCache.set(Number(client.id), client));
+        const totalClients = Number(clientData.total) || 0;
+        const pageLabel = document.getElementById('ownerClientsPage');
+        const previousClients = document.getElementById('previousOwnerClients');
+        const nextClients = document.getElementById('nextOwnerClients');
+        if (pageLabel) pageLabel.textContent = totalClients
+            ? `Clientes ${ownerClientsOffset + 1}–${ownerClientsOffset + clients.length} de ${totalClients}`
+            : '0 clientes';
+        if (previousClients) previousClients.disabled = ownerClientsOffset === 0;
+        if (nextClients) nextClients.disabled = ownerClientsOffset + clients.length >= totalClients;
         const walkInBarberSelect = document.getElementById('walkInBarberSelect');
         if (walkInBarberSelect) {
             const selectedBarber = walkInBarberSelect.value;
@@ -888,7 +899,7 @@ async function loadOwnerManagement() {
                 <td data-label="Acciones"><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
                     <button class="btn-secondary owner-client-status" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
-        clientsResult.textContent = `${clients.length} clientes cargados`;
+        clientsResult.textContent = `${clients.length} clientes cargados en esta página`;
         await loadDemandForecast();
     } catch (error) {
         barberBody.textContent = '';
@@ -896,6 +907,18 @@ async function loadOwnerManagement() {
         clientsResult.textContent = error.message;
     }
 }
+
+document.getElementById('previousOwnerClients')?.addEventListener('click', async () => {
+    if (ownerClientsOffset <= 0) return;
+    ownerClientsOffset = Math.max(0, ownerClientsOffset - OWNER_CLIENTS_PAGE_SIZE);
+    await loadOwnerManagement();
+});
+
+document.getElementById('nextOwnerClients')?.addEventListener('click', async () => {
+    if (document.getElementById('nextOwnerClients')?.disabled) return;
+    ownerClientsOffset += OWNER_CLIENTS_PAGE_SIZE;
+    await loadOwnerManagement();
+});
 
 async function loadOwnerSubscription() {
     const summary = document.getElementById('ownerSubscriptionSummary');
@@ -981,6 +1004,7 @@ document.getElementById('ownerClientCreateForm')?.addEventListener('submit', asy
         });
         form.reset();
         form.hidden = true;
+        ownerClientsOffset = 0;
         await loadOwnerManagement();
         result.textContent = `Cliente ${created.full_name} registrado.`;
     } catch (error) {

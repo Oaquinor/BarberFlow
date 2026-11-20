@@ -2580,11 +2580,13 @@ def owner_list_clients(
         raise HTTPException(status_code=403, detail="Solo el propietario puede consultar sus clientes")
     if not 1 <= limit <= 100 or offset < 0:
         raise HTTPException(status_code=422, detail="Paginación fuera de rango")
-    clients = db.query(User).filter(
+    client_query = db.query(User).filter(
         User.barbershop_id == owner.barbershop_id,
         User.role == "client",
         User.is_deleted == False,
-    ).order_by(User.id.desc()).offset(offset).limit(limit).all()
+    )
+    total = client_query.count()
+    clients = client_query.order_by(User.id.desc()).offset(offset).limit(limit).all()
     client_ids = [client.id for client in clients]
     appointments = {}
     payments = {}
@@ -2619,7 +2621,7 @@ def owner_list_clients(
         "completed_count": appointments.get(client.id, {}).get("completed", 0),
         "last_visit": appointments.get(client.id, {}).get("last_visit"),
         "total_paid_cents": payments.get(client.id, 0),
-    } for client in clients], "limit": limit, "offset": offset}
+    } for client in clients], "limit": limit, "offset": offset, "total": total}
 
 
 @router.post("/owner/clients", status_code=201)

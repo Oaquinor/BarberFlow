@@ -310,6 +310,7 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
     assert deactivated.status_code == 200
     assert deactivated.json()["is_active"] is False
     listing = client.get("/api/v1/owner/clients", headers=owner_headers)
+    assert listing.json()["total"] == 2
     row = next(item for item in listing.json()["items"] if item["id"] == customer.id)
     assert row["is_active"] is False
     assert row["appointment_count"] == row["completed_count"] == 1
