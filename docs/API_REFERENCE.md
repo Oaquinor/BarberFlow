@@ -8,12 +8,14 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 |---|---|---|
 | `POST` | `/auth/login` | Público; aplica límite de intentos |
 | `POST` | `/saas/register` | Público; crea owner, barbería y periodo gratuito |
+| `GET` | `/saas/registration-status` | Público; indica si el formulario de registro está habilitado |
 | `POST` | `/auth/refresh` | Token refresh vigente |
 | `POST` | `/auth/logout` | Token refresh |
 | `POST` | `/auth/change-password` | Usuario autenticado |
 | `POST` | `/auth/password-reset/request` | Público; responde sin revelar si la cuenta existe y limita solicitudes por correo/IP |
 | `POST` | `/auth/password-reset/confirm` | Público; requiere token de un solo uso vigente y contraseña robusta |
 | `GET` | `/auth/me` | Usuario autenticado |
+| `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |
 
 El registro de barbería recibe `owner_email`, `owner_password`, `owner_first_name`, `owner_last_name`, `owner_phone`, `barbershop_name`, `barbershop_email`, `barbershop_phone`, `address_line1`, `city`, `state`, `postal_code`, `country`, `timezone`, `currency` y un `affiliate_code` opcional. Un código inválido se rechaza; uno válido registra el referido con el owner, barbería y suscripción en una sola transacción. La contraseña requiere 12 caracteres, una mayúscula y un número. El registro no cobra ni simula un pago.
 
@@ -214,6 +216,7 @@ Todas las rutas `/admin/*` requieren rol `super_admin`.
 | `PUT` | `/admin/tenants/{barbershop_id}/status` | Activar o suspender barbería |
 | `GET` | `/admin/tenants/{barbershop_id}/subscription` | Consultar suscripción |
 | `PUT` | `/admin/tenants/{barbershop_id}/subscription` | Administrar plan y periodo |
+| `POST` | `/admin/tenants/{barbershop_id}/subscription/payments` | Registrar pago SaaS externo ya recibido |
 | `GET` | `/admin/users` | Buscar usuarios |
 | `PUT` | `/admin/users/{user_id}/status` | Activar o suspender usuario |
 | `PUT` | `/admin/users/{user_id}/support` | Configurar contacto de soporte |
@@ -225,7 +228,6 @@ Todas las rutas `/admin/*` requieren rol `super_admin`.
 | `GET` | `/admin/affiliates/{affiliate_id}/commissions` | Consultar comisiones por moneda |
 | `POST` | `/admin/commissions/{commission_id}/approve` | Aprobar una comisión pendiente |
 | `POST` | `/admin/commissions/{commission_id}/pay` | Registrar el pago externo de una comisión aprobada |
-| `POST` | `/admin/tenants/{barbershop_id}/subscription/payments` | Registrar un cobro SaaS externo ya recibido y crear su comisión afiliada |
 
 Al cambiar el estado de una barbería, se revocan sus sesiones de renovación y se invalida la versión de sesión de sus usuarios; al reactivarla todos deben iniciar sesión de nuevo. Suspender o reactivar un usuario individual también invalida sus tokens y sesiones de renovación. El último superadministrador no se puede desactivar. El historial guarda eventos sensibles junto con la operación y omite tokens y contraseñas. El resumen global cuenta cobros de citas por separado para cada moneda; no suma monedas distintas. El registro SaaS de cobro requiere importe positivo, periodo vigente y confirmación administrativa de un pago ya recibido; no se conecta a una pasarela ni procesa tarjetas. Las comisiones guardan la moneda de origen. El pago de afiliados requiere aprobar la comisión y registrar método y referencia externa.
 
@@ -234,6 +236,14 @@ Al cambiar el estado de una barbería, se revocan sus sesiones de renovación y 
 La bandera disponible `branding_auto` controla si el portal autenticado aplica los colores de marca de la barbería. Solo se activa para un usuario owner/barbero con onboarding completado; su estado forma parte de `/auth/me` y del listado de usuarios. Los cambios se reflejan al volver a iniciar sesión.
 
 ## Soporte y errores
+
+| Método | Ruta | Acceso | Función |
+|---|---|---|---|
+| `POST` | `/support/contact` | Público; limitado por IP | Persiste una solicitud y encola un aviso por correo |
+| `GET` | `/admin/support/tickets?status=open&limit=50&offset=0` | `super_admin` | Consulta y pagina solicitudes de soporte |
+| `PUT` | `/admin/support/tickets/{ticket_id}/status` | `super_admin` | Cambia estado y audita la solicitud |
+| `GET` | `/health` | Público | Verifica la conexión real a MySQL |
+| `GET` | `/` | Público | Sirve la aplicación web |
 
 `POST /support/contact` recibe nombre, email o teléfono, mensaje y slug opcional. Cada solicitud se conserva en MySQL aunque SMTP esté caído; la respuesta incluye `ticket_id` y `notification_sent`. El formulario limita a cinco solicitudes por IP y hora y persiste solo un hash de la dirección.
 
