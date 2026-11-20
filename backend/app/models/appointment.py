@@ -30,7 +30,8 @@ class Appointment(BaseModel):
     actual_end_time = Column(DateTime, nullable=True)
 
     # Service
-    service_type = Column(String(50), nullable=False, default=ServiceType.HAIRCUT)
+    # Snapshot the full service name (the tenant catalog accepts up to 100 chars).
+    service_type = Column(String(100), nullable=False, default=ServiceType.HAIRCUT)
     service_price = Column(Integer, nullable=True)  # in cents
 
     # Status

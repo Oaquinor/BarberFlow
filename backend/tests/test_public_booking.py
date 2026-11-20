@@ -183,7 +183,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     )
     service = Service(
         barbershop_id=shop.id,
-        name="Corte",
+        name="Servicio de cuidado y diseño especializado para cabello rizado",
         duration_minutes=30,
         price=1800,
         category="haircut",
@@ -247,6 +247,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     booking = response.json()
     booked_appointment = test_db.get(Appointment, booking["appointment_id"])
     assert booked_appointment.barber_id == preferred_barber.id
+    assert booked_appointment.service_type == service.name
     public_client = test_db.get(User, booked_appointment.client_id)
     assert public_client.email.endswith("@client.invalid")
     assert "8095550202" not in public_client.email
