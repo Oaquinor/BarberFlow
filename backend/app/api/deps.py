@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_user_id_from_token, verify_token
 from app.core.exceptions import InvalidTokenError, TokenExpiredError
+from app.core.security.sessions import access_session_is_active
 from app.models.user import User
 
 
@@ -69,6 +70,13 @@ def get_current_user(
                 detail="User account is inactive"
             )
         if payload.get("auth_version", 0) != user.auth_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session was revoked",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        session_id = payload.get("sid")
+        if session_id is not None and not access_session_is_active(db, user.id, session_id):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session was revoked",

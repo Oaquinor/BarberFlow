@@ -724,9 +724,12 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
         if not active_shop:
             raise HTTPException(status_code=403, detail="La barbería está desactivada")
 
-    access_token = create_access_token({"sub": str(user.id), "role": user.role, "auth_version": user.auth_version})
     refresh_token = create_refresh_token({"sub": str(user.id), "auth_version": user.auth_version})
-    _save_refresh_session(db, user.id, refresh_token)
+    refresh_session = _save_refresh_session(db, user.id, refresh_token)
+    access_token = create_access_token({
+        "sub": str(user.id), "role": user.role,
+        "auth_version": user.auth_version, "sid": refresh_session.jti,
+    })
     _clear_login_failures(db, buckets, now)
     db.commit()
 
@@ -855,9 +858,12 @@ def register_tenant(data: TenantRegistrationRequest, db: Session = Depends(get_d
         _audit(db, owner, "tenant.referred", "barbershop", shop.id, shop.id,
                {"affiliate_id": affiliate.id})
 
-    access_token = create_access_token({"sub": str(owner.id), "role": owner.role, "auth_version": owner.auth_version})
     refresh_token = create_refresh_token({"sub": str(owner.id), "auth_version": owner.auth_version})
-    _save_refresh_session(db, owner.id, refresh_token)
+    refresh_session = _save_refresh_session(db, owner.id, refresh_token)
+    access_token = create_access_token({
+        "sub": str(owner.id), "role": owner.role,
+        "auth_version": owner.auth_version, "sid": refresh_session.jti,
+    })
     try:
         db.commit()
     except IntegrityError as exc:
@@ -913,9 +919,12 @@ def auth_refresh(data: RefreshTokenRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada")
 
     session.revoked_at = now
-    access_token = create_access_token({"sub": str(user.id), "role": user.role, "auth_version": user.auth_version})
     refresh_token = create_refresh_token({"sub": str(user.id), "auth_version": user.auth_version})
-    _save_refresh_session(db, user.id, refresh_token)
+    refresh_session = _save_refresh_session(db, user.id, refresh_token)
+    access_token = create_access_token({
+        "sub": str(user.id), "role": user.role,
+        "auth_version": user.auth_version, "sid": refresh_session.jti,
+    })
     db.commit()
     return RefreshTokenResponse(access_token=access_token, refresh_token=refresh_token)
 

@@ -55,6 +55,10 @@ def test_login_returns_tokens_for_active_user(client: TestClient, test_db: Sessi
     assert response.json()["token_type"] == "bearer"
     assert response.json()["access_token"]
     assert response.json()["refresh_token"]
+    old_access_token = response.json()["access_token"]
+    assert client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {old_access_token}"},
+    ).status_code == 200
 
     old_refresh_token = response.json()["refresh_token"]
     rotated = client.post(
@@ -63,6 +67,14 @@ def test_login_returns_tokens_for_active_user(client: TestClient, test_db: Sessi
     )
     assert rotated.status_code == 200
     assert rotated.json()["refresh_token"] != old_refresh_token
+    old_access = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {old_access_token}"},
+    )
+    assert old_access.status_code == 401
+    active_access_token = rotated.json()["access_token"]
+    assert client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {active_access_token}"},
+    ).status_code == 200
     replay = client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": old_refresh_token},
@@ -74,6 +86,10 @@ def test_login_returns_tokens_for_active_user(client: TestClient, test_db: Sessi
         json={"refresh_token": rotated.json()["refresh_token"]},
     )
     assert logout.status_code == 200
+    logged_out_access = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {active_access_token}"},
+    )
+    assert logged_out_access.status_code == 401
     after_logout = client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": rotated.json()["refresh_token"]},
