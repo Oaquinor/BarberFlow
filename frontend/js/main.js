@@ -214,6 +214,14 @@ function statusClassForStatus(status) {
     return 'confirmed';
 }
 
+function canMarkAppointmentNoShow(appointment, now = Date.now()) {
+    const scheduledAt = Date.parse(appointment?.scheduled_time);
+    const durationMinutes = Number(appointment?.estimated_duration);
+    return ['pending', 'confirmed'].includes(appointment?.status) &&
+        Number.isFinite(scheduledAt) && Number.isFinite(durationMinutes) && durationMinutes >= 0 &&
+        now >= scheduledAt + durationMinutes * 60_000;
+}
+
 function applyBranding(profile) {
     const logoElement = document.querySelector('.logo h1');
     if (logoElement && profile?.logo_url) {
@@ -565,6 +573,7 @@ function renderAppointmentDay(businessDate, appointments) {
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'in_progress')">▶️ Iniciar</button>` : ''}
                     ${appointment.status === 'in_progress' ? `<button class="btn-secondary" type="button" onclick="collectAppointmentPayment(${Number(appointment.id)})">💳 Cobrar y finalizar</button>` : ''}
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'cancelled')">❌ Cancelar</button>` : ''}
+                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary" type="button" onclick="if (window.confirm('¿Marcar esta cita como inasistencia?')) updateAppointmentStatus(${Number(appointment.id)}, 'no_show')">🚫 No asistió</button>` : ''}
                 </div>
             </div>
         </div>

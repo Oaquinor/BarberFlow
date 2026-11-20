@@ -313,10 +313,10 @@ Ayudamos a:
 
 ### No Show
 
-**Detección:**
-- Si pasan 15 minutos después de la hora programada
-- Y el estado sigue en `confirmed`
-- El sistema puede marcar automáticamente como `no_show`
+**Registro:**
+- Un propietario o el barbero asignado puede marcar manualmente una cita `pending` o `confirmed` como `no_show` cuando haya pasado la hora programada más la duración estimada del servicio.
+- La agenda habilita la acción al cumplirse ese plazo; el backend vuelve a validar el tiempo y el estado antes de guardar.
+- El cambio actualiza las métricas de rendimiento y queda registrado en auditoría. No hay detección automática.
 
 ---
 
