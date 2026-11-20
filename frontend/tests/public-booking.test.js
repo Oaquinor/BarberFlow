@@ -58,6 +58,29 @@ test('appointment tracking requests replacement slots for each appointment durat
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);
 });
 
+test('appointment tracking handles network failures and allows another attempt', async () => {
+  const start = clientScript.indexOf('async function trackAppointments()');
+  const end = clientScript.indexOf('\ntrackList.addEventListener', start);
+  const functionSource = clientScript.slice(start, end);
+  const nodes = {
+    trackToken: { value: 'private-token' },
+    trackList: { textContent: '', innerHTML: '' },
+    trackBtn: { disabled: false },
+  };
+  const sandbox = {
+    document: { getElementById: (id) => nodes[id] },
+    fetch: async () => { throw new Error('offline'); },
+    API_BASE: 'https://api.kingflow.test/api/v1',
+    shopSlug: 'kingflow-shop',
+  };
+  vm.runInNewContext(`const trackBtn = document.getElementById('trackBtn');\nconst trackList = document.getElementById('trackList');\n${functionSource}\nthis.trackAppointments = trackAppointments;`, sandbox);
+
+  await sandbox.trackAppointments();
+
+  assert.match(nodes.trackList.textContent, /Comprueba tu conexión/);
+  assert.equal(nodes.trackBtn.disabled, false);
+});
+
 test('appointment tracking escapes untrusted customer, service, barber, and status values', async () => {
   const nodes = new Map();
   const nodeFor = (id) => {

@@ -261,46 +261,52 @@ async function trackAppointments() {
   }
 
   trackList.textContent = 'Consultando...';
+  trackBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
 
-  const res = await fetch(`${API_BASE}/public/${shopSlug}/track`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    trackList.textContent = data.detail || 'Error de consulta.';
-    return;
-  }
-
-  if (!data.items || data.items.length === 0) {
-    trackList.textContent = 'No se encontró una cita con ese código de seguimiento.';
-    return;
-  }
-
-  const slotResults = new Map();
-  const cards = await Promise.all(data.items.map(async (item) => {
-    const d = new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: shopTimezone });
-    const cancelButton = ['pending', 'confirmed'].includes(item.status)
-      ? `<button class="secondary cancel-booking" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
-      : '';
-    const canReschedule = ['pending', 'confirmed'].includes(item.status);
-    const duration = Number(item.estimated_duration);
-    let availableForService = [];
-    if (canReschedule) {
-      if (!slotResults.has(duration)) slotResults.set(duration, fetchSlots(duration));
-      availableForService = await slotResults.get(duration);
+    const data = await res.json();
+    if (!res.ok) {
+      trackList.textContent = data.detail || 'Error de consulta.';
+      return;
     }
-    const rescheduleControls = ['pending', 'confirmed'].includes(item.status) && availableForService.length
-      ? `<label class="field">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {
-          const label = `${new Date(slot.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(slot.barber_name)}`;
-          return `<option value="${Number(slot.availability_id)}">${label}</option>`;
-        }).join('')}</select></label><button class="secondary reschedule-booking" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
-      : '';
-    return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}<br>${rescheduleControls}<br>${cancelButton}</div>`;
-  }));
-  trackList.innerHTML = cards.join('');
+
+    if (!data.items || data.items.length === 0) {
+      trackList.textContent = 'No se encontró una cita con ese código de seguimiento.';
+      return;
+    }
+
+    const slotResults = new Map();
+    const cards = await Promise.all(data.items.map(async (item) => {
+      const d = new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: shopTimezone });
+      const cancelButton = ['pending', 'confirmed'].includes(item.status)
+        ? `<button class="secondary cancel-booking" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
+        : '';
+      const canReschedule = ['pending', 'confirmed'].includes(item.status);
+      const duration = Number(item.estimated_duration);
+      let availableForService = [];
+      if (canReschedule) {
+        if (!slotResults.has(duration)) slotResults.set(duration, fetchSlots(duration));
+        availableForService = await slotResults.get(duration);
+      }
+      const rescheduleControls = ['pending', 'confirmed'].includes(item.status) && availableForService.length
+        ? `<label class="field">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {
+            const label = `${new Date(slot.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(slot.barber_name)}`;
+            return `<option value="${Number(slot.availability_id)}">${label}</option>`;
+          }).join('')}</select></label><button class="secondary reschedule-booking" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
+        : '';
+      return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}<br>${rescheduleControls}<br>${cancelButton}</div>`;
+    }));
+    trackList.innerHTML = cards.join('');
+  } catch (_) {
+    trackList.textContent = 'No se pudieron consultar tus citas. Comprueba tu conexión e inténtalo de nuevo.';
+  } finally {
+    trackBtn.disabled = false;
+  }
 }
 
 trackList.addEventListener('click', async (event) => {
