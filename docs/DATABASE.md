@@ -138,7 +138,10 @@ System users (super admin, barbershop owners, barbers, clients).
 - PRIMARY KEY (id)
 - UNIQUE INDEX (email)
 - INDEX (barbershop_id)
+- INDEX (`barbershop_id`, `role`, `is_deleted`, `id`) para listados y conteos paginados por tenant
 - FOREIGN KEY (barbershop_id) REFERENCES barbershops(id)
+
+La migración `026_users_client_listing` añade el índice compuesto sin cambiar ni eliminar registros; su downgrade elimina únicamente el índice.
 
 ---
 

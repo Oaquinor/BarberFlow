@@ -4,7 +4,7 @@ User model.
 Represents system users (super admin, barbershop owners, barbers, clients).
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -15,6 +15,9 @@ class User(BaseModel):
     """User entity."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        Index("ix_users_tenant_role_deleted_id", "barbershop_id", "role", "is_deleted", "id"),
+    )
 
     # Basic Info
     email = Column(String(255), unique=True, nullable=False)
