@@ -91,6 +91,10 @@ for (const viewport of viewports) {
         expect(outOfBounds, `${label} visible controls outside viewport`).toEqual([]);
 
         if (route === "/client.html") {
+          await expect(
+            page.locator("#showBookBtn"),
+            `Client page errors: ${pageErrors.join(" | ") || "none"}`,
+          ).toHaveClass(/active/);
           await page.locator("#showBookBtn").click();
           await expect(page.locator("#bookSection")).toBeVisible();
           const bookingWidth = await page.evaluate(() => ({
