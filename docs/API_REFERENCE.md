@@ -98,8 +98,22 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y rechaza duplicados del mismo tenant. Crea una ficha sin acceso de cuenta ni cita asociada.
 | `GET` | `/onboarding/profile` | Lee el perfil, horario y zona horaria de la barbería autenticada |
 | `PUT` | `/onboarding/business-settings` | Actualiza nombre, horario, zona horaria y colores; registra auditoría |
+| `PUT` | `/onboarding/brand-colors` | Guarda los colores de marca del tenant |
+| `POST` | `/onboarding/upload-logo` | Valida y guarda un logo PNG/JPG de hasta 5 MB |
+| `POST` | `/onboarding/step/1` | Guarda el nombre de la barbería |
+| `POST` | `/onboarding/step/3` | Guarda los colores de marca |
+| `POST` | `/onboarding/step/4` | Guarda el estilo elegido |
+| `POST` | `/onboarding/step/5` | Guarda el objetivo principal |
+| `POST` | `/onboarding/step/6` | Guarda el tamaño del equipo |
+| `POST` | `/onboarding/step/7` | Guarda la duración promedio del servicio |
+| `POST` | `/onboarding/step/8` | Guarda el horario comercial |
+| `POST` | `/onboarding/step/9` | Guarda la personalidad del negocio |
+| `POST` | `/onboarding/complete` | Valida, guarda y audita la configuración final |
+| `GET` | `/onboarding/dashboard-layout` | Devuelve distribución y métricas orientativas del panel |
+| `GET` | `/onboarding/greeting` | Devuelve saludo contextual por hora local del tenant |
+| `POST` | `/onboarding/motivational-message` | Devuelve mensaje según el logro indicado y datos del negocio |
 
-La actualización de configuración requiere rol owner, valida horas y zona horaria IANA, y deriva el tenant del usuario autenticado. Un administrador general debe indicar explícitamente la barbería autorizada.
+Las rutas de escritura requieren rol owner; las que admiten `super_admin` exigen además `barbershop_id`. Para owner/barbero, el tenant se deriva de la identidad autenticada. Las rutas de perfil y contenido del panel permiten owner o barbero. Los pasos 1 y 3–9 guardan el progreso en MySQL y permiten reanudar el onboarding. El paso 2 carga el logo por `/upload-logo` y el último paso aplica los datos por `/complete`. La actualización de configuración valida horas y zona horaria IANA.
 
 `GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
 
