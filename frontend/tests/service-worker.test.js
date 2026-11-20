@@ -99,6 +99,21 @@ test("returns a successful network response when cache persistence fails", async
   assert.equal(await responsePromise, networkResponse);
 });
 
+test("returns a successful network response when cloning it for cache fails", async () => {
+  const networkResponse = { status: 200, clone() { throw new Error("response body is locked"); } };
+  const worker = createWorker(async () => networkResponse);
+  let responsePromise;
+  worker.listeners.get("fetch")({
+    request: {
+      method: "GET", url: "https://kingflow.test/index.html", mode: "navigate",
+      headers: { has: () => false },
+    },
+    respondWith(promise) { responsePromise = promise; },
+  });
+
+  assert.equal(await responsePromise, networkResponse);
+});
+
 test("all app entry pages provide the manifest and register the service worker", () => {
   for (const page of ["index.html", "client.html", "admin.html", "signup.html", "reset-password.html", "onboarding.html"]) {
     const html = fs.readFileSync(path.join(__dirname, "..", page), "utf8");
