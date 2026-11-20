@@ -87,3 +87,22 @@ def test_super_admin_settings_control_registration_and_initial_period(
         json={"registrations_enabled": True, "free_period_days": 366},
     )
     assert invalid.status_code == 422
+
+
+def test_registration_initializes_missing_platform_settings_with_defaults(
+    client: TestClient, test_db: Session,
+):
+    assert test_db.get(PlatformSettings, 1) is None
+
+    registered = client.post(
+        "/api/v1/saas/register", json=_registration_payload("first-register@example.com"),
+    )
+
+    assert registered.status_code == 201
+    settings = test_db.get(PlatformSettings, 1)
+    assert settings is not None
+    assert settings.registrations_enabled is True
+    assert settings.free_period_days == 30
+    shop = test_db.get(Barbershop, registered.json()["user"]["barbershop_id"])
+    subscription = test_db.get(Subscription, shop.subscription_id)
+    assert subscription.current_period_end - subscription.current_period_start == timedelta(days=30)
