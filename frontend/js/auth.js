@@ -28,7 +28,8 @@
             body: JSON.stringify({ refresh_token: refreshToken }),
         });
         if (!response.ok) {
-            // Another browser tab may have rotated the same session already.
+            if (response.status !== 401 && response.status !== 403) return false;
+            // A concurrent local credential update wins over this stale response.
             if (sessionStorage.getItem("refresh_token") !== refreshToken) return true;
             clearTokens();
             window.dispatchEvent(new Event("kingflow:auth-expired"));

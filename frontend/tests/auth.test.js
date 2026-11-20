@@ -88,3 +88,31 @@ test("expired refresh credentials emit the session-expired event", async () => {
   assert.equal(sessionStorage.getItem("token"), null);
   assert.equal(sessionStorage.getItem("refresh_token"), null);
 });
+
+test("temporary refresh server failures preserve the local session", async () => {
+  const sessionStorage = createStorage();
+  const events = [];
+  const sandbox = {
+    localStorage: createStorage(),
+    sessionStorage,
+    Headers,
+    Event,
+    fetch: async (input) => String(input).endsWith("/auth/refresh")
+      ? ({ ok: false, status: 503 })
+      : ({ ok: false, status: 401 }),
+    window: {
+      KINGFLOW_CONFIG: {},
+      location: { origin: "https://kingflow.test" },
+      dispatchEvent(event) { events.push(event.type); },
+    },
+  };
+  vm.runInNewContext(authSource, sandbox, { filename: "auth.js" });
+  sandbox.window.KingFlowAuth.setTokens("access", "refresh");
+
+  const response = await sandbox.window.KingFlowAuth.fetch("https://kingflow.test/api/private");
+
+  assert.equal(response.status, 401);
+  assert.equal(sessionStorage.getItem("token"), "access");
+  assert.equal(sessionStorage.getItem("refresh_token"), "refresh");
+  assert.deepEqual(events, []);
+});
