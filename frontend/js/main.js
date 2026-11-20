@@ -572,7 +572,7 @@ function renderAppointmentDay(businessDate, appointments) {
                 <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
                     ${appointment.status === 'pending' ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'confirmed')">✅ Confirmar</button>` : ''}
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'in_progress')">▶️ Iniciar</button>` : ''}
-                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary" type="button" onclick="collectAppointmentPayment(${Number(appointment.id)})">💳 Cobrar y finalizar</button>` : ''}
+                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary" type="button" data-appointment-id="${Number(appointment.id)}" onclick="collectAppointmentPayment(this.dataset.appointmentId)">💳 Cobrar y finalizar</button>` : ''}
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'cancelled')">❌ Cancelar</button>` : ''}
                     ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary" type="button" onclick="if (window.confirm('¿Marcar esta cita como inasistencia?')) updateAppointmentStatus(${Number(appointment.id)}, 'no_show')">🚫 No asistió</button>` : ''}
                 </div>
@@ -1503,14 +1503,13 @@ function finishService() {
         return;
     }
 
-    const clickHandler = paymentBtn.getAttribute('onclick') || '';
-    const match = clickHandler.match(/collectAppointmentPayment\((\d+)\)/);
-    if (!match) {
+    const appointmentId = Number(paymentBtn.dataset.appointmentId);
+    if (!Number.isInteger(appointmentId) || appointmentId <= 0) {
         alert('No se pudo identificar la cita activa.');
         return;
     }
 
-    collectAppointmentPayment(Number(match[1]));
+    collectAppointmentPayment(appointmentId);
 }
 
 async function updateAppointmentStatus(appointmentId, status) {

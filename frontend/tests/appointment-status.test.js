@@ -27,4 +27,6 @@ test("no-show action becomes available only after the scheduled service duration
   assert.equal(sandbox.canMarkAppointmentNoShow({ ...appointment, scheduled_time: "invalid" }, deadline), false);
   assert.match(source, /appointment\.status === 'pending' \? `.*updateAppointmentStatus\(\$\{Number\(appointment\.id\)\}, 'confirmed'\)/s);
   assert.match(source, /canMarkAppointmentNoShow\(appointment\).*no_show/s);
+  assert.match(source, /data-appointment-id="\$\{Number\(appointment\.id\)\}" onclick="collectAppointmentPayment\(this\.dataset\.appointmentId\)"/);
+  assert.match(source, /const appointmentId = Number\(paymentBtn\.dataset\.appointmentId\);[\s\S]*collectAppointmentPayment\(appointmentId\);/);
 });
