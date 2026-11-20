@@ -28,17 +28,18 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución integral de GitHub Actions validó el commit `da14244` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44690329594](https://github.com/Oaquinor/BarberFlow/actions/runs/44690329594). El backend ejecutó **119 pruebas sobre MySQL 8.4.13, sin advertencias de pytest**; también pasaron los tests frontend/WhatsApp, las imágenes de producción y la validación de `docker-compose.prod.yml`. CI levantó la API con Compose contra MySQL efímero, aplicó migraciones y verificó `/health`; luego retiró los contenedores y el volumen descartable. Las acciones oficiales de CI usan runtime Node 24. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
+La ejecución integral de GitHub Actions validó el commit `5431f9e` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44693723168](https://github.com/Oaquinor/BarberFlow/actions/runs/44693723168). El backend ejecutó **119 pruebas sobre MySQL 8.4.13, sin advertencias de pytest**; el frontend pasó **65 pruebas unitarias y 18 comprobaciones Chromium responsivas**. También pasaron las pruebas WhatsApp, auditorías de dependencias, imágenes de producción y la validación de `docker-compose.prod.yml`. CI levantó la API con Compose contra MySQL efímero, aplicó migraciones y verificó `/health`; luego retiró los contenedores y el volumen descartable. Las acciones oficiales de CI usan runtime Node 24. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
 
 - Backend: Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **119 passed**, sin advertencias. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente y las carreras MySQL de cierre de caja.
-- Frontend/WhatsApp: pruebas y auditoría de dependencias pasaron.
+- Frontend: `npm test` — **65 passed**; Playwright — **18 passed** en Chromium para seis páginas con viewports 320 × 640, 375 × 667 y 768 × 1024 px. Se comprobaron overflow horizontal, controles visibles y la apertura de reserva y onboarding.
+- WhatsApp: pruebas y auditoría de dependencias pasaron.
 - Imágenes de producción: builds, usuario sin privilegios y smoke test de API pasaron.
 - Compose de producción: `docker compose -f docker-compose.prod.yml config --quiet` pasó con variables de CI.
-- El CI también ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` sin vulnerabilidades conocidas.
+- El CI ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` en frontend y WhatsApp sin vulnerabilidades conocidas.
 - Las ejecuciones previas incluyen pruebas específicas de bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
 - Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT`, se usa `httpx2` para el TestClient compatible con Starlette actual y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
 - La suite local, sin base MySQL de prueba configurada, fue **28 passed, 53 skipped**; no sustituye la ejecución MySQL de CI indicada arriba.
-- Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
+- Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Playwright amplía la verificación a seis páginas en Chromium; no equivale a una matriz de navegadores ni a pruebas en dispositivos físicos.
 - No se validó Docker Compose en runtime en el equipo local porque Docker no está instalado.
 - No se verificó entrega real de SMTP/WhatsApp porque requiere credenciales SMTP y una sesión WhatsApp autorizada.
 - La pantalla y API de recuperación se probaron con SMTP simulado; producción requiere `FRONTEND_BASE_URL` HTTPS para construir los enlaces.
@@ -57,7 +58,7 @@ La ejecución integral de GitHub Actions validó el commit `da14244` de la rama 
 | Notificaciones internas y cola durable | Implementado | Persistencia/reintentos MySQL probados; entrega efectiva depende de proveedores configurados. |
 | SMTP y WhatsApp | Parcial | Pruebas de API y servicio pasan; no hubo entrega real con credenciales de producción. |
 | Rendimiento, logros y pronóstico | Implementado | Datos y endpoints incluidos en suite backend MySQL; pronóstico estadístico simple, sin modelo entrenado. |
-| PWA | Implementado | Suite frontend verifica service worker, caché y enlaces privados; sin matriz completa de dispositivos/navegadores. |
+| PWA | Implementado | Suite frontend verifica service worker, caché y enlaces privados; Playwright verifica seis páginas responsivas en Chromium; sin matriz completa de dispositivos/navegadores. |
 | Inteligencia artificial | Parcial | El pronóstico es descriptivo y no usa modelo generativo o entrenado. |
 | Despliegue y operación de producción | Pendiente de validación | No se desplegó ni se validaron Compose/proveedores en producción; no se publicó ningún cambio a producción. |
 
