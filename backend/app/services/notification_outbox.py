@@ -102,7 +102,19 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
                 service_type=appointment.service_type,
                 barbershop_address=shop.address_line1 or "N/A",
             )
-            if existing and existing.status == "pending":
+            if existing and (
+                existing.status == "pending"
+                or (
+                    existing.status == "failed"
+                    and existing.last_error in {"recipient_unavailable", "appointment_not_upcoming"}
+                )
+            ):
+                if existing.status == "failed":
+                    existing.status = "pending"
+                    existing.attempts = 0
+                    existing.last_error = None
+                    existing.claimed_at = None
+                    existing.sent_at = None
                 existing.recipient = client.email
                 existing.body = body
                 existing.scheduled_for = due.replace(microsecond=0)
@@ -126,7 +138,19 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
                 barbershop_name=shop.name,
                 scheduled_time=notifier._local_scheduled_time(appointment.scheduled_time, shop),
             )
-            if existing and existing.status == "pending":
+            if existing and (
+                existing.status == "pending"
+                or (
+                    existing.status == "failed"
+                    and existing.last_error in {"recipient_unavailable", "appointment_not_upcoming"}
+                )
+            ):
+                if existing.status == "failed":
+                    existing.status = "pending"
+                    existing.attempts = 0
+                    existing.last_error = None
+                    existing.claimed_at = None
+                    existing.sent_at = None
                 existing.recipient = client.phone
                 existing.body = body
                 existing.scheduled_for = due.replace(microsecond=0)

@@ -113,3 +113,34 @@ def test_reminders_follow_rescheduled_appointments(test_db: Session, monkeypatch
     monkeypatch.setattr(NotificationService, "_send_whatsapp", lambda *_args: True)
     assert process_due_deliveries(test_db, now=now) == 2
     assert all(row.status == "sent" for row in rows)
+
+
+def test_reminder_recovers_when_recipient_becomes_available(test_db: Session, monkeypatch):
+    now = utc_now_naive()
+    shop, client, appointment = _tenant_with_appointment(test_db, now + timedelta(hours=2))
+    assert enqueue_due_appointment_reminders(test_db, now) == 2
+    email_row = test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.barbershop_id == shop.id,
+        NotificationDelivery.appointment_id == appointment.id,
+        NotificationDelivery.channel == "email",
+    ).one()
+
+    client.email = None
+    test_db.commit()
+    assert process_due_deliveries(test_db, now=now) == 1
+    test_db.refresh(email_row)
+    assert email_row.status == "failed"
+    assert email_row.last_error == "recipient_unavailable"
+
+    client.email = "restored@example.com"
+    test_db.commit()
+    assert enqueue_due_appointment_reminders(test_db, now + timedelta(minutes=1)) == 0
+    test_db.refresh(email_row)
+    assert email_row.status == "pending"
+    assert email_row.recipient == client.email
+    assert email_row.attempts == 0
+    assert email_row.last_error is None
+    assert email_row.next_attempt_at == now + timedelta(minutes=1)
+    monkeypatch.setattr(NotificationService, "_send_email", lambda *_args: True)
+    assert process_due_deliveries(test_db, now=now + timedelta(minutes=1)) == 1
+    assert email_row.status == "sent"
