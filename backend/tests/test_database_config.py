@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from app.core.database.session import validate_database_url
@@ -14,6 +16,15 @@ def test_users_model_indexes_tenant_role_and_soft_delete_listings():
     assert indexes["ix_users_tenant_role_deleted_id"] == (
         "barbershop_id", "role", "is_deleted", "id",
     )
+
+
+def test_production_compose_uses_the_trusted_reverse_proxy_ip_header():
+    repository_root = Path(__file__).resolve().parents[2]
+    compose = (repository_root / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    environment_example = (repository_root / ".env.production.example").read_text(encoding="utf-8")
+
+    assert "CLIENT_IP_HEADER=${CLIENT_IP_HEADER:-X-Real-IP}" in compose
+    assert "CLIENT_IP_HEADER=X-Real-IP" in environment_example
 
 
 @pytest.mark.parametrize("url", [

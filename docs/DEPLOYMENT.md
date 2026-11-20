@@ -41,7 +41,7 @@ docker compose -f docker-compose.prod.yml config --quiet
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Alembic migrations run as part of backend startup. The production Compose file rejects missing database credentials, JWT secret, HTTPS origins and WhatsApp token. Put secrets in the root `.env` file consumed by Compose; never put production credentials in `backend/.env` or an image build context. `.dockerignore` excludes environment files, local uploads, logs, dependency folders and Git metadata from builds. The development `docker-compose.yml` contains local defaults and `DEBUG=True`; do not use it for production.
+Alembic migrations run as part of backend startup. The production Compose file rejects missing database credentials, JWT secret, HTTPS origins and WhatsApp token. It defaults `CLIENT_IP_HEADER` to `X-Real-IP` for the trusted same-host reverse proxy shown below; that proxy must overwrite the header before forwarding. If another trusted proxy is used, set the corresponding supported header explicitly. Never expose the API port directly to untrusted networks when using a proxy header. Put secrets in the root `.env` file consumed by Compose; never put production credentials in `backend/.env` or an image build context. `.dockerignore` excludes environment files, local uploads, logs, dependency folders and Git metadata from builds. The development `docker-compose.yml` contains local defaults and `DEBUG=True`; do not use it for production.
 
 4. **Create the first platform admin**
 ```bash
