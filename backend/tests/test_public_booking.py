@@ -374,9 +374,8 @@ def test_public_booking_tracking_and_cancel_are_connected(
         "/api/v1/notifications", headers=original_barber_headers,
     ).json()["items"]
     assert "appointment_booked" in {item["event_type"] for item in selected_barber_events}
-    assert {item["event_type"] for item in rescheduled_barber_events} >= {
-        "appointment_rescheduled", "appointment_cancelled",
-    }
+    assert "appointment_rescheduled" in {item["event_type"] for item in rescheduled_barber_events}
+    assert "appointment_cancelled" in {item["event_type"] for item in selected_barber_events}
 
 
 def test_barber_slots_respect_business_hours(client: TestClient, test_db: Session):
