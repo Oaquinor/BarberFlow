@@ -35,6 +35,42 @@ jobs:
           FRONTEND_BASE_URL: https://app.example.com
           WHATSAPP_API_TOKEN: ci-only-whatsapp-token
         run: docker compose -f docker-compose.prod.yml config --quiet
+      - name: Start production Compose API with MySQL
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_USER: kingflow
+          MYSQL_PASSWORD: ci-only-database-password
+          MYSQL_DATABASE: kingflow_barber
+          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
+          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
+          CORS_ORIGINS: '["https://app.example.com"]'
+          FRONTEND_BASE_URL: https://app.example.com
+          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
+        run: |
+          mkdir -p backend/logs frontend/uploads
+          sudo chown -R 10001:10001 backend/logs frontend/uploads
+          docker compose -f docker-compose.prod.yml up --build -d db backend
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8000/health | grep -q '"database":"connected"'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f docker-compose.prod.yml logs backend db
+          exit 1
+      - name: Stop production Compose API
+        if: always()
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_USER: kingflow
+          MYSQL_PASSWORD: ci-only-database-password
+          MYSQL_DATABASE: kingflow_barber
+          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
+          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
+          CORS_ORIGINS: '["https://app.example.com"]'
+          FRONTEND_BASE_URL: https://app.example.com
+          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
+        run: docker compose -f docker-compose.prod.yml down --volumes --remove-orphans
 
   backend:
     name: Backend (MySQL 8.4)
