@@ -855,11 +855,11 @@ async function loadOwnerManagement() {
             ownerFetch('/owner/barber-commissions'),
         ]);
         barberBody.innerHTML = (barberData.items || []).map(barber => `
-            <tr><td>${escapeHtml(barber.full_name)}</td><td>${escapeHtml(barber.email)}</td>
-                <td>${escapeHtml(barber.phone || '—')}</td>
-                <td><form class="owner-barber-rate-form" data-id="${Number(barber.id)}"><input aria-label="Tasa de comisión porcentual" type="number" min="0" max="100" step="0.01" value="${(Number(barber.commission_rate_basis_points || 0) / 100).toFixed(2)}" style="width:82px"><button class="btn-secondary" type="submit">Guardar</button></form></td>
-                <td>${barber.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td><button class="btn-secondary owner-barber-edit" type="button" data-id="${Number(barber.id)}">Editar</button>
+            <tr><td data-label="Nombre">${escapeHtml(barber.full_name)}</td><td data-label="Correo">${escapeHtml(barber.email)}</td>
+                <td data-label="Teléfono">${escapeHtml(barber.phone || '—')}</td>
+                <td data-label="Comisión (%)"><form class="owner-barber-rate-form" data-id="${Number(barber.id)}"><input aria-label="Tasa de comisión porcentual" type="number" min="0" max="100" step="0.01" value="${(Number(barber.commission_rate_basis_points || 0) / 100).toFixed(2)}" style="width:82px"><button class="btn-secondary" type="submit">Guardar</button></form></td>
+                <td data-label="Estado">${barber.is_active ? 'Activo' : 'Inactivo'}</td>
+                <td data-label="Acción"><button class="btn-secondary owner-barber-edit" type="button" data-id="${Number(barber.id)}">Editar</button>
                     <button class="btn-secondary owner-barber-status" type="button" data-id="${Number(barber.id)}" data-active="${barber.is_active}">${barber.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
         ownerBarberCache.clear();
@@ -880,11 +880,11 @@ async function loadOwnerManagement() {
             }
         }
         clientsBody.innerHTML = clients.map(client => `
-            <tr><td>${escapeHtml(client.full_name)}</td><td>${escapeHtml(client.phone || '—')}</td>
-                <td>${Number(client.appointment_count || 0)}</td><td>${Number(client.completed_count || 0)}</td>
-                <td>${client.last_visit ? escapeHtml(new Date(client.last_visit).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })) : '—'}</td>
-                <td>${fmtMoneyFromCents(client.total_paid_cents || 0)}</td><td>${client.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
+            <tr><td data-label="Cliente">${escapeHtml(client.full_name)}</td><td data-label="Teléfono">${escapeHtml(client.phone || '—')}</td>
+                <td data-label="Citas">${Number(client.appointment_count || 0)}</td><td data-label="Completadas">${Number(client.completed_count || 0)}</td>
+                <td data-label="Última visita">${client.last_visit ? escapeHtml(new Date(client.last_visit).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })) : '—'}</td>
+                <td data-label="Total pagado">${fmtMoneyFromCents(client.total_paid_cents || 0)}</td><td data-label="Estado">${client.is_active ? 'Activo' : 'Inactivo'}</td>
+                <td data-label="Acciones"><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
                     <button class="btn-secondary owner-client-status" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
         clientsResult.textContent = `${clients.length} clientes cargados`;
@@ -1101,12 +1101,12 @@ function renderOwnerCommissions(data) {
     ).join(' · ') || fmtMoneyFromCents(0);
     if (totals) totals.textContent = `Pendiente: ${describeTotals(data.pending_totals_by_currency)} · Pagado: ${describeTotals(data.paid_totals_by_currency)}`;
     body.innerHTML = (data.items || []).map(row => `
-        <tr><td>${escapeHtml(row.barber_name)}</td>
-            <td>${escapeHtml(new Date(row.accrued_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
-            <td>${fmtMoneyFromCents(row.amount_cents)}</td>
-            <td>${(Number(row.rate_basis_points) / 100).toFixed(2)}%</td>
-            <td>${row.status === 'paid' ? 'Pagada' : 'Pendiente'}</td>
-            <td>${row.status === 'pending' ? `<select class="owner-commission-method" aria-label="Método de pago"><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><input class="owner-commission-reference" maxlength="120" aria-label="Referencia de pago" placeholder="Referencia (opcional)"><button class="btn-secondary owner-commission-pay" type="button" data-id="${Number(row.id)}">Registrar pago</button>` : `${escapeHtml(row.payment_method || '')}${row.payment_reference ? ` · ${escapeHtml(row.payment_reference)}` : ''}`}</td></tr>
+        <tr><td data-label="Barbero">${escapeHtml(row.barber_name)}</td>
+            <td data-label="Fecha">${escapeHtml(new Date(row.accrued_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
+            <td data-label="Importe">${fmtMoneyFromCents(row.amount_cents)}</td>
+            <td data-label="Tasa">${(Number(row.rate_basis_points) / 100).toFixed(2)}%</td>
+            <td data-label="Estado">${row.status === 'paid' ? 'Pagada' : 'Pendiente'}</td>
+            <td data-label="Liquidación">${row.status === 'pending' ? `<select class="owner-commission-method" aria-label="Método de pago"><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><input class="owner-commission-reference" maxlength="120" aria-label="Referencia de pago" placeholder="Referencia (opcional)"><button class="btn-secondary owner-commission-pay" type="button" data-id="${Number(row.id)}">Registrar pago</button>` : `${escapeHtml(row.payment_method || '')}${row.payment_reference ? ` · ${escapeHtml(row.payment_reference)}` : ''}`}</td></tr>
     `).join('');
     if (result) result.textContent = `${(data.items || []).length} registros recientes (máximo 200)`;
 }
@@ -1665,7 +1665,7 @@ async function loadFinancialReport() {
         document.getElementById('financialReportBreakdowns').innerHTML = sections.map(([title, rows]) => `
             <h4>${escapeHtml(title)}</h4>
             <table><thead><tr><th>Grupo</th><th>Pagos</th><th>Servicios</th><th>Propinas</th><th>Total</th></tr></thead>
-            <tbody>${rows.length ? rows.map((row) => `<tr><td>${escapeHtml(row.label)}</td><td>${Number(row.payment_count)}</td><td>${format(row.service_revenue_cents)}</td><td>${format(row.tip_cents)}</td><td>${format(row.gross_cents)}</td></tr>`).join('') : '<tr><td colspan="5">Sin cobros en el rango.</td></tr>'}</tbody></table>
+            <tbody>${rows.length ? rows.map((row) => `<tr><td data-label="Grupo">${escapeHtml(row.label)}</td><td data-label="Pagos">${Number(row.payment_count)}</td><td data-label="Servicios">${format(row.service_revenue_cents)}</td><td data-label="Propinas">${format(row.tip_cents)}</td><td data-label="Total">${format(row.gross_cents)}</td></tr>`).join('') : '<tr><td colspan="5" data-label="Informe">Sin cobros en el rango.</td></tr>'}</tbody></table>
         `).join('');
         result.textContent = `${data.payment_count} pagos · ${data.start_date} a ${data.end_date} (${data.timezone})`;
     } catch (error) {
