@@ -6,7 +6,7 @@ KingFlow Barber is a multi-tenant barber shop management SaaS with a FastAPI bac
 
 - Python 3.12 or newer
 - MySQL 8.0 or newer
-- Node.js 20 or newer for frontend and WhatsApp tests
+- Node.js 24 LTS for frontend and WhatsApp tests
 - Docker Compose only if using the container deployment
 
 ## Start locally

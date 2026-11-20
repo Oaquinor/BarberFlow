@@ -1,4 +1,4 @@
-# KingFlow Barber - Deployment Guidemn 
+# KingFlow Barber — Deployment Guide
 
 **Production Deployment Documentation**
 
@@ -61,7 +61,7 @@ sudo chown -R 10001:10001 backend/logs frontend/uploads
 
 ### Option 2: VPS Deployment (Manual)
 
-Deploy on a Linux VPS (Ubuntu/Debian recommended).
+Deploy on Ubuntu 24.04 LTS or another supported Linux release that provides Python 3.12 from its configured repositories.
 
 #### 1. Server Setup
 
@@ -70,11 +70,30 @@ Deploy on a Linux VPS (Ubuntu/Debian recommended).
 sudo apt update && sudo apt upgrade -y
 
 # Install dependencies
-sudo apt install -y python3.12 python3.12-venv python3-pip mysql-server nginx certbot
+sudo apt install -y python3.12 python3.12-venv python3-pip nginx certbot curl ca-certificates xz-utils
+```
 
-# Install Node.js (for frontend)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
+Install a maintained Node.js 24 LTS release for WhatsApp. Use the current 24.x security patch listed on the [official Node.js downloads page](https://nodejs.org/en/download/) and verify it against the published checksum file. For an x86-64 server:
+
+```bash
+NODE_VERSION=24.22.3 # Replace with the latest maintained Node.js 24.x patch before installing.
+cd /tmp
+curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"
+grep "node-v${NODE_VERSION}-linux-x64.tar.xz$" SHASUMS256.txt | sha256sum --check
+sudo tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz" -C /usr/local --strip-components=1
+node --version
+```
+
+Install the same MySQL 8.4 LTS series used by CI and Docker Compose through [Oracle's MySQL APT repository](https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/):
+
+```bash
+curl -fsSLO https://dev.mysql.com/get/mysql-apt-config_0.8.40-1_all.deb
+sudo dpkg -i mysql-apt-config_0.8.40-1_all.deb
+# In the configuration dialog, select MySQL 8.4 LTS for MySQL Server & Cluster.
+sudo apt update
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
 ```
 
 #### 2. Database Setup
@@ -82,7 +101,7 @@ sudo apt install -y nodejs
 ```bash
 # Create database and restricted application user
 sudo mysql
-CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 CREATE USER 'kingflow'@'localhost' IDENTIFIED BY 'use-a-generated-secret';
 GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'localhost';
 FLUSH PRIVILEGES;
@@ -92,55 +111,139 @@ EXIT;
 #### 3. Backend Deployment
 
 ```bash
-# Create app directory
-sudo mkdir -p /var/www/kingflow
-cd /var/www/kingflow
+sudo useradd --system --user-group --home-dir /var/lib/kingflow --create-home --shell /usr/sbin/nologin kingflow
+sudo git clone <repository-url> /var/www/kingflow
+sudo chown -R root:root /var/www/kingflow
+sudo install -d -o kingflow -g kingflow -m 0750 \
+  /var/www/kingflow/backend/logs \
+  /var/www/kingflow/frontend/uploads \
+  /var/www/kingflow/whatsapp-service/auth_info_baileys
 
-# Clone repository
-git clone <repository-url> .
+# Install immutable application dependencies as root; services run as kingflow.
+sudo python3.12 -m venv /var/www/kingflow/venv
+sudo /var/www/kingflow/venv/bin/pip install -r /var/www/kingflow/backend/requirements.txt
+sudo npm ci --omit=dev --prefix /var/www/kingflow/whatsapp-service
 
-# Setup virtual environment
-python3.12 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-cd backend
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-nano .env  # Edit with production values
-
-# Run migrations
-alembic upgrade head
-
-# Create systemd service
-sudo nano /etc/systemd/system/kingflow.service
+# Create a production-only settings file; replace every sample value.
+sudo install -o kingflow -g kingflow -m 0600 /dev/null /var/www/kingflow/backend/.env
+sudoedit /var/www/kingflow/backend/.env
 ```
+
+Set at least these values in `backend/.env`. URL-encode reserved characters in the MySQL password inside `DATABASE_URL`.
+
+```dotenv
+ENVIRONMENT=production
+DEBUG=False
+DATABASE_URL=mysql+pymysql://kingflow:URL_ENCODED_PASSWORD@localhost:3306/kingflow_barber
+SECRET_KEY=GENERATE_A_RANDOM_SECRET_OF_AT_LEAST_48_BYTES
+FRONTEND_BASE_URL=https://api.kingflow.com
+CORS_ORIGINS=["https://api.kingflow.com"]
+CLIENT_IP_HEADER=X-Real-IP
+UPLOAD_DIR=/var/www/kingflow/frontend/uploads
+LOG_FILE=/var/www/kingflow/backend/logs/app.log
+WHATSAPP_API_URL=http://127.0.0.1:3001/send
+WHATSAPP_API_TOKEN=GENERATE_A_RANDOM_URL_SAFE_TOKEN
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+EMAIL_FROM=noreply@example.com
+```
+
+Create `/etc/kingflow-whatsapp.env` with the same URL-safe `WHATSAPP_API_TOKEN`, owned by `root:kingflow` with mode `0640`:
+
+```dotenv
+WHATSAPP_BIND_HOST=127.0.0.1
+WHATSAPP_API_TOKEN=THE_SAME_RANDOM_URL_SAFE_TOKEN
+```
+
+```bash
+sudo install -o root -g kingflow -m 0640 /dev/null /etc/kingflow-whatsapp.env
+sudoedit /etc/kingflow-whatsapp.env
+```
+
+Run migrations as the service account so Alembic reads the production `.env` from its working directory:
+
+```bash
+sudo -u kingflow sh -c 'cd /var/www/kingflow/backend && /var/www/kingflow/venv/bin/alembic upgrade head'
+```
+
+Create `/etc/systemd/system/kingflow.service`:
 
 **kingflow.service:**
 ```ini
 [Unit]
 Description=KingFlow Barber API
-After=network.target
+Wants=network-online.target
+After=network-online.target mysql.service
 
 [Service]
-Type=notify
-User=www-data
-Group=www-data
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0027
 WorkingDirectory=/var/www/kingflow/backend
-Environment="PATH=/var/www/kingflow/venv/bin"
-ExecStart=/var/www/kingflow/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+ExecStart=/var/www/kingflow/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create `/etc/systemd/system/kingflow-worker.service` for the durable email/WhatsApp outbox:
+
+```ini
+[Unit]
+Description=KingFlow notification outbox worker
+After=network-online.target mysql.service kingflow.service
+
+[Service]
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0027
+WorkingDirectory=/var/www/kingflow/backend
+ExecStart=/var/www/kingflow/venv/bin/python -m scripts.notification_worker
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create `/etc/systemd/system/kingflow-whatsapp.service`:
+
+```ini
+[Unit]
+Description=KingFlow WhatsApp gateway
+After=network-online.target
+
+[Service]
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0077
+WorkingDirectory=/var/www/kingflow/whatsapp-service
+EnvironmentFile=/etc/kingflow-whatsapp.env
+ExecStart=/usr/local/bin/node server.js
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```bash
-# Start service
+# Start all services
 sudo systemctl daemon-reload
-sudo systemctl start kingflow
-sudo systemctl enable kingflow
+sudo systemctl enable --now kingflow-whatsapp kingflow kingflow-worker
+
+# Create the first platform administrator interactively.
+sudo -u kingflow sh -c 'cd /var/www/kingflow/backend && /var/www/kingflow/venv/bin/python -m scripts.create_admin'
+
+# Pair WhatsApp once and confirm its session is saved under auth_info_baileys.
+sudo journalctl -u kingflow-whatsapp -f
 ```
 
 #### 4. Nginx Configuration
@@ -154,15 +257,15 @@ sudo nano /etc/nginx/sites-available/kingflow
 server {
     listen 80;
     server_name api.kingflow.com;
+    client_max_body_size 6m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
 }
 ```
 
@@ -182,6 +285,8 @@ sudo certbot --nginx -d api.kingflow.com
 # Auto-renewal
 sudo systemctl enable certbot.timer
 ```
+
+Only expose SSH, HTTP and HTTPS at the host firewall. The API and WhatsApp gateway bind to loopback; do not expose ports `8000` or `3001` publicly. Keep `kingflow` as the owner of `backend/logs`, `frontend/uploads` and `whatsapp-service/auth_info_baileys`; keep application source and `node_modules` owned by root and read-only to the service account.
 
 ---
 
