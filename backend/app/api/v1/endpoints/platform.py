@@ -3248,14 +3248,14 @@ def barber_close_cash_register(
         Appointment.scheduled_time >= start,
         Appointment.scheduled_time < end,
         Appointment.is_deleted == False,
-    )
+    ).with_for_update()
     remaining_appointments = db.query(Appointment.id).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.status.in_({"pending", "confirmed"}),
         Appointment.scheduled_time >= start,
         Appointment.scheduled_time < end,
         Appointment.is_deleted == False,
-    )
+    ).with_for_update()
     if user.role == "barber":
         open_services = open_services.filter(Appointment.barber_id == user.id)
         remaining_appointments = remaining_appointments.filter(Appointment.barber_id == user.id)
@@ -3275,20 +3275,21 @@ def barber_close_cash_register(
         Payment.received_at >= start,
         Payment.received_at < end,
         Payment.is_deleted == False,
-    )
+    ).with_for_update()
     if user.role == "barber":
         payment_query = payment_query.filter(Payment.barber_id == user.id)
     cash_payments = payment_query.all()
     cash_commissions_paid = 0
     if user.role in {"barbershop_owner", "super_admin"}:
-        cash_commissions_paid = db.query(func.coalesce(func.sum(BarberCommission.amount_cents), 0)).filter(
+        paid_cash_commissions = db.query(BarberCommission.amount_cents).filter(
             BarberCommission.barbershop_id == shop.id,
             BarberCommission.status == "paid",
             BarberCommission.payment_method == "cash",
             BarberCommission.paid_at >= start,
             BarberCommission.paid_at < end,
             BarberCommission.is_deleted == False,
-        ).scalar() or 0
+        ).with_for_update().all()
+        cash_commissions_paid = sum(int(amount) for (amount,) in paid_cash_commissions)
     expected = sum(item.amount_cents + item.tip_cents for item in cash_payments) - int(cash_commissions_paid)
     close = CashRegisterClose(
         barbershop_id=shop.id,
