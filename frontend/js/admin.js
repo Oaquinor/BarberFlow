@@ -319,7 +319,14 @@ async function loadAffiliateCommissions() {
             const action = commission.status === 'pending'
                 ? `<button type="button" data-action="approve" data-id="${Number(commission.id)}">Aprobar</button>`
                 : commission.status === 'approved'
-                    ? `<button type="button" data-action="pay" data-id="${Number(commission.id)}">Registrar pago</button>` : '';
+                    ? `<div class="commission-payment-controls">
+                        <label>Método<select class="commission-payment-method" aria-label="Método de pago de comisión">
+                            <option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option>
+                            <option value="card">Tarjeta</option><option value="other">Otro</option>
+                        </select></label>
+                        <label>Referencia<input class="commission-payment-reference" maxlength="100" aria-label="Referencia del pago"></label>
+                        <button type="button" data-action="pay" data-id="${Number(commission.id)}">Registrar pago</button>
+                    </div>` : '';
             return `<tr><td data-label="Barbería">${escapeHtml(commission.barbershop_name || commission.barbershop_id)}</td>
                 <td data-label="Importe">${formatAffiliateMoney(commission.amount_cents, commission.currency)} (${Number(commission.commission_rate_percent)}%)</td>
                 <td data-label="Periodo">${escapeHtml(commission.period_start.slice(0, 10))} — ${escapeHtml(commission.period_end.slice(0, 10))}</td>
@@ -372,23 +379,27 @@ document.getElementById('affiliateCommissionsBody')?.addEventListener('click', a
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const id = Number(button.dataset.id);
+    button.disabled = true;
     try {
         if (button.dataset.action === 'approve') {
             await fetchJson(`/api/v1/admin/commissions/${id}/approve`, { method: 'POST' });
         } else {
-            const method = window.prompt('Método del pago externo recibido', 'bank_transfer');
-            if (method === null) return;
-            const reference = window.prompt('Referencia del pago (opcional)', '');
-            if (reference === null) return;
+            const row = button.closest('tr');
+            const method = row?.querySelector('.commission-payment-method')?.value;
+            const reference = row?.querySelector('.commission-payment-reference')?.value.trim() || null;
+            if (!['bank_transfer', 'cash', 'card', 'other'].includes(method)) {
+                throw new Error('Selecciona un método de pago válido.');
+            }
             await fetchJson(`/api/v1/admin/commissions/${id}/pay`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_method: method, payment_reference: reference || null }),
+                body: JSON.stringify({ payment_method: method, payment_reference: reference }),
             });
         }
         await loadAffiliateCommissions();
         await loadAffiliates();
     } catch (error) {
         document.getElementById('affiliateCommissionResult').textContent = error.message;
+        button.disabled = false;
     }
 });
 
