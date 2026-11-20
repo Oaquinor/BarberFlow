@@ -1826,12 +1826,11 @@ document.getElementById('loginForm').addEventListener('submit', async function (
         if (absenceList) absenceList.onclick = cancelBarberAbsence;
         if (currentUser.role === 'barber') await loadBarberAbsences();
 
+        await loadBarberDashboardData();
         const slotDate = document.getElementById('slotDate');
         if (slotDate && !slotDate.value) {
-            slotDate.value = businessTodayDate();
+            slotDate.value = dashboardBusinessDate || businessTodayDate();
         }
-
-        await loadBarberDashboardData();
         await loadCashSummary();
         await loadOwnerManagement();
         await loadOwnerSubscription();

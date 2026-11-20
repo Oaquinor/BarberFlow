@@ -25,6 +25,15 @@ test('barber calendar defaults use the shop date when UTC is already on the next
 
   assert.equal(new Date(instant).toISOString().slice(0, 10), '2026-11-20');
   assert.equal(sandbox.businessTodayDate(), '2026-11-19');
-  assert.match(source, /slotDate\.value = businessTodayDate\(\)/);
+  assert.match(source, /slotDate\.value = dashboardBusinessDate \|\| businessTodayDate\(\)/);
   assert.match(source, /data\.business_date \|\| businessTodayDate\(\)/);
+});
+
+test('slot date defaults to the backend business date after the dashboard loads', () => {
+  const dashboardLoad = source.indexOf('await loadBarberDashboardData();', source.indexOf("document.getElementById('loginForm')"));
+  const slotDefault = source.indexOf('slotDate.value = dashboardBusinessDate || businessTodayDate();');
+
+  assert.notEqual(dashboardLoad, -1);
+  assert.notEqual(slotDefault, -1);
+  assert.ok(dashboardLoad < slotDefault);
 });
