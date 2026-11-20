@@ -4,56 +4,41 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 
 const frontend = path.join(__dirname, "..");
-const formControls = {
-  "index.html": [
-    "loginEmail", "loginPassword", "slotDate", "slotStart", "slotEnd", "slotMinutes",
-    "shareLinkInput", "walkInClientName", "walkInClientPhone", "walkInServiceSelect",
-    "walkInBarberSelect", "serviceSearch",
-  ],
-  "client.html": [
-    "clientName", "clientPhone", "serviceSelect", "scheduledTime", "clientNotes",
-    "trackToken", "supportName", "supportEmail", "supportPhone", "supportMessage",
-  ],
-  "admin.html": [
-    "subscriptionTenantSelect", "subPlan", "subStatus", "subPeriodEnd", "subAutoRenew",
-    "tenantFilter", "auditTenantFilter", "affiliateFirstName", "affiliateLastName",
-    "affiliateEmail", "affiliatePhone", "affiliateCommissionSelect",
-  ],
-  "onboarding.html": [
-    "barbershopName", "logoFile", "primaryColor", "secondaryColor", "teamSize",
-    "avgDuration", "openingTime", "closingTime",
-  ],
-};
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+test("all page form controls have an accessible name", () => {
+  const pages = fs.readdirSync(frontend).filter((file) => file.endsWith(".html"));
+  for (const page of pages) {
+    const html = fs.readFileSync(path.join(frontend, page), "utf8");
+    const explicitLabels = new Set(
+      [...html.matchAll(/<label\b[^>]*\bfor=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]),
+    );
+    const labelRanges = [...html.matchAll(/<label\b[^>]*>[\s\S]*?<\/label>/gi)]
+      .map((label) => [label.index, label.index + label[0].length]);
 
-test("interactive form controls have an accessible name", () => {
-  for (const [file, ids] of Object.entries(formControls)) {
-    const html = fs.readFileSync(path.join(frontend, file), "utf8");
-    for (const id of ids) {
-      const idPattern = escapeRegExp(id);
-      const tag = html.match(new RegExp(`<(?:(?:input)|select|textarea)\\b[^>]*\\bid=["']${idPattern}["'][^>]*>`, "i"));
-      assert.ok(tag, `${file} must contain control ${id}`);
+    const controls = [...html.matchAll(/<(input|select|textarea)\b[^>]*>/gi)];
+    for (const control of controls) {
+      const tag = control[0];
+      const type = tag.match(/\btype=["']([^"']+)["']/i)?.[1]?.toLowerCase();
+      if (["hidden", "submit", "button", "reset", "image"].includes(type)) continue;
 
-      const hasAriaName = /\baria-label(?:ledby)?\s*=/.test(tag[0]);
-      const hasAssociatedLabel = new RegExp(`<label\\b[^>]*\\bfor=["']${idPattern}["']`, "i").test(html);
-      assert.ok(hasAriaName || hasAssociatedLabel, `${file}#${id} must have an accessible label`);
+      const id = tag.match(/\bid=["']([^"']+)["']/i)?.[1];
+      const hasAriaName = /\baria-label=["'][^"']+|\baria-labelledby=["'][^"']+/i.test(tag);
+      const isWrappedByLabel = labelRanges.some(([start, end]) => control.index > start && control.index < end);
+      const hasLabel = isWrappedByLabel || (id && explicitLabels.has(id));
+      assert.ok(hasAriaName || hasLabel, `${page} contains a form control without a label: ${tag}`);
     }
   }
+});
 
+test("logo upload control is keyboard accessible", () => {
   const onboarding = fs.readFileSync(path.join(frontend, "onboarding.html"), "utf8");
   const onboardingScript = fs.readFileSync(path.join(frontend, "js", "onboarding.js"), "utf8");
   assert.match(onboarding, /id="uploadArea"[^>]*role="button"[^>]*tabindex="0"/);
-  assert.match(onboardingScript, /event\.key === 'Enter' \|\| event\.key === ' '/);
   assert.match(onboarding, /id="logoPreview"[^>]*alt="Vista previa del logo de la barbería"/);
-});
 
-test("logo upload control opens from Enter and Space", () => {
-  const onboardingScript = fs.readFileSync(path.join(frontend, "js", "onboarding.js"), "utf8");
   const start = onboardingScript.indexOf("uploadArea.addEventListener('keydown'");
   const end = onboardingScript.indexOf("\n});", start) + 4;
   assert.ok(start >= 0 && end > start, "logo upload keyboard handler must exist");
@@ -64,7 +49,7 @@ test("logo upload control opens from Enter and Space", () => {
     uploadArea: { addEventListener(type, callback) { if (type === "keydown") handler = callback; } },
     document: { getElementById(id) { return id === "logoFile" ? { click() { clicks += 1; } } : null; } },
   };
-  require("node:vm").runInNewContext(onboardingScript.slice(start, end), sandbox);
+  vm.runInNewContext(onboardingScript.slice(start, end), sandbox);
 
   for (const key of ["Enter", " "]) {
     let prevented = false;
