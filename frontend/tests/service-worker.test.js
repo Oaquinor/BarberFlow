@@ -378,11 +378,16 @@ test("support forms confirm the saved ticket even when email notice is unavailab
 test("owner subscription panel reads period status and plan usage from the API", () => {
   const page = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const script = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");
+  const adminPage = fs.readFileSync(path.join(__dirname, "..", "admin.html"), "utf8");
+  const adminScript = fs.readFileSync(path.join(__dirname, "..", "js", "admin.js"), "utf8");
   assert.match(page, /id="ownerSubscriptionSummary"/);
   assert.ok(script.includes("ownerFetch('/billing/subscription')"));
   assert.match(script, /loadOwnerSubscription/);
-  assert.match(script, /Renovación automática configurada/);
-  assert.match(script, /Los cobros de suscripción se registran manualmente; el sistema no procesa cargos automáticos\./);
+  assert.match(script, /Renovación manual: cada periodo requiere que un administrador registre el pago recibido/);
+  assert.match(script, /El sistema no procesa ni programa cargos automáticos\./);
+  assert.doesNotMatch(script, /data\.auto_renew/);
+  assert.match(adminPage, /Este indicador es administrativo; no procesa ni programa cargos/);
+  assert.match(adminScript, /El cobro se registra manualmente/);
 });
 
 test("does not persist navigations whose query carries a tracking token", async () => {

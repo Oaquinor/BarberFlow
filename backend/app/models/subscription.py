@@ -38,7 +38,7 @@ class Subscription(BaseModel):
     trial_end = Column(DateTime, nullable=True)
     is_trial = Column(Boolean, default=False)
 
-    # Auto-renewal
+    # Administrative indicator only; no automatic payment provider consumes this flag.
     auto_renew = Column(Boolean, default=True)
 
     # Relationships

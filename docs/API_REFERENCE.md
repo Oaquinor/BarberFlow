@@ -96,7 +96,7 @@ El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y r
 
 La actualización de configuración requiere rol owner, valida horas y zona horaria IANA, y deriva el tenant del usuario autenticado. Un administrador general debe indicar explícitamente la barbería autorizada.
 
-`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer.
+`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
 
 ## Analítica de demanda
 

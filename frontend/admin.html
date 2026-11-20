@@ -194,19 +194,20 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Próximo cobro</label>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
                         <input type="date" id="subPeriodEnd" />
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Auto-renovación</label>
+                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Indicador de auto-renovación</label>
                         <select id="subAutoRenew">
-                            <option value="true">Sí</option>
+                            <option value="true">Marcada</option>
                             <option value="false">No</option>
                         </select>
                     </div>
                     <button id="saveSubscriptionBtn">💾 Guardar</button>
                 </div>
                 <p id="subscriptionResult" style="margin-top:10px;color:var(--text-secondary);"></p>
+                <p style="color:var(--text-secondary);">Este indicador es administrativo; no procesa ni programa cargos. Cada periodo requiere registrar manualmente el pago recibido.</p>
                 <hr>
                 <h3>Registrar cobro recibido</h3>
                 <p>Este registro confirma un cobro externo recibido. No procesa tarjetas ni crea un cobro ficticio.</p>

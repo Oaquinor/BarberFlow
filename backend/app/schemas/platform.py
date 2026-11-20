@@ -470,7 +470,10 @@ class AdminSubscriptionUpdateRequest(BaseModel):
     plan: Optional[str] = Field(None, description="free|basic|professional|enterprise")
     status: Optional[str] = Field(None, description="active|inactive|cancelled|expired|suspended")
     current_period_end: Optional[datetime] = None
-    auto_renew: Optional[bool] = None
+    auto_renew: Optional[bool] = Field(
+        None,
+        description="Administrative indicator only; automatic charges are not processed or scheduled.",
+    )
 
 
 class AdminSubscriptionResponse(BaseModel):
@@ -480,7 +483,7 @@ class AdminSubscriptionResponse(BaseModel):
     status: str
     current_period_start: datetime
     current_period_end: datetime
-    auto_renew: bool
+    auto_renew: bool = Field(description="Administrative indicator only; automatic charges are not processed or scheduled.")
     max_barbers: Optional[int] = None
     max_appointments_per_month: Optional[int] = None
     max_clients: Optional[int] = None

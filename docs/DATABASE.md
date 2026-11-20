@@ -57,7 +57,7 @@ Barbershop subscription plans.
 | trial_start | TIMESTAMP | Trial period start |
 | trial_end | TIMESTAMP | Trial period end |
 | is_trial | BOOLEAN | Is in trial period |
-| auto_renew | BOOLEAN | Auto-renewal enabled |
+| auto_renew | BOOLEAN | Administrative indicator only; automatic charges are not processed or scheduled |
 | created_at | TIMESTAMP | Creation timestamp |
 | updated_at | TIMESTAMP | Last update timestamp |
 | is_deleted | BOOLEAN | Soft delete flag |

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SubscriptionUsage(BaseModel):
@@ -20,5 +20,5 @@ class OwnerSubscriptionResponse(BaseModel):
     current_period_start: datetime
     current_period_end: datetime
     days_remaining: int
-    auto_renew: bool
+    auto_renew: bool = Field(description="Administrative indicator only; automatic charges are not processed or scheduled.")
     usage: dict[str, SubscriptionUsage]

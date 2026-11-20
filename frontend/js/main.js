@@ -902,8 +902,8 @@ async function loadOwnerSubscription() {
             return `<div class="stat-card"><div class="stat-value">${Number(item.used)} / ${escapeHtml(limit)}</div><div class="stat-label">${escapeHtml(usageLabels[key] || key)}</div></div>`;
         }).join('');
         summary.innerHTML = `<p><strong>${escapeHtml(planLabels[data.plan] || data.plan)}</strong> · ${escapeHtml(statusLabels[data.status] || data.status)} · ${Number(data.days_remaining)} días restantes</p>
-            <p>Periodo: ${escapeHtml(new Date(data.current_period_start).toLocaleDateString('es-DO', dateOptions))} – ${escapeHtml(new Date(data.current_period_end).toLocaleDateString('es-DO', dateOptions))} · Renovación automática configurada: ${data.auto_renew ? 'Sí' : 'No'}</p>
-            <p>Los cobros de suscripción se registran manualmente; el sistema no procesa cargos automáticos.</p>
+            <p>Periodo: ${escapeHtml(new Date(data.current_period_start).toLocaleDateString('es-DO', dateOptions))} – ${escapeHtml(new Date(data.current_period_end).toLocaleDateString('es-DO', dateOptions))}.</p>
+            <p>Renovación manual: cada periodo requiere que un administrador registre el pago recibido. El sistema no procesa ni programa cargos automáticos.</p>
             <div class="stats-grid">${usage}</div>`;
     } catch (error) {
         summary.textContent = error.message || 'No se pudo cargar el estado del plan.';

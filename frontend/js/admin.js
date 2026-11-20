@@ -557,7 +557,7 @@ async function saveSubscription() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        resultEl.textContent = `✅ Guardado. Plan: ${sub.plan} · Estado: ${sub.status} · Próximo cobro: ${(sub.current_period_end || '').slice(0, 10)}`;
+        resultEl.textContent = `✅ Guardado. Plan: ${sub.plan} · Estado: ${sub.status} · Fin del periodo: ${(sub.current_period_end || '').slice(0, 10)} · El cobro se registra manualmente.`;
         await loadTenants();
     } catch (error) {
         resultEl.textContent = `❌ ${error.message}`;
