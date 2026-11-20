@@ -15,6 +15,43 @@ def _headers(user: User) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_expired_subscription_blocks_public_booking_but_owner_can_review_billing(
+    client: TestClient, test_db: Session,
+):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="basic", status="active", current_period_start=now - timedelta(days=31),
+        current_period_end=now - timedelta(seconds=1), max_barbers=3,
+        max_appointments_per_month=100, max_clients=200, auto_renew=True,
+    )
+    test_db.add(subscription)
+    test_db.flush()
+    shop = Barbershop(
+        name="Expired Billing", slug="expired-billing-test", email="expired-billing@example.com",
+        phone="8095555011", address_line1="Calle 51", city="Santo Domingo", state="DN",
+        postal_code="10106", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP", subscription_id=subscription.id, is_active=True,
+    )
+    test_db.add(shop)
+    test_db.flush()
+    owner = User(
+        email="expired-billing-owner@example.com", password_hash="unused", first_name="Owner",
+        last_name="Expired", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
+    )
+    test_db.add(owner)
+    test_db.commit()
+
+    public_profile = client.get(f"/api/v1/public/{shop.slug}")
+    public_services = client.get(f"/api/v1/public/{shop.slug}/services")
+    assert public_profile.status_code == 402
+    assert public_services.status_code == 402
+
+    billing = client.get("/api/v1/billing/subscription", headers=_headers(owner))
+    assert billing.status_code == 200
+    assert billing.json()["status"] == "expired"
+    assert billing.json()["days_remaining"] == 0
+
+
 def test_owner_reads_subscription_period_and_real_limits(client: TestClient, test_db: Session):
     now = utc_now_naive()
     subscription = Subscription(
