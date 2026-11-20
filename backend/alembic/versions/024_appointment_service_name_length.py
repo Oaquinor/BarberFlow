@@ -4,7 +4,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "024_appointment_service_name_length"
+revision = "024_service_name_100"
 down_revision = "023_persist_support_tickets"
 branch_labels = None
 depends_on = None
