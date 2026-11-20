@@ -374,21 +374,28 @@ async function sendSupport() {
   }
 
   result.textContent = 'Enviando...';
-  const res = await fetch(`${API_BASE}/support/contact`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email: email || null, phone: phone || null, message, barbershop_slug: shopSlug }),
-  });
+  supportBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/support/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email: email || null, phone: phone || null, message, barbershop_slug: shopSlug }),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    result.textContent = data.detail || 'No se pudo enviar soporte.';
-    return;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      result.textContent = data.detail || 'No se pudo enviar soporte.';
+      return;
+    }
+
+    result.textContent = data.notification_sent
+      ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+      : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
+  } catch (_) {
+    result.textContent = 'No pudimos confirmar el envío. Espera un momento y consulta con soporte antes de enviar otra solicitud.';
+  } finally {
+    supportBtn.disabled = false;
   }
-
-  result.textContent = data.notification_sent
-    ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
-    : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
 }
 
 bookBtn.addEventListener('click', bookAppointment);

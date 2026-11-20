@@ -131,6 +131,32 @@ test('reschedule and cancellation recover from network failures without hiding u
   assert.match(clientScript, /No pudimos confirmar la cancelación\. Actualiza el seguimiento antes de intentarlo otra vez/);
 });
 
+test('public support requests recover from network failures without encouraging duplicate tickets', async () => {
+  const start = clientScript.indexOf('async function sendSupport()');
+  const end = clientScript.indexOf('\nbookBtn.addEventListener', start);
+  const functionSource = clientScript.slice(start, end);
+  const nodes = {
+    supportName: { value: 'Cliente' },
+    supportEmail: { value: 'client@example.com' },
+    supportPhone: { value: '8095550101' },
+    supportMessage: { value: 'Necesito ayuda' },
+    supportResult: { textContent: '' },
+    supportBtn: { disabled: false },
+  };
+  const sandbox = {
+    document: { getElementById: (id) => nodes[id] },
+    fetch: async () => { throw new Error('offline'); },
+    API_BASE: 'https://api.kingflow.test/api/v1',
+    shopSlug: 'kingflow-shop',
+  };
+  vm.runInNewContext(`const supportBtn = document.getElementById('supportBtn');\n${functionSource}\nthis.sendSupport = sendSupport;`, sandbox);
+
+  await sandbox.sendSupport();
+
+  assert.match(nodes.supportResult.textContent, /consulta con soporte antes de enviar otra solicitud/);
+  assert.equal(nodes.supportBtn.disabled, false);
+});
+
 test('onboarding shows logo upload success and errors and waits for an active upload', () => {
   assert.match(onboardingPage, /id="logoUploadStatus" role="status" aria-live="polite"/);
   assert.match(onboardingScript, /logoUploadPending = true/);
