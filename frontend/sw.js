@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v13`;
+const CACHE_NAME = `${CACHE_PREFIX}v14`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -84,8 +84,12 @@ self.addEventListener('fetch', (event) => {
 
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
-          const cache = await caches.open(CACHE_NAME);
-          cache.put(event.request, responseClone);
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(event.request, responseClone);
+          } catch (_) {
+            // A full or unavailable cache must not turn a successful network response into an error.
+          }
         }
 
         return networkResponse;

@@ -10,7 +10,7 @@ const workerSource = fs.readFileSync(path.join(__dirname, "..", "sw.js"), "utf8"
 const pwaSource = fs.readFileSync(path.join(__dirname, "..", "js", "pwa.js"), "utf8");
 const securitySource = fs.readFileSync(path.join(__dirname, "..", "js", "security.js"), "utf8");
 
-function createWorker(fetchImpl = async () => ({ status: 200 })) {
+function createWorker(fetchImpl = async () => ({ status: 200 }), cachePut = async () => {}) {
   const listeners = new Map();
   const writes = [];
   const deletedCaches = [];
@@ -19,10 +19,10 @@ function createWorker(fetchImpl = async () => ({ status: 200 })) {
     async open(name) {
       return {
         async addAll(assets) { addedAssets.push({ name, assets }); },
-        async put(request) { writes.push(request.url); },
+        async put(request) { writes.push(request.url); return cachePut(request); },
       };
     },
-      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "other-product-cache", "kingflow-pwa-old"]; },
+      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "other-product-cache", "kingflow-pwa-old"]; },
     async delete(name) { deletedCaches.push(name); return true; },
     async match(request) { return { matched: String(request) }; },
   };
@@ -48,7 +48,7 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v13");
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v14");
   assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261119-session-expiry"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
   for (const asset of worker.addedAssets[0].assets) {
@@ -59,7 +59,44 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let activatePromise;
   worker.listeners.get("activate")({ waitUntil(promise) { activatePromise = promise; } });
   await activatePromise;
-  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-old"]);
+  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "kingflow-pwa-old"]);
+});
+
+test("waits for successful cache writes before completing a fetch event", async () => {
+  let finishWrite;
+  let fetchFinished = false;
+  const cacheWrite = new Promise((resolve) => { finishWrite = resolve; });
+  const networkResponse = { status: 200, clone() { return this; } };
+  const worker = createWorker(async () => networkResponse, () => cacheWrite);
+  let responsePromise;
+  worker.listeners.get("fetch")({
+    request: {
+      method: "GET", url: "https://kingflow.test/index.html", mode: "navigate",
+      headers: { has: () => false },
+    },
+    respondWith(promise) { responsePromise = promise.then((response) => { fetchFinished = true; return response; }); },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(fetchFinished, false);
+  finishWrite();
+  assert.equal((await responsePromise).status, 200);
+  assert.equal(fetchFinished, true);
+});
+
+test("returns a successful network response when cache persistence fails", async () => {
+  const networkResponse = { status: 200, clone() { return this; } };
+  const worker = createWorker(async () => networkResponse, async () => { throw new Error("cache full"); });
+  let responsePromise;
+  worker.listeners.get("fetch")({
+    request: {
+      method: "GET", url: "https://kingflow.test/index.html", mode: "navigate",
+      headers: { has: () => false },
+    },
+    respondWith(promise) { responsePromise = promise; },
+  });
+
+  assert.equal(await responsePromise, networkResponse);
 });
 
 test("all app entry pages provide the manifest and register the service worker", () => {
