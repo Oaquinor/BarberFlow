@@ -1,6 +1,7 @@
 """Durable notification queue and reminder scheduling on MySQL."""
 
 from datetime import timedelta
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
@@ -60,6 +61,84 @@ def test_reminders_are_due_and_idempotent(test_db: Session):
     assert {row.channel for row in rows} == {"email", "whatsapp"}
     assert all(row.recipient in {client.email, client.phone} for row in rows)
     assert all(row.scheduled_for <= now + timedelta(seconds=30) for row in rows)
+
+
+def test_refreshing_existing_reminders_commits_updates_for_other_workers(mysql_test_engine):
+    suffix = uuid4().hex
+    now = utc_now_naive().replace(microsecond=0)
+    with Session(mysql_test_engine) as db:
+        shop = Barbershop(
+            name="Outbox reschedule", slug=f"outbox-reschedule-{suffix}",
+            email=f"outbox-reschedule-shop-{suffix}@example.com", phone="8095550404",
+            address_line1="Calle Dos", city="Santo Domingo", state="DN", postal_code="10102",
+            country="DO", timezone="America/Santo_Domingo", currency="DOP",
+        )
+        db.add(shop)
+        db.flush()
+        barber = User(
+            email=f"outbox-reschedule-barber-{suffix}@example.com", password_hash="unused",
+            first_name="Barbero", last_name="Dos", role="barber", is_active=True,
+            barbershop_id=shop.id,
+        )
+        client = User(
+            email=f"outbox-reschedule-client-{suffix}@example.com", password_hash="unused",
+            first_name="Cliente", last_name="Dos", phone="8095550405", role="client",
+            is_active=True, barbershop_id=shop.id,
+        )
+        db.add_all([barber, client])
+        db.flush()
+        appointment = Appointment(
+            barbershop_id=shop.id, client_id=client.id, barber_id=barber.id,
+            scheduled_time=now + timedelta(hours=2), estimated_duration=30,
+            service_type="Corte", service_price=10000, status="confirmed",
+        )
+        db.add(appointment)
+        db.commit()
+        shop_id, appointment_id, client_id = shop.id, appointment.id, client.id
+
+    with Session(mysql_test_engine) as db:
+        assert enqueue_due_appointment_reminders(db, now) == 2
+
+    with Session(mysql_test_engine) as db:
+        appointment = db.get(Appointment, appointment_id)
+        appointment.scheduled_time = now + timedelta(hours=20)
+        client = db.get(User, client_id)
+        client.email = f"restored-{suffix}@example.com"
+        existing_rows = db.query(NotificationDelivery).filter(
+            NotificationDelivery.barbershop_id == shop_id,
+            NotificationDelivery.appointment_id == appointment_id,
+        ).all()
+        previous_email_body = next(row.body for row in existing_rows if row.channel == "email")
+        for row in existing_rows:
+            row.next_attempt_at = now + timedelta(minutes=30)
+        db.commit()
+
+    with Session(mysql_test_engine) as db:
+        assert enqueue_due_appointment_reminders(db, now + timedelta(minutes=1)) == 0
+
+    try:
+        with Session(mysql_test_engine) as db:
+            rows = db.query(NotificationDelivery).filter(
+                NotificationDelivery.barbershop_id == shop_id,
+                NotificationDelivery.appointment_id == appointment_id,
+            ).all()
+            assert len(rows) == 2
+            email_row = next(row for row in rows if row.channel == "email")
+            assert email_row.recipient == f"restored-{suffix}@example.com"
+            assert email_row.body != previous_email_body
+            assert all(row.scheduled_for == now + timedelta(minutes=1) for row in rows)
+            assert all(row.next_attempt_at == now + timedelta(minutes=1) for row in rows)
+    finally:
+        with Session(mysql_test_engine) as db:
+            db.query(NotificationDelivery).filter(
+                NotificationDelivery.barbershop_id == shop_id,
+            ).delete(synchronize_session=False)
+            db.query(Appointment).filter(Appointment.id == appointment_id).delete(
+                synchronize_session=False,
+            )
+            db.query(User).filter(User.barbershop_id == shop_id).delete(synchronize_session=False)
+            db.query(Barbershop).filter(Barbershop.id == shop_id).delete(synchronize_session=False)
+            db.commit()
 
 
 def test_worker_sends_one_due_delivery_once(test_db: Session, monkeypatch):

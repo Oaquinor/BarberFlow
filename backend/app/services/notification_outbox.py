@@ -163,8 +163,9 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
                     body=body, scheduled_for=due,
                 )
                 queued += 1
-    if queued:
-        db.commit()
+    # Existing reminder rows may have changed recipient, content, or schedule
+    # even when no new row was inserted. Persist those refreshes as well.
+    db.commit()
     return queued
 
 
