@@ -335,7 +335,7 @@
                 <div class="user-info" id="userInfo" style="display: none;">
                     <span id="userName">Carlos Martínez (Barbero)</span>
                     <button id="changePasswordBtn" type="button" class="btn-secondary" aria-haspopup="dialog">🔒 Contraseña</button>
-                    <button onclick="logout()" class="btn-secondary">Cerrar Sesión</button>
+                    <button id="logoutButton" class="btn-secondary">Cerrar Sesión</button>
                 </div>
                 <p id="passwordChangeNotice" role="status" aria-live="polite" hidden></p>
             </div>
@@ -402,13 +402,13 @@
             </section>
             <!-- Navigation Tabs -->
             <nav class="tabs">
-                <button class="tab active" onclick="showTab('serviceMode')">🔥 Modo Servicio</button>
-                <button class="tab" onclick="showTab('appointments')">📅 Citas</button>
-                <button class="tab" onclick="showTab('performance')">📊 Rendimiento</button>
-                <button class="tab" onclick="showTab('achievements')">🎮 Logros</button>
-                <button class="tab" onclick="showTab('services')">🛠️ Servicios</button>
-                <button class="tab" onclick="showTab('cashRegister')">💵 Caja</button>
-                <button class="tab owner-only" id="ownerManagementTabButton" onclick="showTab('ownerManagement')" hidden>👥 Equipo y clientes</button>
+                <button class="tab active" data-tab="serviceMode">🔥 Modo Servicio</button>
+                <button class="tab" data-tab="appointments">📅 Citas</button>
+                <button class="tab" data-tab="performance">📊 Rendimiento</button>
+                <button class="tab" data-tab="achievements">🎮 Logros</button>
+                <button class="tab" data-tab="services">🛠️ Servicios</button>
+                <button class="tab" data-tab="cashRegister">💵 Caja</button>
+                <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden>👥 Equipo y clientes</button>
             </nav>
 
             <!-- SERVICE MODE TAB -->
@@ -498,7 +498,7 @@
                 </section>
 
                     <div class="action-buttons">
-                        <button class="btn-success btn-large" onclick="finishService()">
+                        <button class="btn-success btn-large" id="finishServiceButton">
                             ✅ Finalizar Servicio
                         </button>
                     </div>
@@ -532,7 +532,7 @@
                         </div>
                     </div>
                     <div class="actions-grid">
-                        <button class="action-btn" onclick="testConnection()">
+                        <button class="action-btn" id="testConnectionButton">
                             <span class="action-icon">🔌</span>
                             <span class="action-text">Test API</span>
                         </button>
@@ -868,7 +868,7 @@
     <script src="js/auth.js"></script>
     <script src="js/account-security.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261120-appointment-payment-dialog"></script>
+    <script src="js/main.js?v=20261120-csp-events"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

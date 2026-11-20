@@ -481,7 +481,7 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-primary" onclick="nextStep(2)">Siguiente →</button>
+                <button class="btn btn-primary" data-next-step="2">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 1 de 10</div>
@@ -495,12 +495,12 @@
                 <p class="step-subtitle">Lo usaremos en todo el sistema</p>
             </div>
 
-            <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" onclick="document.getElementById('logoFile').click()">
+            <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" data-open-logo>
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Arrastra tu logo aquí o haz click para seleccionar</div>
                 <div class="upload-hint">PNG o JPG • Máx 5MB</div>
             </div>
-            <input type="file" id="logoFile" aria-label="Logo de la barbería, archivo PNG o JPG" accept="image/png,image/jpeg,image/jpg" style="display: none" onchange="previewLogo(this)">
+            <input type="file" id="logoFile" aria-label="Logo de la barbería, archivo PNG o JPG" accept="image/png,image/jpeg,image/jpg" style="display: none" >
             <img id="logoPreview" class="logo-preview hidden" alt="Vista previa del logo de la barbería" />
             <p id="logoUploadStatus" role="status" aria-live="polite"></p>
 
@@ -510,8 +510,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(1)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(3)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="1">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="3">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 2 de 10</div>
@@ -528,12 +528,12 @@
             <div class="color-picker-group">
                 <div class="color-picker">
                     <label for="primaryColor">Color Principal</label>
-                    <input type="color" id="primaryColor" value="#667eea" onchange="updateColorPreview()">
+                    <input type="color" id="primaryColor" value="#667eea" >
                     <div class="color-preview" id="primaryPreview" style="background: #667eea"></div>
                 </div>
                 <div class="color-picker">
                     <label for="secondaryColor">Color Secundario</label>
-                    <input type="color" id="secondaryColor" value="#764ba2" onchange="updateColorPreview()">
+                    <input type="color" id="secondaryColor" value="#764ba2" >
                     <div class="color-preview" id="secondaryPreview" style="background: #764ba2"></div>
                 </div>
             </div>
@@ -541,16 +541,16 @@
             <div class="form-group">
                 <label>O elige un preset:</label>
                 <div class="color-presets">
-                    <button class="preset-btn preset-classic" onclick="applyPreset('#8B4513', '#654321')">Clásico</button>
-                    <button class="preset-btn preset-modern" onclick="applyPreset('#667eea', '#764ba2')">Moderno</button>
-                    <button class="preset-btn preset-urban" onclick="applyPreset('#1a1a1a', '#333333')">Urbano</button>
-                    <button class="preset-btn preset-premium" onclick="applyPreset('#FFD700', '#FFA500')">Premium</button>
+                    <button class="preset-btn preset-classic" data-preset-primary="#8B4513" data-preset-secondary="#654321">Clásico</button>
+                    <button class="preset-btn preset-modern" data-preset-primary="#667eea" data-preset-secondary="#764ba2">Moderno</button>
+                    <button class="preset-btn preset-urban" data-preset-primary="#1a1a1a" data-preset-secondary="#333333">Urbano</button>
+                    <button class="preset-btn preset-premium" data-preset-primary="#FFD700" data-preset-secondary="#FFA500">Premium</button>
                 </div>
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(2)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(4)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="2">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="4">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 3 de 10</div>
@@ -565,35 +565,35 @@
             </div>
 
             <div class="radio-group">
-                <label class="radio-option" onclick="selectRadio('style', 'classic')">
+                <label class="radio-option">
                     <input type="radio" name="style" value="classic">
                     <div class="option-content">
                         <div class="option-title">🏛️ Clásica</div>
                         <div class="option-description">Tradición y experiencia</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('style', 'modern')">
+                <label class="radio-option">
                     <input type="radio" name="style" value="modern">
                     <div class="option-content">
                         <div class="option-title">🌟 Moderna</div>
                         <div class="option-description">Tendencias y estilo actual</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('style', 'urban')">
+                <label class="radio-option">
                     <input type="radio" name="style" value="urban">
                     <div class="option-content">
                         <div class="option-title">🎨 Urbana</div>
                         <div class="option-description">Streetwear y cultura urbana</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('style', 'premium')">
+                <label class="radio-option">
                     <input type="radio" name="style" value="premium">
                     <div class="option-content">
                         <div class="option-title">💎 Premium</div>
                         <div class="option-description">Lujo y exclusividad</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('style', 'family')">
+                <label class="radio-option">
                     <input type="radio" name="style" value="family">
                     <div class="option-content">
                         <div class="option-title">👨‍👩‍👧‍👦 Familiar</div>
@@ -603,8 +603,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(3)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(5)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="3">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="5">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 4 de 10</div>
@@ -619,42 +619,42 @@
             </div>
 
             <div class="radio-group">
-                <label class="radio-option" onclick="selectRadio('goal', 'more_clients')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="more_clients">
                     <div class="option-content">
                         <div class="option-title">📈 Conseguir más clientes</div>
                         <div class="option-description">Crecimiento y nuevos clientes</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('goal', 'organization')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="organization">
                     <div class="option-content">
                         <div class="option-title">📅 Mejor organización</div>
                         <div class="option-description">Agenda y flujo de trabajo</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('goal', 'reduce_cancellations')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="reduce_cancellations">
                     <div class="option-content">
                         <div class="option-title">🎯 Reducir cancelaciones</div>
                         <div class="option-description">Menos no-shows y cancelaciones</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('goal', 'save_time')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="save_time">
                     <div class="option-content">
                         <div class="option-title">⚡ Ahorrar tiempo</div>
                         <div class="option-description">Automatización y eficiencia</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('goal', 'better_service')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="better_service">
                     <div class="option-content">
                         <div class="option-title">⭐ Mejorar atención</div>
                         <div class="option-description">Calidad y satisfacción</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('goal', 'productivity')">
+                <label class="radio-option">
                     <input type="radio" name="goal" value="productivity">
                     <div class="option-content">
                         <div class="option-title">🔥 Aumentar productividad</div>
@@ -669,8 +669,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(4)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(6)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="4">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="6">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 5 de 10</div>
@@ -698,8 +698,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(5)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(7)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="5">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="7">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 6 de 10</div>
@@ -728,8 +728,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(6)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(8)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="6">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="8">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 7 de 10</div>
@@ -755,8 +755,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(7)">← Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(9)">Siguiente →</button>
+                <button class="btn btn-secondary" data-prev-step="7">← Atrás</button>
+                <button class="btn btn-primary" data-next-step="9">Siguiente →</button>
             </div>
 
             <div class="step-indicator">Paso 8 de 10</div>
@@ -771,28 +771,28 @@
             </div>
 
             <div class="radio-group">
-                <label class="radio-option" onclick="selectRadio('personality', 'professional')">
+                <label class="radio-option">
                     <input type="radio" name="personality" value="professional">
                     <div class="option-content">
                         <div class="option-title">💼 Profesional y seria</div>
                         <div class="option-description">Formal y corporativa</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('personality', 'friendly')">
+                <label class="radio-option">
                     <input type="radio" name="personality" value="friendly">
                     <div class="option-content">
                         <div class="option-title">😊 Amigable y relajada</div>
                         <div class="option-description">Cercana y casual</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('personality', 'energetic')">
+                <label class="radio-option">
                     <input type="radio" name="personality" value="energetic">
                     <div class="option-content">
                         <div class="option-title">⚡ Energética y divertida</div>
                         <div class="option-description">Dinámica y juvenil</div>
                     </div>
                 </label>
-                <label class="radio-option" onclick="selectRadio('personality', 'elegant')">
+                <label class="radio-option">
                     <input type="radio" name="personality" value="elegant">
                     <div class="option-content">
                         <div class="option-title">✨ Elegante y sofisticada</div>
@@ -802,8 +802,8 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-secondary" onclick="prevStep(8)">← Atrás</button>
-                <button class="btn btn-primary" onclick="completeOnboarding()">Finalizar →</button>
+                <button class="btn btn-secondary" data-prev-step="8">← Atrás</button>
+                <button class="btn btn-primary" data-onboarding-action="complete">Finalizar →</button>
             </div>
 
             <div class="step-indicator">Paso 9 de 10</div>
@@ -835,7 +835,7 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary" style="max-width: 300px; margin: 30px auto;" onclick="goToDashboard()">
+                <button class="btn btn-primary" style="max-width: 300px; margin: 30px auto;" data-onboarding-action="dashboard">
                     Ir a mi dashboard →
                 </button>
             </div>
@@ -844,7 +844,7 @@
 
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/onboarding.js?v=20261119-logo-status"></script>
+    <script src="js/onboarding.js?v=20261120-csp-events"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

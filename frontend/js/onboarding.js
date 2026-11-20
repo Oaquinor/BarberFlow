@@ -406,6 +406,39 @@ function goToDashboard() {
     window.location.href = '/';
 }
 
+document.addEventListener('click', (event) => {
+    const target = event.target.closest('[data-next-step], [data-prev-step], [data-preset-primary], [data-open-logo], [data-onboarding-action]');
+    if (!target) return;
+
+    if (target.hasAttribute('data-next-step')) nextStep(Number(target.dataset.nextStep));
+    else if (target.hasAttribute('data-prev-step')) prevStep(Number(target.dataset.prevStep));
+    else if (target.hasAttribute('data-preset-primary')) {
+        applyPreset(target.dataset.presetPrimary, target.dataset.presetSecondary);
+    } else if (target.hasAttribute('data-open-logo')) {
+        document.getElementById('logoFile')?.click();
+    } else if (target.dataset.onboardingAction === 'complete') {
+        void completeOnboarding();
+    } else if (target.dataset.onboardingAction === 'dashboard') {
+        goToDashboard();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-open-logo]')) {
+        event.preventDefault();
+        document.getElementById('logoFile')?.click();
+    }
+});
+
+document.getElementById('logoFile')?.addEventListener('change', (event) => previewLogo(event.currentTarget));
+document.getElementById('primaryColor')?.addEventListener('input', updateColorPreview);
+document.getElementById('secondaryColor')?.addEventListener('input', updateColorPreview);
+document.querySelectorAll('input[type="radio"][name="style"], input[type="radio"][name="goal"], input[type="radio"][name="personality"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+        if (radio.checked) selectRadio(radio.name, radio.value);
+    });
+});
+
 // Initialize
 window.addEventListener('kingflow:auth-expired', () => {
     window.location.replace('/index.html');

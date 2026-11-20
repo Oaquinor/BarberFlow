@@ -570,11 +570,11 @@ function renderAppointmentDay(businessDate, appointments) {
                     <span>💰 ${fmtMoneyFromCents(appointment.service_price || 0)}</span>
                 </div>
                 <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-                    ${appointment.status === 'pending' ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'confirmed')">✅ Confirmar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'in_progress')">▶️ Iniciar</button>` : ''}
-                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary" type="button" data-appointment-id="${Number(appointment.id)}" onclick="collectAppointmentPayment(this.dataset.appointmentId)">💳 Cobrar y finalizar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'cancelled')">❌ Cancelar</button>` : ''}
-                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary" type="button" onclick="if (window.confirm('¿Marcar esta cita como inasistencia?')) updateAppointmentStatus(${Number(appointment.id)}, 'no_show')">🚫 No asistió</button>` : ''}
+                    ${appointment.status === 'pending' ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="confirmed">✅ Confirmar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="in_progress">▶️ Iniciar</button>` : ''}
+                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary appointment-payment" type="button" data-appointment-id="${Number(appointment.id)}">💳 Cobrar y finalizar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="cancelled">❌ Cancelar</button>` : ''}
+                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="no_show">🚫 No asistió</button>` : ''}
                 </div>
             </div>
         </div>
@@ -806,7 +806,7 @@ async function loadBarberDashboardData() {
                             </div>
                         </div>
                         <div class="service-price">${fmtMoneyFromCents(s.price_cents || 0)}</div>
-                        ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon" type="button" aria-label="Editar servicio" onclick="editService(${s.id})">✏️</button><button class="btn-icon" type="button" aria-label="Desactivar servicio" onclick="deleteService(${s.id})">🗑️</button>` : ''}
+                        ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(s.id)}">✏️</button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(s.id)}">🗑️</button>` : ''}
                     </div>
                 `).join('');
             }
@@ -1366,7 +1366,8 @@ function showTab(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
 
-    const selectedTab = document.querySelector(`.tab[onclick*="showTab('${tabName}')"]`);
+    const selectedTab = [...document.querySelectorAll('.tab[data-tab]')]
+        .find((tab) => tab.dataset.tab === tabName);
     if (selectedTab) selectedTab.classList.add('active');
 
     const content = document.getElementById(`${tabName}Tab`);
@@ -1497,7 +1498,7 @@ function finishService() {
         return;
     }
 
-    const paymentBtn = inProgressCard.querySelector('button[onclick*="collectAppointmentPayment"]');
+    const paymentBtn = inProgressCard.querySelector('.appointment-payment');
     if (!paymentBtn) {
         alert('No se encontró cita para finalizar.');
         return;
@@ -1893,6 +1894,34 @@ if (sessionStorage.getItem('kingflow-password-changed') === '1') {
         notice.hidden = false;
     }
 }
+
+document.getElementById('logoutButton')?.addEventListener('click', logout);
+document.getElementById('finishServiceButton')?.addEventListener('click', finishService);
+document.getElementById('testConnectionButton')?.addEventListener('click', testConnection);
+document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+});
+document.getElementById('appointmentsList')?.addEventListener('click', (event) => {
+    const statusButton = event.target.closest('.appointment-status-action');
+    if (statusButton) {
+        const appointmentId = Number(statusButton.dataset.appointmentId);
+        const nextStatus = statusButton.dataset.status;
+        if (!Number.isInteger(appointmentId) || appointmentId <= 0) return;
+        if (nextStatus === 'no_show' && !window.confirm('¿Marcar esta cita como inasistencia?')) return;
+        void updateAppointmentStatus(appointmentId, nextStatus);
+        return;
+    }
+    const paymentButton = event.target.closest('.appointment-payment');
+    if (paymentButton) void collectAppointmentPayment(Number(paymentButton.dataset.appointmentId));
+});
+document.getElementById('servicesList')?.addEventListener('click', (event) => {
+    const button = event.target.closest('.service-action');
+    if (!button) return;
+    const serviceId = Number(button.dataset.serviceId);
+    if (!Number.isInteger(serviceId) || serviceId <= 0) return;
+    if (button.dataset.action === 'edit') editService(serviceId);
+    if (button.dataset.action === 'delete') void deleteService(serviceId);
+});
 
 console.log('🚀 KingFlow Barber Frontend Ready');
 console.log('📍 API Base:', API_ROOT);

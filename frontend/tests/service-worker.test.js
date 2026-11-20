@@ -22,7 +22,7 @@ function createWorker(fetchImpl = async () => ({ status: 200 }), cachePut = asyn
         async put(request) { writes.push(request.url); return cachePut(request); },
       };
     },
-      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "kingflow-pwa-v14", "kingflow-pwa-v15", "kingflow-pwa-v16", "kingflow-pwa-v17", "kingflow-pwa-v18", "kingflow-pwa-v19", "kingflow-pwa-v20", "kingflow-pwa-v21", "kingflow-pwa-v22", "kingflow-pwa-v23", "kingflow-pwa-v24", "kingflow-pwa-v25", "other-product-cache", "kingflow-pwa-old"]; },
+      async keys() { return ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "kingflow-pwa-v14", "kingflow-pwa-v15", "kingflow-pwa-v16", "kingflow-pwa-v17", "kingflow-pwa-v18", "kingflow-pwa-v19", "kingflow-pwa-v20", "kingflow-pwa-v21", "kingflow-pwa-v22", "kingflow-pwa-v23", "kingflow-pwa-v24", "kingflow-pwa-v25", "kingflow-pwa-v26", "other-product-cache", "kingflow-pwa-old"]; },
     async delete(name) { deletedCaches.push(name); return true; },
     async match(request) { return { matched: String(request) }; },
   };
@@ -48,8 +48,9 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v26");
-  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261120-appointment-payment-dialog"));
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v27");
+  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261120-csp-events"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
   for (const asset of worker.addedAssets[0].assets) {
@@ -60,7 +61,7 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let activatePromise;
   worker.listeners.get("activate")({ waitUntil(promise) { activatePromise = promise; } });
   await activatePromise;
-  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "kingflow-pwa-v14", "kingflow-pwa-v15", "kingflow-pwa-v16", "kingflow-pwa-v17", "kingflow-pwa-v18", "kingflow-pwa-v19", "kingflow-pwa-v20", "kingflow-pwa-v21", "kingflow-pwa-v22", "kingflow-pwa-v23", "kingflow-pwa-v24", "kingflow-pwa-v25", "kingflow-pwa-old"]);
+  assert.deepEqual(worker.deletedCaches, ["kingflow-pwa-v5", "kingflow-pwa-v6", "kingflow-pwa-v7", "kingflow-pwa-v8", "kingflow-pwa-v9", "kingflow-pwa-v10", "kingflow-pwa-v11", "kingflow-pwa-v12", "kingflow-pwa-v13", "kingflow-pwa-v14", "kingflow-pwa-v15", "kingflow-pwa-v16", "kingflow-pwa-v17", "kingflow-pwa-v18", "kingflow-pwa-v19", "kingflow-pwa-v20", "kingflow-pwa-v21", "kingflow-pwa-v22", "kingflow-pwa-v23", "kingflow-pwa-v24", "kingflow-pwa-v25", "kingflow-pwa-v26", "kingflow-pwa-old"]);
 });
 
 test("waits for successful cache writes before completing a fetch event", async () => {
