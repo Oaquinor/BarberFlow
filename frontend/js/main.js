@@ -1546,6 +1546,12 @@ function resetSessionInterface(message = '') {
     notificationRefreshTimer = null;
     if (serviceTimerInterval) clearInterval(serviceTimerInterval);
     serviceTimerInterval = null;
+    if (ownerClientsSearchTimer) clearTimeout(ownerClientsSearchTimer);
+    ownerClientsSearchTimer = null;
+    ownerClientsRequestId += 1;
+    ownerClientsSearch = '';
+    ownerClientsOffset = 0;
+    ownerClientCache.clear();
     localStorage.removeItem('userEmail');
     accessToken = null;
     currentUser = null;
@@ -1560,6 +1566,8 @@ function resetSessionInterface(message = '') {
     if (notificationButton) notificationButton.hidden = true;
     const inbox = document.getElementById('inAppNotificationInbox');
     if (inbox) inbox.hidden = true;
+    const ownerClientSearch = document.getElementById('ownerClientSearch');
+    if (ownerClientSearch) ownerClientSearch.value = '';
 
     const email = document.getElementById('loginEmail');
     if (email) email.value = '';
