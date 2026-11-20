@@ -121,7 +121,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     """Password reset confirmation schema."""
     token: str = Field(..., min_length=32, max_length=128, description="Reset token")
-    new_password: str = Field(..., min_length=8, description="New password")
+    new_password: str = Field(..., min_length=8, max_length=72, description="New password")
 
     @field_validator("new_password")
     @classmethod

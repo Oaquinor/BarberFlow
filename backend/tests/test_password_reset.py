@@ -126,6 +126,10 @@ def test_password_reset_rejects_weak_or_expired_credentials(
         "/api/v1/auth/password-reset/confirm",
         json={"token": "x" * 43, "new_password": "weakpassword"},
     ).status_code == 422
+    assert client.post(
+        "/api/v1/auth/password-reset/confirm",
+        json={"token": "x" * 43, "new_password": "A1" + "x" * 71},
+    ).status_code == 422
     expired_token = "x" * 43
     user = _user(test_db, "expired-recovery@example.com")
     test_db.add(PasswordResetToken(
