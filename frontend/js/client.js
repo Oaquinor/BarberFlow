@@ -12,6 +12,22 @@ function q(name) {
 
 const shopSlug = q('shop');
 
+function trustedTrackingUrl(value) {
+  try {
+    const url = new URL(value, window.location.origin);
+    const allowedOrigins = new Set([window.location.origin, new URL(API_ROOT).origin]);
+    if (!allowedOrigins.has(url.origin) || !['http:', 'https:'].includes(url.protocol) ||
+        url.username || url.password || url.pathname !== '/client.html' ||
+        url.searchParams.get('shop') !== shopSlug || !url.searchParams.get('track_token') ||
+        url.hash) {
+      return null;
+    }
+    return url;
+  } catch (_) {
+    return null;
+  }
+}
+
 const shopNameEl = document.getElementById('shopName');
 const serviceSelect = document.getElementById('serviceSelect');
 const barberSelect = document.getElementById('barberSelect');
@@ -206,8 +222,8 @@ async function bookAppointment() {
     bookResult.replaceChildren();
     bookResult.append(document.createTextNode(`✅ Cita creada (ID ${Number(data.appointment_id)}). `));
     const link = document.createElement('a');
-    const trackingUrl = new URL(data.tracking_link, window.location.origin);
-    if (!['http:', 'https:'].includes(trackingUrl.protocol)) {
+    const trackingUrl = trustedTrackingUrl(data.tracking_link);
+    if (!trackingUrl) {
       bookResult.textContent = '✅ Cita creada. No fue posible abrir el enlace de seguimiento.';
       return;
     }

@@ -22,6 +22,37 @@ test('public booking lets a client choose a barber and submits the selected barb
   assert.match(clientScript, /value="\$\{Number\(s\.availability_id\)\}"/);
 });
 
+test('booking only exposes tracking links for the app or configured API origin', () => {
+  const start = clientScript.indexOf('function trustedTrackingUrl(');
+  const end = clientScript.indexOf('\n}', start) + 2;
+  const helper = clientScript.slice(start, end);
+  const sandbox = {
+    URL,
+    Set,
+    API_ROOT: 'https://api.kingflow.test',
+    shopSlug: 'kingflow-shop',
+    window: { location: { origin: 'https://app.kingflow.test' } },
+  };
+  vm.runInNewContext(`${helper}\nthis.trustedTrackingUrl = trustedTrackingUrl;`, sandbox);
+
+  assert.equal(
+    sandbox.trustedTrackingUrl('/client.html?shop=kingflow-shop&track_token=opaque').origin,
+    'https://app.kingflow.test',
+  );
+  assert.equal(
+    sandbox.trustedTrackingUrl('http://localhost:8000/client.html?shop=kingflow-shop&track_token=opaque'),
+    null,
+  );
+  assert.equal(
+    sandbox.trustedTrackingUrl('https://api.kingflow.test/client.html?shop=kingflow-shop&track_token=opaque').origin,
+    'https://api.kingflow.test',
+  );
+  assert.equal(sandbox.trustedTrackingUrl('https://attacker.test/client.html?shop=kingflow-shop&track_token=opaque'), null);
+  assert.equal(sandbox.trustedTrackingUrl('https://app.kingflow.test/client.html?shop=other-shop&track_token=opaque'), null);
+  assert.equal(sandbox.trustedTrackingUrl('javascript:alert(1)'), null);
+  assert.equal(sandbox.trustedTrackingUrl('https://app.kingflow.test/client.html?shop=kingflow-shop#external'), null);
+});
+
 test('appointment tracking requests replacement slots for each appointment duration', () => {
   assert.match(clientScript, /const duration = Number\(item\.estimated_duration\)/);
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);
