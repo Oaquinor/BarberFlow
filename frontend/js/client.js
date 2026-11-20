@@ -5,6 +5,7 @@ let shopCurrency = 'USD';
 let shopTimezone = 'UTC';
 let availableSlots = [];
 let serviceCatalog = [];
+let slotsRequestSequence = 0;
 
 function q(name) {
   return new URLSearchParams(window.location.search).get(name);
@@ -85,48 +86,61 @@ async function loadShop() {
     shopNameEl.textContent = '❌ Falta identificar la barbería';
     return;
   }
-  const res = await fetch(`${API_BASE}/public/${shopSlug}`);
-  if (!res.ok) {
-    shopNameEl.textContent = '❌ Barbería no disponible';
-    return;
-  }
-
-  const shop = await res.json();
-  shopCurrency = shop.currency || 'USD';
-  shopTimezone = shop.timezone || 'UTC';
-  shopNameEl.textContent = `💈 ${shop.name}`;
-  document.title = `${shop.name} - Cliente`;
-
-  const brandColorPattern = /^#[0-9a-f]{6}$/i;
-  if (brandColorPattern.test(shop.primary_color || '')) {
-    document.documentElement.style.setProperty('--brand-primary', shop.primary_color);
-  }
-  if (brandColorPattern.test(shop.secondary_color || '')) {
-    document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
-  }
-  if (shop.logo_url) {
-    try {
-      const logoUrl = new URL(shop.logo_url, API_ROOT);
-      if (logoUrl.origin === new URL(API_ROOT).origin && ['http:', 'https:'].includes(logoUrl.protocol)) {
-        const logo = document.getElementById('shopLogo');
-        logo.src = logoUrl.href;
-        logo.alt = `Logo de ${shop.name}`;
-        logo.referrerPolicy = 'no-referrer';
-        logo.hidden = false;
-      }
-    } catch (_) {
-      // Ignore an invalid legacy logo URL and keep the booking page usable.
+  const retryButton = document.getElementById('retryShopBtn');
+  if (retryButton) retryButton.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}`);
+    if (!res.ok) {
+      shopNameEl.textContent = '❌ Barbería no disponible';
+      if (retryButton) retryButton.hidden = false;
+      return;
     }
+
+    const shop = await res.json();
+    shopCurrency = shop.currency || 'USD';
+    shopTimezone = shop.timezone || 'UTC';
+    shopNameEl.textContent = `💈 ${shop.name}`;
+    document.title = `${shop.name} - Cliente`;
+    if (retryButton) retryButton.hidden = true;
+
+    const brandColorPattern = /^#[0-9a-f]{6}$/i;
+    if (brandColorPattern.test(shop.primary_color || '')) {
+      document.documentElement.style.setProperty('--brand-primary', shop.primary_color);
+    }
+    if (brandColorPattern.test(shop.secondary_color || '')) {
+      document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
+    }
+    if (shop.logo_url) {
+      try {
+        const logoUrl = new URL(shop.logo_url, API_ROOT);
+        if (logoUrl.origin === new URL(API_ROOT).origin && ['http:', 'https:'].includes(logoUrl.protocol)) {
+          const logo = document.getElementById('shopLogo');
+          logo.src = logoUrl.href;
+          logo.alt = `Logo de ${shop.name}`;
+          logo.referrerPolicy = 'no-referrer';
+          logo.hidden = false;
+        }
+      } catch (_) {
+        // Ignore an invalid legacy logo URL and keep the booking page usable.
+      }
+    }
+
+    const sres = await fetch(`${API_BASE}/public/${shopSlug}/services`);
+    if (!sres.ok) throw new Error('No se pudieron cargar los servicios.');
+    serviceCatalog = await sres.json();
+    if (!Array.isArray(serviceCatalog)) throw new Error('Respuesta de servicios inválida.');
+
+    serviceSelect.innerHTML = serviceCatalog
+      .map(s => `<option value="${Number(s.id)}">${escapeHtml(s.name)} - ${formatMoney(s.price_cents)} (${Number(s.duration_minutes)} min)</option>`)
+      .join('');
+
+    await loadSlots(selectedServiceDuration());
+  } catch (_) {
+    shopNameEl.textContent = 'No se pudo cargar la barbería. Comprueba tu conexión e inténtalo de nuevo.';
+    if (retryButton) retryButton.hidden = false;
+  } finally {
+    if (retryButton) retryButton.disabled = false;
   }
-
-  const sres = await fetch(`${API_BASE}/public/${shopSlug}/services`);
-  serviceCatalog = sres.ok ? await sres.json() : [];
-
-  serviceSelect.innerHTML = serviceCatalog
-    .map(s => `<option value="${Number(s.id)}">${escapeHtml(s.name)} - ${formatMoney(s.price_cents)} (${Number(s.duration_minutes)} min)</option>`)
-    .join('');
-
-  await loadSlots(selectedServiceDuration());
 }
 
 function selectedServiceDuration() {
@@ -142,15 +156,25 @@ async function fetchSlots(durationMinutes) {
   }
   try {
     const res = await fetch(url);
-    return res.ok ? await res.json() : [];
+    if (!res.ok) return null;
+    const slots = await res.json();
+    return Array.isArray(slots) ? slots : null;
   } catch (_) {
-    return [];
+    return null;
   }
 }
 
 async function loadSlots(durationMinutes = selectedServiceDuration()) {
+  const requestSequence = ++slotsRequestSequence;
   const slots = await fetchSlots(durationMinutes);
-  availableSlots = Array.isArray(slots) ? slots : [];
+  if (requestSequence !== slotsRequestSequence) return;
+  if (!Array.isArray(slots)) {
+    availableSlots = [];
+    if (barberSelect) barberSelect.innerHTML = '<option value="">Cualquier barbero</option>';
+    scheduledTimeSelect.innerHTML = '<option value="">No se pudo consultar la disponibilidad</option>';
+    return;
+  }
+  availableSlots = slots;
 
   const selectedBarberId = barberSelect?.value || '';
   const barbers = new Map(availableSlots.map(slot => [Number(slot.barber_id), slot.barber_name]));
@@ -180,6 +204,16 @@ function renderAvailableSlots() {
 
 serviceSelect.addEventListener('change', () => loadSlots(selectedServiceDuration()));
 barberSelect?.addEventListener('change', renderAvailableSlots);
+document.getElementById('refreshSlotsBtn')?.addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await loadSlots(selectedServiceDuration());
+  } finally {
+    button.disabled = false;
+  }
+});
+document.getElementById('retryShopBtn')?.addEventListener('click', loadShop);
 
 async function bookAppointment() {
   const client_name = document.getElementById('clientName').value.trim();
@@ -291,7 +325,7 @@ async function trackAppointments() {
       let availableForService = [];
       if (canReschedule) {
         if (!slotResults.has(duration)) slotResults.set(duration, fetchSlots(duration));
-        availableForService = await slotResults.get(duration);
+        availableForService = await slotResults.get(duration) || [];
       }
       const rescheduleControls = ['pending', 'confirmed'].includes(item.status) && availableForService.length
         ? `<label class="field">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {

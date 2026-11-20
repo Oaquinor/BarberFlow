@@ -14,6 +14,59 @@ test('public booking loads slots for the selected service duration', () => {
   assert.match(clientScript, /serviceSelect\.addEventListener\('change', \(\) => loadSlots\(selectedServiceDuration\(\)\)\)/);
 });
 
+test('availability lookup distinguishes an empty schedule from a failed request', async () => {
+  const start = clientScript.indexOf('async function fetchSlots(');
+  const end = clientScript.indexOf('\nasync function loadSlots', start);
+  const functionSource = clientScript.slice(start, end);
+  const responses = [
+    { ok: true, json: async () => [] },
+    { ok: false },
+  ];
+  const sandbox = {
+    URL,
+    API_BASE: 'https://api.kingflow.test/api/v1',
+    shopSlug: 'kingflow-shop',
+    fetch: async () => responses.shift(),
+  };
+  vm.runInNewContext(`${functionSource}\nthis.fetchSlots = fetchSlots;`, sandbox);
+
+  assert.deepEqual(await sandbox.fetchSlots(30), []);
+  assert.equal(await sandbox.fetchSlots(30), null);
+  sandbox.fetch = async () => { throw new Error('offline'); };
+  assert.equal(await sandbox.fetchSlots(30), null);
+  assert.match(clientScript, /No se pudo consultar la disponibilidad/);
+  const page = fs.readFileSync(path.join(__dirname, '..', 'client.html'), 'utf8');
+  assert.match(page, /id="refreshSlotsBtn"/);
+  assert.match(clientScript, /getElementById\('refreshSlotsBtn'\).*loadSlots\(selectedServiceDuration\(\)\)/s);
+});
+
+test('a slower old availability response cannot replace the selected service slots', async () => {
+  const start = clientScript.indexOf('async function loadSlots(');
+  const end = clientScript.indexOf('\nfunction renderAvailableSlots', start);
+  const source = `let slotsRequestSequence = 0;\n${clientScript.slice(start, end)}`;
+  const pending = new Map();
+  const sandbox = {
+    barberSelect: { value: '', innerHTML: '' },
+    scheduledTimeSelect: { innerHTML: '' },
+    selectedServiceDuration: () => 30,
+    fetchSlots: (duration) => new Promise((resolve) => pending.set(duration, resolve)),
+    escapeHtml: (value) => String(value),
+    renderAvailableSlots() {},
+  };
+  vm.runInNewContext(`${source}\nthis.loadSlots = loadSlots;\nthis.getAvailableSlots = () => availableSlots;`, sandbox);
+
+  const oldRequest = sandbox.loadSlots(30);
+  const currentRequest = sandbox.loadSlots(60);
+  pending.get(60)([{ availability_id: 2, barber_id: 2, barber_name: 'Actual' }]);
+  await currentRequest;
+  pending.get(30)([{ availability_id: 1, barber_id: 1, barber_name: 'Antiguo' }]);
+  await oldRequest;
+
+  assert.equal(sandbox.getAvailableSlots()[0].availability_id, 2);
+  assert.match(sandbox.barberSelect.innerHTML, /Actual/);
+  assert.doesNotMatch(sandbox.barberSelect.innerHTML, /Antiguo/);
+});
+
 test('public booking lets a client choose a barber and submits the selected barber with the slot', () => {
   const page = fs.readFileSync(path.join(__dirname, '..', 'client.html'), 'utf8');
   assert.match(page, /id="barberSelect"/);
