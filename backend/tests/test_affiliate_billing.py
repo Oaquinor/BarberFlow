@@ -1,7 +1,7 @@
 """MySQL integration coverage for referral attribution and subscription commissions."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 from fastapi.testclient import TestClient

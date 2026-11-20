@@ -167,17 +167,41 @@ def test_password_reset_email_quota_is_shared_across_source_ips(test_db: Session
     assert error.value.status_code == 429
 
 
-def test_password_reset_requests_have_a_global_per_ip_limit(client: TestClient):
+def test_password_reset_requests_have_a_global_per_configured_proxy_ip_limit(
+    client: TestClient, monkeypatch,
+):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    first_ip_headers = {"CF-Connecting-IP": "198.51.100.45"}
     for index in range(30):
         response = client.post(
             "/api/v1/auth/password-reset/request",
             json={"email": f"reset-{index}@example.com"},
+            headers=first_ip_headers,
         )
         assert response.status_code == 202
     blocked = client.post(
-        "/api/v1/auth/password-reset/request", json={"email": "reset-last@example.com"}
+        "/api/v1/auth/password-reset/request",
+        json={"email": "reset-last@example.com"},
+        headers=first_ip_headers,
     )
     assert blocked.status_code == 429
+
+    second_ip_headers = {"CF-Connecting-IP": "198.51.100.46"}
+    for index in range(30):
+        response = client.post(
+            "/api/v1/auth/password-reset/request",
+            json={"email": f"other-reset-{index}@example.com"},
+            headers=second_ip_headers,
+        )
+        assert response.status_code == 202
+    blocked_second_ip = client.post(
+        "/api/v1/auth/password-reset/request",
+        json={"email": "other-reset-last@example.com"},
+        headers=second_ip_headers,
+    )
+    assert blocked_second_ip.status_code == 429
 
 
 def test_expired_authentication_records_are_pruned_in_bounded_batches(test_db: Session):

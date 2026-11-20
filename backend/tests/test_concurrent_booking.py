@@ -1,7 +1,7 @@
 """MySQL integration test for two clients racing to reserve one slot."""
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from uuid import uuid4
 
 from fastapi.testclient import TestClient

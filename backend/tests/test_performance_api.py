@@ -1,6 +1,6 @@
 """Tenant and role integration coverage for performance endpoints (MySQL only)."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

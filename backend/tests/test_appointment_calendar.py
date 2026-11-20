@@ -1,6 +1,6 @@
 """Tenant-safe day navigation for the barber appointment calendar."""
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient

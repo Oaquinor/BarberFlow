@@ -20,6 +20,10 @@ def test_booking_client_ip_uses_only_configured_proxy_headers(monkeypatch):
         platform._public_booking_client_ip(request)
     assert invalid_header.value.status_code == 503
 
+    monkeypatch.setattr(platform.settings, "CLIENT_IP_HEADER", "X-Forwarded-For")
+    with pytest.raises(RuntimeError, match="CLIENT_IP_HEADER"):
+        platform._public_booking_client_ip(request)
+
 
 def test_public_booking_quota_limits_tenant_and_ip_and_expires(
     test_db: Session, monkeypatch,

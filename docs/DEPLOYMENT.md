@@ -294,11 +294,11 @@ Only expose SSH, HTTP and HTTPS at the host firewall. The API and WhatsApp gatew
 
 #### Render preview configuration
 
-The repository's `render.yaml` defines an API preview and a separate notification worker. The API uses a free web service and an externally managed MySQL URL; the worker uses paid compute because it must stay online to drain the outbox. Set the MySQL URL and notification provider credentials for both services. `WHATSAPP_API_URL` must point to a reachable WhatsApp gateway; the manifest does not host that gateway. The API uses Render's `CF-Connecting-IP` header for booking quotas; the service must remain behind Render's edge proxy. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid API compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and configure an SMTP provider reachable from the paid worker. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+The repository's `render.yaml` defines an API preview and a separate notification worker. The API uses a free web service and an externally managed MySQL URL; the worker uses paid compute because it must stay online to drain the outbox. Set the MySQL URL and notification provider credentials for both services. `WHATSAPP_API_URL` must point to a reachable WhatsApp gateway; the manifest does not host that gateway. The API uses `CF-Connecting-IP` for per-IP limits on login, password recovery, support requests and public booking. Render routes inbound web requests through Cloudflare; do not expose the app through an alternate path that bypasses that proxy. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid API compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and configure an SMTP provider reachable from the paid worker. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
 
 #### Railway notification worker
 
-Railway's `railway.json` starts the API and runs migrations. Set `CLIENT_IP_HEADER=X-Real-IP` so anonymous booking quotas use Railway's client IP header. Create a second Railway service from the same repository for notifications, set its start command to `cd backend && python -m scripts.notification_worker`, and provide the same MySQL `DATABASE_URL` plus SMTP and WhatsApp gateway variables. Run Alembic migrations only from the API service.
+Railway's `railway.json` starts the API and runs migrations. Set `CLIENT_IP_HEADER=X-Real-IP` so login, recovery, support and booking quotas use Railway's client IP header. Create a second Railway service from the same repository for notifications, set its start command to `cd backend && python -m scripts.notification_worker`, and provide the same MySQL `DATABASE_URL` plus SMTP and WhatsApp gateway variables. Run Alembic migrations only from the API service.
 
 #### AWS Deployment
 
@@ -369,7 +369,7 @@ Before going to production:
 - [ ] Set `CORS_ORIGINS` to a JSON list containing only the public HTTPS app origins, such as `["https://app.example.com"]`.
 - [ ] Enable HTTPS/SSL
 - [ ] Setup firewall rules
-- [ ] Enable rate limiting
+- [ ] Verify MySQL-backed rate limits and configure only the trusted proxy IP header for the selected deployment
 - [ ] Configure backup strategy
 - [ ] Setup monitoring/logging
 - [ ] Use environment variables (never hardcode secrets)

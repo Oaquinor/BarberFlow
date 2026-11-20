@@ -18,6 +18,7 @@ from app.services.audit_service import record_audit
 from app.services.auth_record_retention import prune_expired_auth_records
 from app.services.notification_service import NotificationService
 from app.utils.datetime import utc_now_naive
+from app.utils.client_ip import get_client_ip
 
 router = APIRouter(prefix="/auth/password-reset", tags=["Authentication"])
 RESET_TOKEN_TTL = timedelta(minutes=30)
@@ -92,7 +93,7 @@ def request_password_reset(
     now = utc_now_naive()
     prune_expired_auth_records(db, now)
     email = str(data.email).strip().lower()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request, get_settings().CLIENT_IP_HEADER)
     _consume_request_quota(db, email, client_ip, now)
 
     user = db.query(User).filter(

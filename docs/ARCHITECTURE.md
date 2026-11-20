@@ -39,7 +39,7 @@ Los cobros se guardan como pagos reales y alimentan conciliación, rendimiento y
 
 La API emite JWT de acceso y refresh; las sesiones refresh se guardan y revocan en MySQL. La rotación y la versión de autenticación invalidan sesiones anteriores al cambiar o recuperar la contraseña. Las dependencias de API validan identidad y rol; la pertenencia al tenant se verifica en las consultas y operaciones.
 
-La protección de intentos de login y solicitudes de soporte usa límites persistidos en MySQL con actualizaciones atómicas. Las credenciales de producción y URLs se suministran por variables de entorno. En producción, `main.py` exige clave secreta robusta, HTTPS para los orígenes configurados y URL de frontend HTTPS.
+Los límites por IP de login, recuperación de contraseña, solicitudes de soporte y reservas públicas se guardan en MySQL con actualizaciones atómicas. La IP procede del socket por defecto; `CLIENT_IP_HEADER` permite seleccionar únicamente `CF-Connecting-IP` o `X-Real-IP` cuando un proxy confiable los sobrescribe. No se confía en `X-Forwarded-For`. Las credenciales de producción y URLs se suministran por variables de entorno. En producción, `main.py` exige clave secreta robusta, HTTPS para los orígenes configurados y URL de frontend HTTPS.
 
 ## Notificaciones y tareas de fondo
 

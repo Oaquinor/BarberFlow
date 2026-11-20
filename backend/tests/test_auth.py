@@ -1,12 +1,11 @@
 """Authentication and tenant boundary integration tests (MySQL test DB)."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password
-from app.main import app
 from app.models import Appointment, AuditLog, Barbershop, User
 from app.utils.datetime import utc_now_naive
 
@@ -205,6 +204,25 @@ def test_repeated_bad_passwords_lock_the_account_and_ip_bucket(client: TestClien
     assert blocked.status_code == 429
 
 
+def test_login_ip_quota_uses_the_configured_proxy_header(
+    client: TestClient, test_db: Session, monkeypatch,
+):
+    import app.api.v1.endpoints.platform as platform
+    from app.models import LoginAttempt
+
+    monkeypatch.setattr(platform.settings, "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    client_ip = "198.51.100.42"
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "proxy-login@example.com", "password": "WrongPassword123"},
+        headers={"CF-Connecting-IP": client_ip},
+    )
+
+    assert response.status_code == 401
+    ip_bucket_hash = platform._login_bucket_hash("ip", client_ip)
+    assert test_db.query(LoginAttempt).filter_by(key_hash=ip_bucket_hash).one()
+
+
 def test_support_contact_is_rate_limited_per_hashed_client_ip(
     client: TestClient, test_db: Session, monkeypatch
 ):
@@ -212,6 +230,7 @@ def test_support_contact_is_rate_limited_per_hashed_client_ip(
     from app.models import LoginAttempt
 
     monkeypatch.setattr(platform, "_send_email", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(platform.settings, "CLIENT_IP_HEADER", "CF-Connecting-IP")
     original_bucket_hash = platform._login_bucket_hash
     observed_buckets = []
 
@@ -230,17 +249,30 @@ def test_support_contact_is_rate_limited_per_hashed_client_ip(
     test_db.commit()
     payload = {"name": "Visitante", "email": "visitor@example.com", "message": "Necesito ayuda"}
 
+    first_ip_headers = {"CF-Connecting-IP": "198.51.100.43"}
     for _ in range(platform.SUPPORT_MESSAGE_LIMIT):
-        assert client.post("/api/v1/support/contact", json=payload).status_code == 200
+        assert client.post(
+            "/api/v1/support/contact", json=payload, headers=first_ip_headers
+        ).status_code == 200
     assert test_db.query(platform.SupportTicket).count() == platform.SUPPORT_MESSAGE_LIMIT
-    blocked = client.post("/api/v1/support/contact", json=payload)
+    blocked = client.post(
+        "/api/v1/support/contact", json=payload, headers=first_ip_headers
+    )
     assert blocked.status_code == 429
+    second_ip_headers = {"CF-Connecting-IP": "198.51.100.44"}
+    assert client.post(
+        "/api/v1/support/contact", json=payload, headers=second_ip_headers
+    ).status_code == 200
 
     support_buckets = [row for row in observed_buckets if row[0] == "support-ip"]
     assert support_buckets
     bucket = support_buckets[0][2]
     assert bucket not in support_buckets[0][1]
     assert test_db.query(LoginAttempt).filter(LoginAttempt.key_hash == bucket).count() == 1
+    second_bucket = platform._login_bucket_hash(
+        "support-ip", second_ip_headers["CF-Connecting-IP"]
+    )
+    assert test_db.query(LoginAttempt).filter_by(key_hash=second_bucket).one()
 
 
 def test_owner_cannot_read_another_tenant(client: TestClient, test_db: Session):

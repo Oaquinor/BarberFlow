@@ -1,6 +1,6 @@
 """MySQL integration coverage for owner staff and client operations."""
 
-from datetime import datetime, time, timedelta
+from datetime import time, timedelta
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session

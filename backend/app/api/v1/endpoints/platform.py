@@ -10,7 +10,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from email.message import EmailMessage
 from html import escape as escape_html
 import hashlib
-from ipaddress import ip_address
 import os
 import re
 import secrets
@@ -108,6 +107,7 @@ from app.schemas.platform import (
 from app.services.affiliate_service import AffiliateService
 from app.services.audit_service import record_audit
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
+from app.utils.client_ip import get_client_ip
 from app.services.notification_service import NotificationService
 from app.services.notification_outbox import enqueue_delivery
 from app.services.auth_record_retention import prune_expired_auth_records
@@ -694,33 +694,13 @@ def _consume_public_booking_quota(
 
 def _public_booking_client_ip(request: Request) -> str:
     """Read the socket IP or one explicitly configured, trusted proxy header."""
-    header_name = settings.CLIENT_IP_HEADER.strip().lower()
-    if header_name == "socket":
-        candidate = request.client.host if request.client else None
-        if isinstance(candidate, str) and candidate.strip():
-            try:
-                return ip_address(candidate.strip()).compressed
-            except ValueError:
-                # ASGI test clients can supply symbolic socket addresses; this
-                # value still comes from the server's transport, not a header.
-                return candidate.strip().lower()
-    elif header_name in {"cf-connecting-ip", "x-real-ip"}:
-        candidate = request.headers.get(header_name)
-    else:
-        raise RuntimeError("CLIENT_IP_HEADER must be socket, CF-Connecting-IP, or X-Real-IP")
-    try:
-        return ip_address(candidate.strip()).compressed
-    except (AttributeError, ValueError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo verificar la dirección de red para procesar la reserva.",
-        ) from exc
+    return get_client_ip(request, settings.CLIENT_IP_HEADER)
 
 
 @router.post("/auth/login", response_model=AuthLoginResponse)
 def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(get_db)):
-    ip_address = request.client.host if request.client else "unknown"
-    buckets = _login_buckets(str(data.email), ip_address)
+    client_ip = get_client_ip(request, settings.CLIENT_IP_HEADER)
+    buckets = _login_buckets(str(data.email), client_ip)
     now = utc_now_naive()
     prune_expired_auth_records(db, now)
     _check_login_throttle(db, buckets, now)
@@ -986,7 +966,7 @@ def auth_change_password(
 @router.post("/support/contact")
 def support_contact(data: SupportRequest, request: Request, db: Session = Depends(get_db)):
     _consume_support_message_quota(
-        db, request.client.host if request.client else "unknown", utc_now_naive()
+        db, get_client_ip(request, settings.CLIENT_IP_HEADER), utc_now_naive()
     )
     recipient_query = db.query(User).filter(
         User.is_active == True,
