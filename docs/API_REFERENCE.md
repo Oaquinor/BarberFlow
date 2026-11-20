@@ -48,7 +48,7 @@ Reserva:
 
 `barber_id` es opcional para integraciones anteriores. La página pública permite elegir un barbero entre los que tienen disponibilidad y envía su ID junto con la hora; el backend valida que el turno siga disponible para ese barbero y esa barbería.
 
-Las reservas exitosas sin cuenta se limitan por IP y barbería a 10 por hora, con un límite adicional de 60 por IP por hora entre todas las barberías. El backend guarda únicamente hashes con clave secreta para aplicar la cuota y responde `429` con `Retry-After` al superarla.
+Las solicitudes de reserva para barberías con suscripción activa se limitan por IP y barbería a 10 por hora, con un límite adicional de 60 por IP por hora entre todas las barberías. El backend guarda únicamente hashes con clave secreta para aplicar la cuota y responde `429` con `Retry-After` al superarla.
 
 El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su hash. No se acepta un ID de cita como sustituto de autorización. Para reprogramar envía `{"token":"<token privado>","availability_id":45}`; el sistema bloquea el nuevo turno, valida duración y conflictos, libera el anterior y registra el cambio atómicamente. Cancelación acepta `token` y `reason` opcional. Email/WhatsApp depende de configuración real del proveedor.
 

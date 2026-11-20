@@ -628,43 +628,52 @@ def _consume_support_message_quota(db: Session, ip_address: str, now: datetime) 
 def _consume_public_booking_quota(
     db: Session, barbershop_id: int, ip_address: str, now: datetime,
 ) -> None:
-    """Limit successful anonymous bookings per tenant and source IP in MySQL."""
+    """Limit anonymous booking requests per tenant and source IP in MySQL."""
     buckets = sorted([
         (_login_bucket_hash("booking-tenant-ip", f"{barbershop_id}:{ip_address}"), PUBLIC_BOOKING_TENANT_IP_LIMIT),
         (_login_bucket_hash("booking-ip", ip_address), PUBLIC_BOOKING_IP_LIMIT),
     ])
-    for key_hash, _limit in buckets:
-        statement = mysql_insert(LoginAttempt).values(
-            key_hash=key_hash,
-            failed_count=0,
-            window_started_at=now,
-            last_attempt_at=now,
-            created_at=now,
-            updated_at=now,
-            is_deleted=False,
-        ).prefix_with("IGNORE")
-        db.execute(statement)
+    def consume():
+        for key_hash, _limit in buckets:
+            statement = mysql_insert(LoginAttempt).values(
+                key_hash=key_hash,
+                failed_count=0,
+                window_started_at=now,
+                last_attempt_at=now,
+                created_at=now,
+                updated_at=now,
+                is_deleted=False,
+            ).prefix_with("IGNORE")
+            db.execute(statement)
 
-    attempts = db.query(LoginAttempt).filter(
-        LoginAttempt.key_hash.in_([key_hash for key_hash, _limit in buckets]),
-        LoginAttempt.is_deleted == False,
-    ).order_by(LoginAttempt.key_hash.asc()).with_for_update().all()
-    attempts_by_hash = {attempt.key_hash: attempt for attempt in attempts}
-    for key_hash, limit in buckets:
-        attempt = attempts_by_hash[key_hash]
-        if now - attempt.window_started_at >= PUBLIC_BOOKING_WINDOW:
-            attempt.failed_count = 0
-            attempt.window_started_at = now
-        if attempt.failed_count >= limit:
-            raise HTTPException(
-                status_code=429,
-                detail="Se alcanzó el límite temporal de reservas. Intenta de nuevo más tarde.",
-                headers={"Retry-After": str(max(1, int((attempt.window_started_at + PUBLIC_BOOKING_WINDOW - now).total_seconds())))},
-            )
-    for key_hash, _limit in buckets:
-        attempt = attempts_by_hash[key_hash]
-        attempt.failed_count += 1
-        attempt.last_attempt_at = now
+        attempts = db.query(LoginAttempt).filter(
+            LoginAttempt.key_hash.in_([key_hash for key_hash, _limit in buckets]),
+            LoginAttempt.is_deleted == False,
+        ).order_by(LoginAttempt.key_hash.asc()).with_for_update().all()
+        attempts_by_hash = {attempt.key_hash: attempt for attempt in attempts}
+        for key_hash, limit in buckets:
+            attempt = attempts_by_hash[key_hash]
+            if now - attempt.window_started_at >= PUBLIC_BOOKING_WINDOW:
+                attempt.failed_count = 0
+                attempt.window_started_at = now
+            if attempt.failed_count >= limit:
+                retry_after = max(
+                    1,
+                    int((attempt.window_started_at + PUBLIC_BOOKING_WINDOW - now).total_seconds()),
+                )
+                db.commit()
+                raise HTTPException(
+                    status_code=429,
+                    detail="Se alcanzó el límite temporal de reservas. Intenta de nuevo más tarde.",
+                    headers={"Retry-After": str(retry_after)},
+                )
+        for key_hash, _limit in buckets:
+            attempt = attempts_by_hash[key_hash]
+            attempt.failed_count += 1
+            attempt.last_attempt_at = now
+        db.commit()
+
+    _retry_login_deadlock(db, consume)
 
 
 def _public_booking_client_ip(request: Request) -> str:
@@ -672,6 +681,13 @@ def _public_booking_client_ip(request: Request) -> str:
     header_name = settings.CLIENT_IP_HEADER.strip().lower()
     if header_name == "socket":
         candidate = request.client.host if request.client else None
+        if isinstance(candidate, str) and candidate.strip():
+            try:
+                return ip_address(candidate.strip()).compressed
+            except ValueError:
+                # ASGI test clients can supply symbolic socket addresses; this
+                # value still comes from the server's transport, not a header.
+                return candidate.strip().lower()
     elif header_name in {"cf-connecting-ip", "x-real-ip"}:
         candidate = request.headers.get(header_name)
     else:
@@ -1267,6 +1283,9 @@ def public_create_appointment(
     shop = _get_public_shop(db, slug)
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _require_active_subscription(db, shop)
+    source_ip = _public_booking_client_ip(request)
+    _consume_public_booking_quota(db, shop.id, source_ip, utc_now_naive())
     subscription = _require_active_subscription(db, shop, lock=True)
     if subscription.max_appointments_per_month is not None:
         used = db.query(Appointment.id).filter(
@@ -1362,9 +1381,6 @@ def public_create_appointment(
         for existing in existing_appointments
     ):
         raise HTTPException(status_code=409, detail="El barbero ya tiene una cita en ese horario")
-
-    source_ip = _public_booking_client_ip(request)
-    _consume_public_booking_quota(db, shop.id, source_ip, utc_now_naive())
 
     phone = _normalize_phone(data.phone)
     client = (
