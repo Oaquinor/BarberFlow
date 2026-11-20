@@ -40,6 +40,7 @@ def downgrade():
         "requirement_value", "points", "rarity", "is_active", "is_deleted", "deleted_at",
     )
     for expected in ACHIEVEMENTS:
+        expected_values = {**expected, "is_deleted": False, "deleted_at": None}
         row = connection.execute(
             sa.text(
                 "SELECT id, name, description, icon, category, requirement_type, "
@@ -50,7 +51,7 @@ def downgrade():
         ).mappings().first()
         if not row:
             continue
-        if any(row[field] != expected[field] for field in fields):
+        if any(row[field] != expected_values[field] for field in fields):
             raise RuntimeError(
                 f"Refusing to remove customized achievement {expected['code']}; "
                 "export or restore its original values before downgrade."

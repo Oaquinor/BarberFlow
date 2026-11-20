@@ -226,7 +226,7 @@ All tables include:
 
 ## Operación MySQL agregada por migraciones
 
-La cadena vigente termina en `023_persist_support_tickets` y todas las conexiones de la aplicación usan `mysql+pymysql`.
+La cadena vigente termina en `024_service_name_100` y todas las conexiones de la aplicación usan `mysql+pymysql`.
 
 | Revisión | Cambio |
 |---|---|
@@ -248,12 +248,13 @@ La cadena vigente termina en `023_persist_support_tickets` y todas las conexione
 | `021_user_auth_version` | Versión de credenciales para invalidar access tokens tras cambio/recuperación de contraseña |
 | `022_auth_record_retention_index` | Índice para depurar en lotes acotados los buckets de autenticación vencidos |
 | `023_persist_support_tickets` | Bandeja MySQL de solicitudes de soporte, estado y vínculo opcional a barbería; downgrade protegido si existen tickets |
+| `024_service_name_100` | Amplía a 100 caracteres el snapshot del servicio de una cita; el downgrade rechaza snapshots más largos |
 
 `support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 
 Los importes operativos se guardan en centavos enteros. Las fechas de cita y pago se guardan como UTC sin zona en MySQL; el negocio las convierte usando su zona IANA para presentación y cierres diarios. Las migraciones son aditivas y no borran datos operativos al actualizar.
 
-CI valida el avance desde una base vacía hasta `head`, el retroceso de la base descartable de migraciones hasta `base` y una nueva aplicación hasta `head`. Algunas migraciones protegen los datos y se niegan intencionalmente a retroceder si borrarían historial existente; realiza cualquier reversión de producción solo después de respaldar y revisar esos datos.
+CI valida el avance desde una base vacía hasta `head`, el retroceso de la base descartable de migraciones hasta `base` y una nueva aplicación hasta `head`, usando MySQL 8.4. Los downgrades que eliminarían datos de negocio, auditoría, autenticación, preferencias, notificaciones, pagos, logros o soporte se niegan intencionalmente; las revisiones con semillas solo eliminan valores originales no utilizados. Realiza una reversión de producción solo después de respaldar y revisar los datos afectados.
 
 Los modelos `affiliates` y `commissions` registran el programa de referidos SaaS. `barber_commissions` es independiente: se origina en pagos de servicios, se guarda en la moneda del tenant y se liquida por su propietario. Los cobros SaaS externos se registran en `subscription_payments` y solo después se calculan comisiones de afiliados. `in_app_notifications` es la bandeja del usuario; `notification_deliveries` conserva entregas SMTP/WhatsApp pendientes, enviadas o fallidas, con clave idempotente y reintentos.
 
