@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v14`;
+const CACHE_NAME = `${CACHE_PREFIX}v15`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -65,8 +65,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Tracking tokens and other credentials must not be persisted as cache keys.
-  const sensitiveQueryKeys = ['token', 'track_token', 'code', 'email', 'phone', 'password'];
-  if (sensitiveQueryKeys.some((key) => requestUrl.searchParams.has(key))) {
+  const sensitiveQueryKeys = [...requestUrl.searchParams.keys()].some((key) => {
+    const normalizedKey = key.toLowerCase().replaceAll('-', '_');
+    return [
+      'token', 'code', 'secret', 'key', 'auth', 'authorization', 'session',
+      'email', 'phone', 'password', 'credential', 'otp', 'state', 'signature', 'jwt', 'ticket',
+    ].includes(normalizedKey) ||
+      /(?:^|_)(?:token|code|secret|key)$/.test(normalizedKey);
+  });
+  if (sensitiveQueryKeys) {
     event.respondWith(
       fetch(event.request).catch(() =>
         event.request.mode === 'navigate' ? caches.match('/offline.html') : Response.error()
