@@ -59,7 +59,7 @@ services:
       - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:?Set WHATSAPP_API_TOKEN}
       - WHATSAPP_API_URL=http://whatsapp:3001/send
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend/logs:/app/logs
       - ./frontend/uploads:/frontend/uploads
