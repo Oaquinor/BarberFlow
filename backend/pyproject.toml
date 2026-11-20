@@ -23,7 +23,7 @@ tzdata = ">=2024.1,<2028"
 [tool.poetry.dev-dependencies]
 pytest = "^9.2.0"
 pytest-asyncio = "^1.5.0"
-httpx = "^0.28.1"
+httpx2 = "2.16.2"
 black = "^26.10.1"
 isort = "^5.13.2"
 flake8 = "^7.5.0"
@@ -44,6 +44,9 @@ python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
