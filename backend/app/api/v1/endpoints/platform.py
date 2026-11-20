@@ -1231,19 +1231,17 @@ def public_create_appointment(
         raise HTTPException(status_code=422, detail="La reserva supera el plazo máximo permitido")
 
     # El cliente solo puede reservar turnos configurados por el barbero y no vencidos.
-    slot = (
-        db.query(BarberAvailability)
-        .filter(
-            BarberAvailability.barbershop_id == shop.id,
-            BarberAvailability.is_active == True,
-            BarberAvailability.is_booked == False,
-            BarberAvailability.slot_start == scheduled_time,
-            BarberAvailability.slot_start >= utc_now_naive(),
-            BarberAvailability.is_deleted == False,
-        )
-        .order_by(BarberAvailability.id.asc())
-        .first()
+    slot_query = db.query(BarberAvailability).filter(
+        BarberAvailability.barbershop_id == shop.id,
+        BarberAvailability.is_active == True,
+        BarberAvailability.is_booked == False,
+        BarberAvailability.slot_start == scheduled_time,
+        BarberAvailability.slot_start >= utc_now_naive(),
+        BarberAvailability.is_deleted == False,
     )
+    if data.barber_id is not None:
+        slot_query = slot_query.filter(BarberAvailability.barber_id == data.barber_id)
+    slot = slot_query.order_by(BarberAvailability.barber_id.asc(), BarberAvailability.id.asc()).first()
 
     if not slot:
         raise HTTPException(status_code=400, detail="Ese turno no está disponible")

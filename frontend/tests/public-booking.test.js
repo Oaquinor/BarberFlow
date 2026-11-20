@@ -14,6 +14,14 @@ test('public booking loads slots for the selected service duration', () => {
   assert.match(clientScript, /serviceSelect\.addEventListener\('change', \(\) => loadSlots\(selectedServiceDuration\(\)\)\)/);
 });
 
+test('public booking lets a client choose a barber and submits the selected barber with the slot', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'client.html'), 'utf8');
+  assert.match(page, /id="barberSelect"/);
+  assert.match(clientScript, /barberSelect\?\.addEventListener\('change', renderAvailableSlots\)/);
+  assert.match(clientScript, /barber_id: slot\.barber_id/);
+  assert.match(clientScript, /value="\$\{Number\(s\.availability_id\)\}"/);
+});
+
 test('appointment tracking requests replacement slots for each appointment duration', () => {
   assert.match(clientScript, /const duration = Number\(item\.estimated_duration\)/);
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);

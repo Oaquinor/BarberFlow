@@ -14,6 +14,7 @@ const shopSlug = q('shop');
 
 const shopNameEl = document.getElementById('shopName');
 const serviceSelect = document.getElementById('serviceSelect');
+const barberSelect = document.getElementById('barberSelect');
 const scheduledTimeSelect = document.getElementById('scheduledTime');
 const bookBtn = document.getElementById('bookBtn');
 const bookResult = document.getElementById('bookResult');
@@ -135,24 +136,41 @@ async function loadSlots(durationMinutes = selectedServiceDuration()) {
   const slots = await fetchSlots(durationMinutes);
   availableSlots = Array.isArray(slots) ? slots : [];
 
-  if (!availableSlots.length) {
+  const selectedBarberId = barberSelect?.value || '';
+  const barbers = new Map(availableSlots.map(slot => [Number(slot.barber_id), slot.barber_name]));
+  if (barberSelect) {
+    barberSelect.innerHTML = '<option value="">Cualquier barbero</option>' +
+      [...barbers.entries()].map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('');
+    if (barbers.has(Number(selectedBarberId))) barberSelect.value = selectedBarberId;
+  }
+
+  renderAvailableSlots();
+}
+
+function renderAvailableSlots() {
+  const barberId = barberSelect?.value || '';
+  const slots = availableSlots.filter(slot => !barberId || Number(slot.barber_id) === Number(barberId));
+
+  if (!slots.length) {
     scheduledTimeSelect.innerHTML = '<option value="">Sin turnos disponibles</option>';
     return;
   }
 
-  scheduledTimeSelect.innerHTML = availableSlots.map(s => {
+  scheduledTimeSelect.innerHTML = slots.map(s => {
     const label = `${new Date(s.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(s.barber_name)}`;
-    return `<option value="${escapeHtml(s.slot_start)}">${label}</option>`;
+    return `<option value="${Number(s.availability_id)}">${label}</option>`;
   }).join('');
 }
 
 serviceSelect.addEventListener('change', () => loadSlots(selectedServiceDuration()));
+barberSelect?.addEventListener('change', renderAvailableSlots);
 
 async function bookAppointment() {
   const client_name = document.getElementById('clientName').value.trim();
   const phone = document.getElementById('clientPhone').value.trim();
   const service_id = Number(serviceSelect.value);
-  const dt = scheduledTimeSelect.value;
+  const slot = availableSlots.find(item => Number(item.availability_id) === Number(scheduledTimeSelect.value));
+  const dt = slot?.slot_start;
   const notes = document.getElementById('clientNotes').value.trim();
 
   if (!client_name || !phone || !service_id || !dt) {
@@ -166,6 +184,7 @@ async function bookAppointment() {
     client_name,
     phone,
     service_id,
+    barber_id: slot.barber_id,
     scheduled_time: dt,
     notes: notes || null,
   };

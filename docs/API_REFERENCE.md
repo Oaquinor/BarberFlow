@@ -40,10 +40,13 @@ Reserva:
   "client_name": "Ana Cliente",
   "phone": "8095550202",
   "service_id": 12,
+  "barber_id": 7,
   "scheduled_time": "2026-11-20T15:00:00-04:00",
   "notes": "Corte clásico"
 }
 ```
+
+`barber_id` es opcional para integraciones anteriores. La página pública permite elegir un barbero entre los que tienen disponibilidad y envía su ID junto con la hora; el backend valida que el turno siga disponible para ese barbero y esa barbería.
 
 El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su hash. No se acepta un ID de cita como sustituto de autorización. Para reprogramar envía `{"token":"<token privado>","availability_id":45}`; el sistema bloquea el nuevo turno, valida duración y conflictos, libera el anterior y registra el cambio atómicamente. Cancelación acepta `token` y `reason` opcional. Email/WhatsApp depende de configuración real del proveedor.
 

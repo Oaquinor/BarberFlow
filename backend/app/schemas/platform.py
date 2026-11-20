@@ -112,6 +112,7 @@ class PublicCreateAppointmentRequest(BaseModel):
     client_name: str = Field(..., min_length=2, max_length=120)
     phone: str = Field(..., min_length=6, max_length=30)
     service_id: int = Field(..., gt=0)
+    barber_id: Optional[int] = Field(None, gt=0)
     scheduled_time: datetime
     notes: Optional[str] = Field(None, max_length=1000)
 

@@ -132,7 +132,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     now = utc_now_naive()
     subscription = Subscription(
         plan="free", status="active", current_period_start=now - timedelta(days=1),
-        current_period_end=now + timedelta(days=29), max_barbers=1,
+        current_period_end=now + timedelta(days=29), max_barbers=2,
         max_appointments_per_month=50, max_clients=100, auto_renew=False,
     )
     test_db.add(subscription)
@@ -163,6 +163,15 @@ def test_public_booking_tracking_and_cancel_are_connected(
         is_active=True,
         barbershop_id=shop.id,
     )
+    preferred_barber = User(
+        email="booking-preferred-barber@example.com",
+        password_hash="not-used-for-public-booking",
+        first_name="Barbero",
+        last_name="Elegido",
+        role="barber",
+        is_active=True,
+        barbershop_id=shop.id,
+    )
     owner = User(
         email="booking-owner@example.com",
         password_hash="not-used-for-public-booking",
@@ -180,9 +189,10 @@ def test_public_booking_tracking_and_cancel_are_connected(
         category="haircut",
         is_active=True,
     )
-    test_db.add_all([barber, owner, service])
+    test_db.add_all([barber, preferred_barber, owner, service])
     test_db.commit()
     test_db.refresh(barber)
+    test_db.refresh(preferred_barber)
     test_db.refresh(service)
 
     start = utc_now_naive().replace(second=0, microsecond=0) + timedelta(days=1)
@@ -195,6 +205,11 @@ def test_public_booking_tracking_and_cancel_are_connected(
         is_active=True,
         is_booked=False,
     )
+    preferred_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=preferred_barber.id,
+        slot_start=start, slot_end=start + timedelta(hours=1),
+        is_active=True, is_booked=False,
+    )
     replacement_slot = BarberAvailability(
         barbershop_id=shop.id, barber_id=barber.id,
         slot_start=start + timedelta(hours=2), slot_end=start + timedelta(hours=3),
@@ -205,7 +220,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
         slot_start=start + timedelta(hours=4), slot_end=start + timedelta(hours=5),
         is_active=True, is_booked=False,
     )
-    test_db.add_all([slot, replacement_slot, blocked_slot])
+    test_db.add_all([slot, preferred_slot, replacement_slot, blocked_slot])
     test_db.add(BarberAvailabilityBlock(
         barbershop_id=shop.id, barber_id=barber.id,
         starts_at=blocked_slot.slot_start + timedelta(minutes=10),
@@ -218,12 +233,20 @@ def test_public_booking_tracking_and_cancel_are_connected(
         "client_name": "Cliente Prueba",
         "phone": "809-555-0202",
         "service_id": service.id,
+        "barber_id": preferred_barber.id,
         "scheduled_time": start.replace(tzinfo=timezone.utc).isoformat(),
     }
+    public_slots = client.get(f"/api/v1/public/{shop.slug}/slots?duration_minutes=30")
+    same_time_slots = [
+        row for row in public_slots.json()
+        if datetime.fromisoformat(row["slot_start"].replace("Z", "+00:00")) == start.replace(tzinfo=timezone.utc)
+    ]
+    assert {row["barber_id"] for row in same_time_slots} == {barber.id, preferred_barber.id}
     response = client.post(f"/api/v1/public/{shop.slug}/appointments", json=payload)
     assert response.status_code == 200
     booking = response.json()
     booked_appointment = test_db.get(Appointment, booking["appointment_id"])
+    assert booked_appointment.barber_id == preferred_barber.id
     public_client = test_db.get(User, booked_appointment.client_id)
     assert public_client.email.endswith("@client.invalid")
     assert "8095550202" not in public_client.email
