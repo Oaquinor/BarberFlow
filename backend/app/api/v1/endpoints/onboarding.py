@@ -1,12 +1,15 @@
 """Authenticated, tenant-scoped onboarding endpoints."""
 
+import warnings
 from datetime import datetime, time
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -16,10 +19,10 @@ from app.core.config import get_settings
 from app.models.barbershop import Barbershop
 from app.schemas.onboarding import (
     BarbershopProfile,
+    BusinessSettingsUpdate,
     ContextualMessage,
     DashboardLayoutResponse,
     OnboardingComplete,
-    BusinessSettingsUpdate,
     OnboardingStep1,
     OnboardingStep3,
     OnboardingStep4,
@@ -29,13 +32,48 @@ from app.schemas.onboarding import (
     OnboardingStep8,
     OnboardingStep9,
 )
-from app.services.onboarding_service import OnboardingService
 from app.services.audit_service import record_audit
+from app.services.onboarding_service import OnboardingService
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 MAX_LOGO_SIZE = get_settings().MAX_UPLOAD_SIZE
 ALLOWED_LOGO_TYPES = {"image/png": ".png", "image/jpeg": ".jpg"}
+LOGO_IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG"}
+MAX_LOGO_PIXELS = 16_000_000
 UPLOAD_ROOT = Path(get_settings().UPLOAD_DIR) / "barbershops"
+
+
+def _sanitize_logo(contents: bytes, expected_format: str) -> bytes:
+    """Decode and re-encode a bounded, single-frame PNG/JPEG without metadata."""
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(BytesIO(contents), formats=(expected_format,)) as source:
+                if source.format != expected_format:
+                    raise ValueError("El formato no coincide")
+                width, height = source.size
+                if width < 1 or height < 1 or width * height > MAX_LOGO_PIXELS:
+                    raise ValueError("Las dimensiones del logo no son válidas")
+                if getattr(source, "n_frames", 1) != 1:
+                    raise ValueError("No se permiten imágenes animadas")
+                source.verify()
+
+            with Image.open(BytesIO(contents), formats=(expected_format,)) as source:
+                source.load()
+                image = source.convert("RGBA" if expected_format == "PNG" else "RGB")
+                output = BytesIO()
+                image.save(output, format=expected_format, optimize=True)
+                sanitized = output.getvalue()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning,
+            UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo debe ser una imagen PNG o JPG válida y de dimensiones permitidas",
+        ) from exc
+
+    if len(sanitized) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="El logo procesado debe pesar como máximo 5 MB")
+    return sanitized
 
 
 def _get_tenant_id(user, requested_id: Optional[int] = None) -> int:
@@ -186,10 +224,7 @@ async def upload_logo(
     contents = await file.read(MAX_LOGO_SIZE + 1)
     if not contents or len(contents) > MAX_LOGO_SIZE:
         raise HTTPException(status_code=413, detail="El logo debe pesar como máximo 5 MB")
-    if (extension == ".png" and not contents.startswith(b"\x89PNG\r\n\x1a\n")) or (
-        extension == ".jpg" and not contents.startswith(b"\xff\xd8\xff")
-    ):
-        raise HTTPException(status_code=400, detail="El contenido no coincide con el tipo de imagen")
+    contents = _sanitize_logo(contents, LOGO_IMAGE_FORMATS[file.content_type])
 
     shop = _lock_barbershop(db, tenant_id)
     directory = UPLOAD_ROOT / str(tenant_id)

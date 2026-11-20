@@ -1,8 +1,10 @@
 """MySQL integration tests for tenant-scoped logo storage and audit history."""
 
 from datetime import timedelta
+from io import BytesIO
 
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -10,8 +12,15 @@ from app.core.security import create_access_token
 from app.models import AuditLog, Barbershop, Subscription, User
 from app.utils.datetime import utc_now_naive
 
-
 PNG_HEADER = b"\x89PNG\r\n\x1a\n"
+
+
+def _image_bytes(image_format: str = "PNG") -> bytes:
+    output = BytesIO()
+    mode = "RGBA" if image_format == "PNG" else "RGB"
+    color = (40, 90, 160, 180) if image_format == "PNG" else (40, 90, 160)
+    Image.new(mode, (2, 2), color).save(output, format=image_format)
+    return output.getvalue()
 
 
 def _create_owner(test_db: Session) -> tuple[Barbershop, User]:
@@ -56,19 +65,21 @@ def test_owner_logo_replacement_is_tenant_scoped_and_audited(
     tenant_dir = upload_root / str(shop.id)
     tenant_dir.mkdir(parents=True)
     previous_file = tenant_dir / "old.png"
-    previous_file.write_bytes(PNG_HEADER + b"old")
+    previous_file.write_bytes(_image_bytes())
     shop.logo_url = f"/uploads/barbershops/{shop.id}/old.png"
     test_db.commit()
 
     response = client.post(
         "/api/v1/onboarding/upload-logo",
         headers=owner_headers,
-        files={"file": ("logo.png", PNG_HEADER + b"new", "image/png")},
+        files={"file": ("logo.png", _image_bytes(), "image/png")},
     )
     assert response.status_code == 200
     logo_url = response.json()["logo_url"]
     new_file = tenant_dir / logo_url.rsplit("/", 1)[1]
-    assert new_file.read_bytes() == PNG_HEADER + b"new"
+    with Image.open(new_file) as saved_logo:
+        assert saved_logo.format == "PNG"
+        assert saved_logo.size == (2, 2)
     assert not previous_file.exists()
     assert test_db.get(Barbershop, shop.id).logo_url == logo_url
 
@@ -84,7 +95,7 @@ def test_owner_logo_replacement_is_tenant_scoped_and_audited(
     foreign = client.post(
         f"/api/v1/onboarding/upload-logo?barbershop_id={shop.id + 100}",
         headers=owner_headers,
-        files={"file": ("logo.png", PNG_HEADER + b"foreign", "image/png")},
+        files={"file": ("logo.png", _image_bytes(), "image/png")},
     )
     assert foreign.status_code == 403
 
@@ -100,9 +111,23 @@ def test_logo_upload_rejects_wrong_content_type_and_oversized_payload(
 
     invalid = client.post(
         "/api/v1/onboarding/upload-logo", headers=headers,
-        files={"file": ("logo.png", b"not an image", "image/png")},
+        files={"file": ("logo.png", PNG_HEADER + b"not a valid PNG", "image/png")},
     )
     assert invalid.status_code == 400
+
+    mismatched_format = client.post(
+        "/api/v1/onboarding/upload-logo", headers=headers,
+        files={"file": ("logo.jpg", _image_bytes("PNG"), "image/jpeg")},
+    )
+    assert mismatched_format.status_code == 400
+
+    import app.api.v1.endpoints.onboarding as onboarding
+    monkeypatch.setattr(onboarding, "MAX_LOGO_PIXELS", 1)
+    oversized_dimensions = client.post(
+        "/api/v1/onboarding/upload-logo", headers=headers,
+        files={"file": ("logo.png", _image_bytes(), "image/png")},
+    )
+    assert oversized_dimensions.status_code == 400
 
     too_large = client.post(
         "/api/v1/onboarding/upload-logo", headers=headers,
