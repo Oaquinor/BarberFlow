@@ -1,3 +1,5 @@
+.password-dialog,
+.password-dialog select { font: inherit; }
 .password-dialog {
   width: min(480px, calc(100vw - 24px));
   max-height: min(90vh, 720px);
@@ -20,6 +22,14 @@
   border: 1px solid #d4d4d8;
   border-radius: 8px;
   font: inherit;
+}
+.password-dialog select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
 }
 .password-dialog small { display: block; margin-top: 5px; color: #52525b; }
 .password-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }

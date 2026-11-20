@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v19`;
+const CACHE_NAME = `${CACHE_PREFIX}v20`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -12,7 +12,7 @@ const ASSETS_TO_CACHE = [
   '/manifest.webmanifest',
   '/css/styles.css',
   '/css/account-security.css',
-  '/js/main.js?v=20261120-business-date-api',
+  '/js/main.js?v=20261120-appointment-payment-dialog',
   '/js/security.js',
   '/js/config.js',
   '/js/auth.js',

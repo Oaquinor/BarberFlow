@@ -845,11 +845,30 @@
         </form>
     </dialog>
 
+    <dialog id="appointmentPaymentDialog" class="password-dialog" aria-labelledby="appointmentPaymentTitle">
+        <h2 id="appointmentPaymentTitle">Cobrar y finalizar servicio</h2>
+        <p>Selecciona cómo recibiste el pago. El cobro se registrará en la caja de hoy.</p>
+        <p id="appointmentPaymentResult" role="status" aria-live="polite"></p>
+        <form id="appointmentPaymentForm">
+            <label for="appointmentPaymentMethod">Método de pago</label>
+            <select id="appointmentPaymentMethod" required>
+                <option value="cash">Efectivo</option>
+                <option value="card">Tarjeta</option>
+                <option value="transfer">Transferencia</option>
+                <option value="other">Otro</option>
+            </select>
+            <div class="password-dialog-actions">
+                <button id="cancelAppointmentPayment" type="button" class="btn-secondary">Cancelar</button>
+                <button id="submitAppointmentPayment" type="submit" class="btn-primary">Registrar cobro</button>
+            </div>
+        </form>
+    </dialog>
+
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/account-security.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261120-business-date-api"></script>
+    <script src="js/main.js?v=20261120-appointment-payment-dialog"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

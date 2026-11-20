@@ -1539,33 +1539,69 @@ async function updateAppointmentStatus(appointmentId, status) {
     }
 }
 
-async function collectAppointmentPayment(appointmentId) {
-    const method = window.prompt('Método de pago: cash, card, transfer u other', 'cash');
-    if (method === null) return;
-    const normalizedMethod = method.trim().toLowerCase();
-    if (!['cash', 'card', 'transfer', 'other'].includes(normalizedMethod)) {
-        alert('Elige cash, card, transfer u other.');
-        return;
-    }
+let pendingAppointmentPaymentId = null;
+
+function collectAppointmentPayment(appointmentId) {
+    const dialog = document.getElementById('appointmentPaymentDialog');
+    const form = document.getElementById('appointmentPaymentForm');
+    const result = document.getElementById('appointmentPaymentResult');
+    if (!Number.isInteger(Number(appointmentId)) || Number(appointmentId) <= 0 || !dialog || !form) return;
+    pendingAppointmentPaymentId = Number(appointmentId);
+    form.hidden = false;
+    form.reset();
+    if (result) result.textContent = '';
+    document.getElementById('submitAppointmentPayment').disabled = false;
+    document.getElementById('cancelAppointmentPayment').textContent = 'Cancelar';
+    dialog.showModal();
+    document.getElementById('appointmentPaymentMethod')?.focus();
+}
+
+document.getElementById('cancelAppointmentPayment')?.addEventListener('click', () => {
+    document.getElementById('appointmentPaymentDialog')?.close();
+});
+
+document.getElementById('appointmentPaymentDialog')?.addEventListener('close', () => {
+    pendingAppointmentPaymentId = null;
+    const form = document.getElementById('appointmentPaymentForm');
+    form.hidden = false;
+    form.reset();
+    document.getElementById('appointmentPaymentResult').textContent = '';
+    document.getElementById('submitAppointmentPayment').disabled = false;
+    document.getElementById('cancelAppointmentPayment').textContent = 'Cancelar';
+});
+
+document.getElementById('appointmentPaymentForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const appointmentId = pendingAppointmentPaymentId;
+    const form = document.getElementById('appointmentPaymentForm');
+    const method = document.getElementById('appointmentPaymentMethod').value;
+    const result = document.getElementById('appointmentPaymentResult');
+    const submitButton = document.getElementById('submitAppointmentPayment');
+    if (!appointmentId || !['cash', 'card', 'transfer', 'other'].includes(method)) return;
+    submitButton.disabled = true;
+    result.textContent = 'Registrando el pago…';
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/appointments/${appointmentId}/payment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ method: normalizedMethod, tip_cents: 0 })
+            body: JSON.stringify({ method, tip_cents: 0 })
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            alert(data.detail || 'No se pudo registrar el pago');
+            result.textContent = data.detail || 'No se pudo registrar el pago. Revisa el estado de la cita antes de reintentar.';
+            submitButton.disabled = false;
             return;
         }
-        alert(`Pago registrado: ${fmtMoneyFromCents(data.total_cents)} ${escapeHtml(data.currency)}`);
-        await loadBarberDashboardData();
-        await loadCashSummary();
+        result.textContent = `Pago registrado: ${fmtMoneyFromCents(data.total_cents)} ${data.currency}. El servicio quedó finalizado.`;
+        form.hidden = true;
+        document.getElementById('cancelAppointmentPayment').textContent = 'Cerrar';
+        await Promise.allSettled([loadBarberDashboardData(), loadCashSummary()]);
     } catch (error) {
         console.error('Error recording appointment payment:', error);
-        alert('Error de conexión registrando el pago');
+        result.textContent = 'No se pudo confirmar la respuesta del servidor. Revisa la cita antes de volver a intentar el cobro.';
+        submitButton.disabled = false;
     }
-}
+});
 
 let cashBusinessDate = null;
 let cashCurrency = 'USD';
