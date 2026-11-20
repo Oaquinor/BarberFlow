@@ -74,3 +74,44 @@ test("delegated no-show action still requires confirmation", () => {
   handler({ target: noShowButton });
   assert.equal(sandbox.statusUpdate, undefined);
 });
+
+test("appointment rendering escapes untrusted names and status labels", () => {
+  const helpersEnd = source.indexOf("\nfunction applyBranding(");
+  const rendererStart = source.indexOf("function renderAppointmentDay(");
+  const rendererEnd = source.indexOf("\nfunction businessTodayDate(", rendererStart);
+  assert.ok(helpersEnd > 0 && rendererStart > helpersEnd && rendererEnd > rendererStart);
+
+  const elements = {
+    appointmentsList: { innerHTML: "", hidden: false },
+    appointmentsCalendarViewport: { hidden: false },
+    appointmentsAnchorDate: { value: "" },
+  };
+  const sandbox = {
+    currentUser: { role: "barbershop_owner" },
+    barbershopProfile: { currency: "DOP", timezone: "America/Santo_Domingo" },
+    document: { getElementById: (id) => elements[id] || null },
+    setText() {},
+  };
+  const renderers = [
+    source.slice(source.indexOf("function escapeHtml("), helpersEnd),
+    source.slice(rendererStart, rendererEnd),
+    "this.renderAppointmentDay = renderAppointmentDay;",
+  ].join("\n");
+  vm.runInNewContext(renderers, sandbox);
+
+  sandbox.renderAppointmentDay("2026-11-20", [{
+    id: 42,
+    status: '<img src=x onerror="alert(1)">',
+    scheduled_time: "2026-11-20T15:00:00Z",
+    estimated_duration: 30,
+    client_name: '<svg onload="alert(2)">Cliente',
+    service_type: '</p><img src=x onerror="alert(3)">',
+    service_price: 1500,
+  }]);
+
+  const markup = elements.appointmentsList.innerHTML;
+  assert.match(markup, /&lt;svg onload=&quot;alert\(2\)&quot;&gt;Cliente/);
+  assert.match(markup, /&lt;\/p&gt;&lt;img src=x onerror=&quot;alert\(3\)&quot;&gt;/);
+  assert.match(markup, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
+  assert.doesNotMatch(markup, /<(?:svg|img)\b/i);
+});
