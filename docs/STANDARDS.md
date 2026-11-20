@@ -69,37 +69,14 @@ def process_appointment(appointment_id: int) -> Appointment:
 
 ---
 
-### Rule #3: No Business Logic in Endpoints
+### Rule #3: Keep request handlers focused
 
-**Endpoints ONLY:**
-- ✅ Receive requests
-- ✅ Validate input
-- ✅ Call services
-- ✅ Return responses
-
-**Bad:**
-```python
-@router.post("/appointments")
-async def create_appointment(data: dict):
-    # 50 lines of business logic here
-    pass
-```
-
-**Good:**
-```python
-@router.post("/appointments")
-async def create_appointment(
-    data: AppointmentCreate,
-    service: AppointmentService = Depends()
-) -> AppointmentResponse:
-    """Create a new appointment."""
-    appointment = await service.create_appointment(data)
-    return AppointmentResponse(
-        success=True,
-        message="Appointment created successfully",
-        data=appointment
-    )
-```
+Handlers authenticate and validate the request, enforce role and tenant access,
+orchestrate the use case, and return the endpoint's documented response. Put
+shared or substantial business rules in an existing service; do not add a
+service/repository layer only to satisfy a template. Related database writes
+must use the transaction boundary required by the flow. Active handlers use
+synchronous SQLAlchemy sessions; do not `await` database calls.
 
 ---
 
@@ -150,13 +127,13 @@ client_repository.py
 notification_manager.py
 ```
 
-### Endpoints: `kebab-case`
+### Endpoints: resource-oriented paths
 
-```python
-@router.post("/create-appointment")
-@router.put("/finish-appointment")
-@router.get("/client-history")
-```
+Follow the existing versioned API and resource naming. Use HTTP methods to
+express operations and preserve established contracts, for example
+`GET /owner/clients` and `POST /public/{slug}/appointments`. Check
+`docs/API_REFERENCE.md` before adding or renaming a route; do not introduce
+action-style paths just to force a naming convention.
 
 ---
 
@@ -181,8 +158,9 @@ Active request handlers use synchronous database operations (`Session.query`, `S
 
 ### Keep Functions Small
 
-**Target:** 10-20 lines per function
-**Maximum:** 50 lines (then refactor)
+Keep functions focused and easy to review. Line counts are a prompt to inspect
+responsibility, not a hard limit; split code when it improves cohesion without
+adding layers that obscure the actual flow.
 
 ### One Level of Abstraction
 
@@ -234,8 +212,8 @@ def do_stuff(x, y):
 def calculate_commission(amount: float, rate: float) -> float:
     return amount * rate
 
-async def get_user(user_id: int) -> User | None:
-    return await repository.get_by_id(user_id)
+def get_user(user_id: int) -> User | None:
+    return db.query(User).filter(User.id == user_id).first()
 
 def process_batch(items: list[Item]) -> dict[str, Any]:
     return {"processed": len(items)}
@@ -404,15 +382,12 @@ from app.services import AppointmentService
 ## 🧪 Testing Standards
 
 ### Test File Structure
-```
-tests/
-├── unit/
-│   ├── test_services.py
-│   └── test_repositories.py
-├── integration/
-│   └── test_api.py
-└── conftest.py
-```
+
+Follow the current layout: backend MySQL integration/API tests live in
+`backend/tests/`; frontend unit tests live in `frontend/tests/`, and Chromium
+browser tests live in `frontend/browser-tests/`. Keep tests near the suite
+that owns their fixtures and run the MySQL suite only against a dedicated
+disposable database ending in `_test`.
 
 ### Test Naming
 ```python
@@ -439,7 +414,7 @@ API_KEY = os.getenv("API_KEY")
 ### Always Validate Input
 ```python
 @router.post("/appointments")
-async def create_appointment(data: AppointmentCreate):  # Pydantic validates
+def create_appointment(data: AppointmentCreate):  # Pydantic valida la entrada
     pass
 ```
 
@@ -453,22 +428,11 @@ query = select(User).where(User.id == user_id)
 
 ## 📊 API Response Standards
 
-### Standard Response Format
-
-```python
-class StandardResponse(BaseModel):
-    success: bool
-    message: str
-    data: Any = None
-    errors: list[str] = []
-
-# Usage
-return StandardResponse(
-    success=True,
-    message="Operation successful",
-    data=result
-)
-```
+Keep each route's established response schema and error semantics. Do not
+wrap all endpoints in a new generic envelope: active routes intentionally
+return resource-specific objects, paginated collections, or FastAPI error
+responses. Document contract changes in `docs/API_REFERENCE.md` and cover
+success, validation, authorization, and not-found cases in tests.
 
 ---
 
@@ -499,15 +463,12 @@ flake8 app/
 3. Optimize bottlenecks only
 
 ### Use Async Properly
-```python
-# For I/O operations
-async def get_user(user_id: int) -> User:
-    return await repository.get_by_id(user_id)
 
-# Not for CPU operations
-def calculate_complex_math(data: list) -> float:
-    return sum(data) / len(data)
-```
+The active API uses synchronous SQLAlchemy and PyMySQL. Prefer ordinary `def`
+handlers for database-bound requests. Use `async def` only when the awaited
+I/O path is genuinely asynchronous; never await synchronous `Session` calls.
+Do not add an async database driver or `AsyncSession` without an explicit
+architecture decision and MySQL integration coverage.
 
 ---
 
