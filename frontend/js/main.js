@@ -235,13 +235,17 @@ function applyBranding(profile) {
     const logoElement = document.querySelector('.logo h1');
     if (logoElement && profile?.logo_url) {
         let imageUrl;
+        let apiOrigin;
         try {
-            imageUrl = new URL(profile.logo_url, window.location.origin);
+            imageUrl = new URL(profile.logo_url, API_ROOT);
+            apiOrigin = new URL(API_ROOT, window.location.origin).origin;
         } catch (_) {
             imageUrl = null;
         }
         logoElement.replaceChildren();
-        if (imageUrl && imageUrl.origin === window.location.origin && ['http:', 'https:'].includes(imageUrl.protocol)) {
+        const trustedOrigins = new Set([window.location.origin, apiOrigin]);
+        if (imageUrl && trustedOrigins.has(imageUrl.origin) && ['http:', 'https:'].includes(imageUrl.protocol) &&
+            !imageUrl.username && !imageUrl.password) {
             const logo = document.createElement('img');
             logo.src = imageUrl.href;
             logo.alt = '';
