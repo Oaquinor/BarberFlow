@@ -408,9 +408,9 @@ async function loadShareLink() {
             copyBtn.onclick = async () => {
                 try {
                     await navigator.clipboard.writeText(data.client_link);
-                    alert('✅ Link copiado');
+                    showToast('✅ Link copiado', 'info');
                 } catch (_) {
-                    alert('⚠️ No se pudo copiar automáticamente');
+                    showToast('⚠️ No se pudo copiar automáticamente');
                 }
             };
         }
@@ -524,7 +524,10 @@ async function loadBarberAbsences() {
 
 async function cancelBarberAbsence(event) {
     const button = event.target.closest('.cancel-barber-absence');
-    if (!button || !window.confirm('¿Cancelar esta ausencia? Los turnos originales volverán a aparecer disponibles.')) return;
+    if (!button || !await showConfirmation(
+        '¿Cancelar esta ausencia? Los turnos originales volverán a estar disponibles.',
+        { title: 'Cancelar ausencia', confirmLabel: 'Cancelar ausencia', danger: true },
+    )) return;
     const result = document.getElementById('barberAbsenceResult');
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/absences/${Number(button.dataset.id)}`, {
@@ -1100,7 +1103,10 @@ document.getElementById('ownerClientsBody')?.addEventListener('click', async (ev
     }
     if (!statusButton || currentUser?.role !== 'barbershop_owner') return;
     const nextActive = statusButton.dataset.active !== 'true';
-    if (!window.confirm(`${nextActive ? 'Reactivar' : 'Desactivar'} este acceso de cliente?`)) return;
+    if (!await showConfirmation(`${nextActive ? 'Reactivar' : 'Desactivar'} este acceso de cliente?`, {
+        title: `${nextActive ? 'Reactivar' : 'Desactivar'} cliente`,
+        confirmLabel: nextActive ? 'Reactivar' : 'Desactivar', danger: !nextActive,
+    })) return;
     const result = document.getElementById('ownerClientsResult');
     try {
         await ownerFetch(`/owner/clients/${Number(statusButton.dataset.id)}/status`, {
@@ -1192,8 +1198,9 @@ async function saveBusinessSettings(event) {
         primary_color: document.getElementById('businessSettingsPrimary').value,
         secondary_color: document.getElementById('businessSettingsSecondary').value,
     };
-    if (payload.timezone !== barbershopProfile?.timezone && !window.confirm(
+    if (payload.timezone !== barbershopProfile?.timezone && !await showConfirmation(
         'Cambiar la zona horaria cambiará cómo se muestran las horas de todas las citas existentes. ¿Continuar?'
+        , { title: 'Confirmar cambio de zona horaria', confirmLabel: 'Guardar cambios' }
     )) return;
     result.textContent = 'Guardando configuración…';
     try {
@@ -1688,25 +1695,25 @@ function logout() {
     KingFlowAuth.logout();
     resetSessionInterface();
 
-    alert('👋 Sesión cerrada exitosamente');
+    showToast('👋 Sesión cerrada exitosamente', 'info');
 }
 
 function finishService() {
     const inProgressCard = document.querySelector('#appointmentsList .appointment-card.in-progress');
     if (!inProgressCard) {
-        alert('No hay servicio en progreso para finalizar.');
+        showToast('No hay servicio en progreso para finalizar.');
         return;
     }
 
     const paymentBtn = inProgressCard.querySelector('.appointment-payment');
     if (!paymentBtn) {
-        alert('No se encontró cita para finalizar.');
+        showToast('No se encontró cita para finalizar.');
         return;
     }
 
     const appointmentId = Number(paymentBtn.dataset.appointmentId);
     if (!Number.isInteger(appointmentId) || appointmentId <= 0) {
-        alert('No se pudo identificar la cita activa.');
+        showToast('No se pudo identificar la cita activa.');
         return;
     }
 
@@ -1727,7 +1734,7 @@ async function updateAppointmentStatus(appointmentId, status) {
 
         const data = await response.json();
         if (!response.ok) {
-            alert(data.detail || 'No se pudo actualizar el estado de la cita');
+            showToast(data.detail || 'No se pudo actualizar el estado de la cita');
             return;
         }
 
@@ -1735,7 +1742,7 @@ async function updateAppointmentStatus(appointmentId, status) {
         await loadCashSummary();
     } catch (error) {
         console.error('Error updating appointment status:', error);
-        alert('Error de conexión actualizando cita');
+        showToast('Error de conexión actualizando cita');
     }
 }
 
@@ -1974,18 +1981,21 @@ function editService(serviceId) {
 }
 
 async function deleteService(serviceId) {
-    if (currentUser?.role !== 'barbershop_owner' || !window.confirm('¿Desactivar este servicio? No aparecerá en nuevas reservas.')) return;
+    if (currentUser?.role !== 'barbershop_owner' || !await showConfirmation(
+        '¿Desactivar este servicio? No aparecerá en nuevas reservas.',
+        { title: 'Desactivar servicio', confirmLabel: 'Desactivar', danger: true },
+    )) return;
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/services/${serviceId}`, { method: 'DELETE' });
         if (!response.ok) {
             const data = await response.json();
-            alert(data.detail || 'No se pudo desactivar el servicio.');
+            showToast(data.detail || 'No se pudo desactivar el servicio.');
             return;
         }
         await loadBarberDashboardData();
     } catch (error) {
         console.error('Error deleting service:', error);
-        alert('Error de conexión al desactivar el servicio.');
+        showToast('Error de conexión al desactivar el servicio.');
     }
 }
 
@@ -2004,7 +2014,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
 
         const data = await response.json();
         if (!response.ok) {
-            alert(`❌ ${data.detail || 'Credenciales inválidas'}`);
+            showToast(`❌ ${data.detail || 'Credenciales inválidas'}`);
             return;
         }
 
@@ -2078,10 +2088,10 @@ document.getElementById('loginForm').addEventListener('submit', async function (
         const welcomeMessage = barbershopProfile
             ? `✅ Bienvenido a ${barbershopProfile.name}`
             : '✅ Login exitoso';
-        alert(welcomeMessage);
+        showToast(welcomeMessage, 'info');
     } catch (error) {
         console.error(error);
-        alert('❌ No fue posible conectar con el backend de autenticación');
+        showToast('❌ No fue posible conectar con el backend de autenticación');
     }
 });
 
@@ -2103,13 +2113,15 @@ document.getElementById('testConnectionButton')?.addEventListener('click', testC
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
     tab.addEventListener('click', () => showTab(tab.dataset.tab));
 });
-document.getElementById('appointmentsList')?.addEventListener('click', (event) => {
+document.getElementById('appointmentsList')?.addEventListener('click', async (event) => {
     const statusButton = event.target.closest('.appointment-status-action');
     if (statusButton) {
         const appointmentId = Number(statusButton.dataset.appointmentId);
         const nextStatus = statusButton.dataset.status;
         if (!Number.isInteger(appointmentId) || appointmentId <= 0) return;
-        if (nextStatus === 'no_show' && !window.confirm('¿Marcar esta cita como inasistencia?')) return;
+        if (nextStatus === 'no_show' && !await showConfirmation('¿Marcar esta cita como inasistencia?', {
+            title: 'Registrar inasistencia', confirmLabel: 'Marcar inasistencia', danger: true,
+        })) return;
         void updateAppointmentStatus(appointmentId, nextStatus);
         return;
     }

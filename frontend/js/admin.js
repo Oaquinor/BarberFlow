@@ -484,7 +484,7 @@ document.getElementById('usersBody')?.addEventListener('click', async (event) =>
         }
         await loadUsers();
     } catch (error) {
-        alert(`❌ ${error.message}`);
+        showToast(`❌ ${error.message}`);
     }
 });
 
@@ -501,7 +501,7 @@ document.getElementById('tenantsBody')?.addEventListener('click', async (event) 
         });
         await loadTenants();
     } catch (error) {
-        alert(`❌ ${error.message}`);
+        showToast(`❌ ${error.message}`);
     }
 });
 
@@ -512,7 +512,7 @@ async function loadSubscription() {
     resultEl.textContent = '';
 
     if (!tenantId) {
-        alert('Selecciona una barbería primero');
+        showToast('Selecciona una barbería primero');
         return;
     }
 
@@ -548,7 +548,7 @@ async function saveSubscription() {
     const resultEl = document.getElementById('subscriptionResult');
 
     if (!tenantId) {
-        alert('Selecciona una barbería primero');
+        showToast('Selecciona una barbería primero');
         return;
     }
 

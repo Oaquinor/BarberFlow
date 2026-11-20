@@ -33,7 +33,7 @@ test("no-show action becomes available only after the scheduled service duration
 
 function getAppointmentClickHandler() {
   const registration = source.match(
-    /document\.getElementById\('appointmentsList'\)\?\.addEventListener\('click', \(event\) => \{[\s\S]*?\n\}\);/,
+    /document\.getElementById\('appointmentsList'\)\?\.addEventListener\('click', async \(event\) => \{[\s\S]*?\n\}\);/,
   )?.[0];
   assert.ok(registration, "appointment actions must use the external delegated handler");
   let handler;
@@ -41,37 +41,37 @@ function getAppointmentClickHandler() {
     document: { getElementById: () => ({ addEventListener(_name, callback) { handler = callback; } }) },
     updateAppointmentStatus(...args) { sandbox.statusUpdate = args; },
     collectAppointmentPayment(...args) { sandbox.payment = args; },
-    window: { confirm: () => true },
+    showConfirmation: async () => true,
   };
   vm.runInNewContext(registration, sandbox);
   return { handler, sandbox };
 }
 
-test("delegated appointment actions update status and collect payment", () => {
+test("delegated appointment actions update status and collect payment", async () => {
   const { handler, sandbox } = getAppointmentClickHandler();
   const statusButton = {
     dataset: { appointmentId: "42", status: "confirmed" },
     closest(selector) { return selector === ".appointment-status-action" ? this : null; },
   };
-  handler({ target: statusButton });
+  await handler({ target: statusButton });
   assert.deepEqual(sandbox.statusUpdate, [42, "confirmed"]);
 
   const paymentButton = {
     dataset: { appointmentId: "42" },
     closest(selector) { return selector === ".appointment-payment" ? this : null; },
   };
-  handler({ target: paymentButton });
+  await handler({ target: paymentButton });
   assert.deepEqual(sandbox.payment, [42]);
 });
 
-test("delegated no-show action still requires confirmation", () => {
+test("delegated no-show action still requires confirmation", async () => {
   const { handler, sandbox } = getAppointmentClickHandler();
-  sandbox.window.confirm = () => false;
+  sandbox.showConfirmation = async () => false;
   const noShowButton = {
     dataset: { appointmentId: "42", status: "no_show" },
     closest(selector) { return selector === ".appointment-status-action" ? this : null; },
   };
-  handler({ target: noShowButton });
+  await handler({ target: noShowButton });
   assert.equal(sandbox.statusUpdate, undefined);
 });
 

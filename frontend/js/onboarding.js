@@ -76,25 +76,25 @@ function validateStep(step) {
         case 1:
             const name = document.getElementById('barbershopName').value.trim();
             if (!name || name.length < 2) {
-                alert('Por favor ingresa el nombre de tu barbería');
+                showToast('Por favor ingresa el nombre de tu barbería');
                 return false;
             }
             return true;
         case 4:
             if (!onboardingData.style) {
-                alert('Por favor selecciona el estilo de tu barbería');
+                showToast('Por favor selecciona el estilo de tu barbería');
                 return false;
             }
             return true;
         case 5:
             if (!onboardingData.primaryGoal) {
-                alert('Por favor selecciona tu objetivo principal');
+                showToast('Por favor selecciona tu objetivo principal');
                 return false;
             }
             return true;
         case 9:
             if (!onboardingData.personality) {
-                alert('Por favor selecciona la personalidad de tu negocio');
+                showToast('Por favor selecciona la personalidad de tu negocio');
                 return false;
             }
             return true;
@@ -393,11 +393,11 @@ async function completeOnboarding() {
             document.getElementById('step10').classList.remove('hidden');
             document.getElementById('progressBar').style.width = '100%';
         } else {
-            alert('Error al completar el onboarding. Por favor intenta de nuevo.');
+            showToast('Error al completar el onboarding. Por favor intenta de nuevo.');
         }
     } catch (error) {
         console.error('Error completing onboarding:', error);
-        alert('Error de conexión. Por favor intenta de nuevo.');
+        showToast('Error de conexión. Por favor intenta de nuevo.');
     }
 }
 

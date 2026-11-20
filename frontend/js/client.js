@@ -359,12 +359,12 @@ trackList.addEventListener('click', async (event) => {
       const data = await response.json();
       if (!response.ok) {
         rescheduleButton.disabled = false;
-        window.alert(data.detail || 'No se pudo reprogramar la cita.');
+        showToast(data.detail || 'No se pudo reprogramar la cita.');
         return;
       }
     } catch (_) {
       rescheduleButton.disabled = false;
-      window.alert('No pudimos confirmar el cambio. Actualiza el seguimiento antes de intentarlo otra vez.');
+      showToast('No pudimos confirmar el cambio. Actualiza el seguimiento antes de intentarlo otra vez.');
       return;
     }
     await loadSlots();
@@ -372,7 +372,9 @@ trackList.addEventListener('click', async (event) => {
     return;
   }
   const button = event.target.closest('.cancel-booking');
-  if (!button || !window.confirm('¿Quieres cancelar esta cita?')) return;
+  if (!button || !await showConfirmation('¿Quieres cancelar esta cita?', {
+    title: 'Cancelar cita', confirmLabel: 'Cancelar cita', danger: true,
+  })) return;
   button.disabled = true;
   try {
     const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/cancel`, {
@@ -383,12 +385,12 @@ trackList.addEventListener('click', async (event) => {
     const data = await response.json();
     if (!response.ok) {
       button.disabled = false;
-      window.alert(data.detail || 'No se pudo cancelar la cita.');
+      showToast(data.detail || 'No se pudo cancelar la cita.');
       return;
     }
   } catch (_) {
     button.disabled = false;
-    window.alert('No pudimos confirmar la cancelación. Actualiza el seguimiento antes de intentarlo otra vez.');
+    showToast('No pudimos confirmar la cancelación. Actualiza el seguimiento antes de intentarlo otra vez.');
     return;
   }
   await loadSlots();
