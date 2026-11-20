@@ -3165,12 +3165,21 @@ def barber_cash_today(
             BarberCommission.is_deleted == False,
         ).scalar() or 0
     expected_cash = by_method.get("cash", 0) - int(cash_commissions_paid)
-    close = db.query(CashRegisterClose).filter(
+    close_query = db.query(CashRegisterClose).filter(
         CashRegisterClose.barbershop_id == shop.id,
-        CashRegisterClose.closed_by_user_id == user.id,
         CashRegisterClose.business_date == datetime.combine(_utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date(), time.min),
         CashRegisterClose.is_deleted == False,
-    ).first()
+    )
+    if user.role == "barber":
+        close_query = close_query.join(
+            User, User.id == CashRegisterClose.closed_by_user_id,
+        ).filter(or_(
+            CashRegisterClose.closed_by_user_id == user.id,
+            (User.role == "barbershop_owner") & (User.barbershop_id == shop.id),
+        ))
+    else:
+        close_query = close_query.filter(CashRegisterClose.closed_by_user_id == user.id)
+    close = close_query.first()
     return {
         "business_date": _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date().isoformat(),
         "currency": shop.currency,
@@ -3211,6 +3220,18 @@ def barber_close_cash_register(
     if business_date > local_today:
         raise HTTPException(status_code=422, detail="No se puede cerrar una fecha futura")
     date_key = datetime.combine(business_date, time.min)
+    if user.role == "barber":
+        owner_close = db.query(CashRegisterClose.id).join(
+            User, User.id == CashRegisterClose.closed_by_user_id,
+        ).filter(
+            CashRegisterClose.barbershop_id == shop.id,
+            CashRegisterClose.business_date == date_key,
+            CashRegisterClose.is_deleted == False,
+            User.role == "barbershop_owner",
+            User.barbershop_id == shop.id,
+        ).first()
+        if owner_close:
+            raise HTTPException(status_code=409, detail="La caja del negocio ya fue cerrada por un propietario")
     existing = db.query(CashRegisterClose.id).filter(
         CashRegisterClose.barbershop_id == shop.id,
         CashRegisterClose.closed_by_user_id == user.id,

@@ -221,6 +221,13 @@ def test_owner_close_blocks_barber_checkout_for_the_same_business_day(
         "business_date": summary.json()["business_date"], "declared_cash_cents": 0,
     })
     assert closed.status_code == 201
+    barber_summary_after_close = client.get("/api/v1/barber/cash/today", headers=barber_headers)
+    assert barber_summary_after_close.status_code == 200
+    assert barber_summary_after_close.json()["closed"] is True
+    barber_duplicate_close = client.post("/api/v1/barber/cash/close", headers=barber_headers, json={
+        "business_date": summary.json()["business_date"], "declared_cash_cents": 0,
+    })
+    assert barber_duplicate_close.status_code == 409
 
     checkout = client.post(
         f"/api/v1/barber/appointments/{appointment.id}/payment",
