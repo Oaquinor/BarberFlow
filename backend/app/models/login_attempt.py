@@ -1,4 +1,4 @@
-"""Persistent login failure buckets used to throttle password guessing."""
+"""Persistent hashed buckets for authentication and public-request throttles."""
 
 from sqlalchemy import Column, DateTime, Integer, String, UniqueConstraint, Index
 
@@ -6,6 +6,8 @@ from app.models.base import BaseModel
 
 
 class LoginAttempt(BaseModel):
+    """Store counters keyed by secret hashes, never raw emails or IP addresses."""
+
     __tablename__ = "login_attempts"
     __table_args__ = (
         UniqueConstraint("key_hash", name="uq_login_attempts_key_hash"),

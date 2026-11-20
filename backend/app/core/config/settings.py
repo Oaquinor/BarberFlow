@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     WHATSAPP_API_TOKEN: str = ""
     WHATSAPP_API_URL: str = "http://127.0.0.1:3001/send"
+    # Use the socket address by default; deployments behind a trusted proxy must
+    # explicitly select the header that their platform overwrites.
+    CLIENT_IP_HEADER: str = "socket"
     
     # CORS
     CORS_ORIGINS: List[str] = [
