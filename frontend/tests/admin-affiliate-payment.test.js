@@ -67,3 +67,32 @@ test("affiliate payment options match the backend payment contract", () => {
   assert.match(source, /commission-payment-method[\s\S]*bank_transfer[\s\S]*cash[\s\S]*card[\s\S]*other/);
   assert.doesNotMatch(source, /window\.prompt\(/);
 });
+
+test("subscription period date is sent as the selected UTC calendar day", async () => {
+  const start = source.indexOf("async function saveSubscription() {");
+  const end = source.indexOf("document.getElementById('subscriptionPaymentForm')", start);
+  const handler = source.slice(start, end);
+  const values = {
+    subscriptionTenantSelect: { value: "42" },
+    subscriptionResult: { textContent: "" },
+    subPlan: { value: "basic" },
+    subStatus: { value: "active" },
+    subAutoRenew: { value: "false" },
+    subPeriodEnd: { value: "2026-11-20" },
+  };
+  const calls = [];
+  const sandbox = {
+    document: { getElementById: id => values[id] || null },
+    fetchJson: async (...args) => {
+      calls.push(args);
+      return { plan: "basic", status: "active", current_period_end: "2026-11-20T00:00:00Z" };
+    },
+    loadTenants: async () => {},
+  };
+  vm.runInNewContext(`${handler}\nsaveSubscription();`, sandbox);
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "/api/v1/admin/tenants/42/subscription");
+  assert.equal(JSON.parse(calls[0][1].body).current_period_end, "2026-11-20T00:00:00Z");
+});

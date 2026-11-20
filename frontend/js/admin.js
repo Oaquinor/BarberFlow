@@ -559,7 +559,9 @@ async function saveSubscription() {
         auto_renew: document.getElementById('subAutoRenew').value === 'true',
     };
     if (periodEndValue) {
-        payload.current_period_end = new Date(`${periodEndValue}T00:00:00`).toISOString();
+        // A date input represents a calendar day; keep it at UTC midnight instead
+        // of shifting it through the administrator's local timezone.
+        payload.current_period_end = `${periodEndValue}T00:00:00Z`;
     }
 
     try {
