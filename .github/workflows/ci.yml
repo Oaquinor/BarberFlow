@@ -11,6 +11,16 @@ jobs:
   container-images:
     name: Production container images
     runs-on: ubuntu-latest
+    env:
+      MYSQL_ROOT_PASSWORD: ci-only-root-password
+      MYSQL_USER: kingflow
+      MYSQL_PASSWORD: ci-only-database-password
+      MYSQL_DATABASE: kingflow_barber
+      DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
+      SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
+      CORS_ORIGINS: '["https://app.example.com"]'
+      FRONTEND_BASE_URL: https://app.example.com
+      WHATSAPP_API_TOKEN: ci-only-whatsapp-token
     steps:
       - uses: actions/checkout@v7
       - name: Build API and worker image
@@ -24,28 +34,8 @@ jobs:
       - name: Verify WhatsApp image defaults to an unprivileged user
         run: test "$(docker image inspect kingflow-whatsapp:ci --format '{{.Config.User}}')" = "node"
       - name: Validate production Compose configuration
-        env:
-          MYSQL_ROOT_PASSWORD: ci-only-root-password
-          MYSQL_USER: kingflow
-          MYSQL_PASSWORD: ci-only-database-password
-          MYSQL_DATABASE: kingflow_barber
-          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
-          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
-          CORS_ORIGINS: '["https://app.example.com"]'
-          FRONTEND_BASE_URL: https://app.example.com
-          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
         run: docker compose -f docker-compose.prod.yml config --quiet
       - name: Start production Compose API with MySQL
-        env:
-          MYSQL_ROOT_PASSWORD: ci-only-root-password
-          MYSQL_USER: kingflow
-          MYSQL_PASSWORD: ci-only-database-password
-          MYSQL_DATABASE: kingflow_barber
-          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
-          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
-          CORS_ORIGINS: '["https://app.example.com"]'
-          FRONTEND_BASE_URL: https://app.example.com
-          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
         run: |
           mkdir -p backend/logs frontend/uploads
           sudo chown -R 10001:10001 backend/logs frontend/uploads
@@ -60,16 +50,6 @@ jobs:
           exit 1
       - name: Stop production Compose API
         if: always()
-        env:
-          MYSQL_ROOT_PASSWORD: ci-only-root-password
-          MYSQL_USER: kingflow
-          MYSQL_PASSWORD: ci-only-database-password
-          MYSQL_DATABASE: kingflow_barber
-          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
-          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
-          CORS_ORIGINS: '["https://app.example.com"]'
-          FRONTEND_BASE_URL: https://app.example.com
-          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
         run: docker compose -f docker-compose.prod.yml down --volumes --remove-orphans
 
   backend:
