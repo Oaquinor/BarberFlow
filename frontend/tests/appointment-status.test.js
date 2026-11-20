@@ -30,3 +30,47 @@ test("no-show action becomes available only after the scheduled service duration
   assert.match(source, /class="btn-secondary appointment-payment" type="button" data-appointment-id="\$\{Number\(appointment\.id\)\}"/);
   assert.match(source, /const appointmentId = Number\(paymentBtn\.dataset\.appointmentId\);[\s\S]*collectAppointmentPayment\(appointmentId\);/);
 });
+
+function getAppointmentClickHandler() {
+  const registration = source.match(
+    /document\.getElementById\('appointmentsList'\)\?\.addEventListener\('click', \(event\) => \{[\s\S]*?\n\}\);/,
+  )?.[0];
+  assert.ok(registration, "appointment actions must use the external delegated handler");
+  let handler;
+  const sandbox = {
+    document: { getElementById: () => ({ addEventListener(_name, callback) { handler = callback; } }) },
+    updateAppointmentStatus(...args) { sandbox.statusUpdate = args; },
+    collectAppointmentPayment(...args) { sandbox.payment = args; },
+    window: { confirm: () => true },
+  };
+  vm.runInNewContext(registration, sandbox);
+  return { handler, sandbox };
+}
+
+test("delegated appointment actions update status and collect payment", () => {
+  const { handler, sandbox } = getAppointmentClickHandler();
+  const statusButton = {
+    dataset: { appointmentId: "42", status: "confirmed" },
+    closest(selector) { return selector === ".appointment-status-action" ? this : null; },
+  };
+  handler({ target: statusButton });
+  assert.deepEqual(sandbox.statusUpdate, [42, "confirmed"]);
+
+  const paymentButton = {
+    dataset: { appointmentId: "42" },
+    closest(selector) { return selector === ".appointment-payment" ? this : null; },
+  };
+  handler({ target: paymentButton });
+  assert.deepEqual(sandbox.payment, [42]);
+});
+
+test("delegated no-show action still requires confirmation", () => {
+  const { handler, sandbox } = getAppointmentClickHandler();
+  sandbox.window.confirm = () => false;
+  const noShowButton = {
+    dataset: { appointmentId: "42", status: "no_show" },
+    closest(selector) { return selector === ".appointment-status-action" ? this : null; },
+  };
+  handler({ target: noShowButton });
+  assert.equal(sandbox.statusUpdate, undefined);
+});
