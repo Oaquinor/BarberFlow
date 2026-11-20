@@ -41,8 +41,8 @@ def test_recorded_subscription_payment_creates_and_pays_referral_commission(
 ):
     now = utc_now_naive()
     subscription = Subscription(
-        plan="basic", status="active", current_period_start=now - timedelta(days=1),
-        current_period_end=now + timedelta(days=29), max_barbers=3,
+        plan="basic", status="expired", current_period_start=now - timedelta(days=31),
+        current_period_end=now - timedelta(days=1), max_barbers=3,
         max_appointments_per_month=200, max_clients=500, auto_renew=False,
     )
     test_db.add(subscription)
@@ -67,6 +67,8 @@ def test_recorded_subscription_payment_creates_and_pays_referral_commission(
     test_db.add(shop)
     test_db.commit()
 
+    assert client.get(f"/api/v1/public/{shop.slug}").status_code == 402
+
     headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': 'super_admin'})}"}
     body = {
         "amount_cents": 10000,
@@ -80,6 +82,8 @@ def test_recorded_subscription_payment_creates_and_pays_referral_commission(
     )
     assert payment.status_code == 201
     assert payment.json()["commission_id"] is not None
+    assert payment.json()["subscription_status"] == "active"
+    assert client.get(f"/api/v1/public/{shop.slug}").status_code == 200
     test_db.refresh(affiliate)
     assert affiliate.total_commissions_earned == 1500
 
