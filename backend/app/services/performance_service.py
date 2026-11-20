@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
-from app.models import BarberPerformance, Appointment, Payment, Barbershop
+from app.models import BarberPerformance, Appointment, Payment, Barbershop, User
 from app.core.constants import AppointmentStatus
 from app.utils.datetime import local_day_start_utc_naive
 
@@ -50,6 +50,16 @@ class PerformanceService:
         ).first()
         if not shop:
             raise ValueError("Barbershop not found")
+        # Serialize daily recomputations per barber. Two checkouts can concern
+        # different appointments but still race to create the same daily row.
+        barber = db.query(User.id).filter(
+            User.id == barber_id,
+            User.barbershop_id == barbershop_id,
+            User.role == "barber",
+            User.is_deleted == False,
+        ).with_for_update().first()
+        if not barber:
+            raise ValueError("Barber not found in barbershop")
         try:
             business_timezone = ZoneInfo(shop.timezone)
         except (ZoneInfoNotFoundError, TypeError) as exc:
