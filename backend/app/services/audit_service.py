@@ -1,6 +1,5 @@
 """Small transactional helper for sensitive-operation audit records."""
 
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session

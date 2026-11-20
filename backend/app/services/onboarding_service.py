@@ -2,7 +2,7 @@
 Onboarding service for barbershop personalization.
 """
 
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 from datetime import datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func

@@ -4,7 +4,7 @@ Performance Service.
 Handles barber performance tracking, metrics, and analytics.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session

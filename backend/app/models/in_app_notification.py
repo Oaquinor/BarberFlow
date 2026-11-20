@@ -1,6 +1,6 @@
 """Tenant scoped, durable inbox notifications for authenticated users."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 
 from app.models.base import BaseModel
 

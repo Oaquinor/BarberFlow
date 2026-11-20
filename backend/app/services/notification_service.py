@@ -3,7 +3,7 @@ Notification Service for KingFlow Barber
 Handles email and SMS/WhatsApp notifications to clients
 """
 
-from typing import Dict, Optional
+from typing import Optional
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from html import escape

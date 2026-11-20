@@ -4,11 +4,11 @@ Affiliate Service.
 Handles affiliate program, referrals, and commissions.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
+from sqlalchemy import and_
 import secrets
 import string
 

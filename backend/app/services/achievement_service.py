@@ -4,7 +4,7 @@ Achievement Service.
 Handles gamification, achievements, and badges.
 """
 
-from datetime import datetime, date
+from datetime import date
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func

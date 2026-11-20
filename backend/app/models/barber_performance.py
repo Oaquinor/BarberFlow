@@ -4,7 +4,7 @@ Performance model.
 Tracks barber performance metrics and statistics.
 """
 
-from sqlalchemy import Column, String, Integer, Float, Date, ForeignKey, JSON
+from sqlalchemy import Column, Integer, Float, Date, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
