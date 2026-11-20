@@ -141,7 +141,7 @@ def test_reminder_recovers_when_recipient_becomes_available(test_db: Session, mo
     assert email_row.recipient == client.email
     assert email_row.attempts == 0
     assert email_row.last_error is None
-    assert email_row.next_attempt_at == now + timedelta(minutes=1)
+    assert email_row.next_attempt_at == (now + timedelta(minutes=1)).replace(microsecond=0)
     monkeypatch.setattr(NotificationService, "_send_email", lambda *_args: True)
     assert process_due_deliveries(test_db, now=now + timedelta(minutes=1)) == 1
     assert email_row.status == "sent"
