@@ -107,7 +107,6 @@ def test_inactive_user_cannot_login(client: TestClient, test_db: Session):
 
 def test_shared_security_dependency_rejects_users_from_inactive_barbershops(test_db: Session):
     from fastapi import HTTPException
-    from fastapi.security import HTTPAuthorizationCredentials
     import pytest
 
     from app.core.security.dependencies import get_current_user as get_core_current_user
@@ -121,10 +120,8 @@ def test_shared_security_dependency_rejects_users_from_inactive_barbershops(test
         "role": owner.role,
         "auth_version": owner.auth_version,
     })
-    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
-
     with pytest.raises(HTTPException) as error:
-        get_core_current_user(credentials, test_db)
+        get_core_current_user(f"Bearer {token}", test_db)
 
     assert error.value.status_code == 403
     assert error.value.detail == "Barbershop is inactive"

@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints.onboarding import _get_tenant_id
+from app.api.deps import get_current_user as get_api_current_user
 from app.api.v1.endpoints.platform import (
     _business_date_for_appointment,
     _email_html_lines,
@@ -88,6 +89,12 @@ def test_new_passwords_use_the_same_twelve_character_policy():
     ):
         with pytest.raises(ValueError):
             schema(**data)
+
+
+def test_api_and_security_packages_share_the_same_auth_dependency():
+    from app.core.security.dependencies import get_current_user as shared_current_user
+
+    assert get_api_current_user is shared_current_user
 
 
 def test_jwt_subject_must_be_a_decimal_user_id():
