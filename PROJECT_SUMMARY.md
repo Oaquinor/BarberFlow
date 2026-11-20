@@ -28,11 +28,12 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución integral de GitHub Actions documentada aquí validó el commit `7d90f06` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44687646677](https://github.com/Oaquinor/BarberFlow/actions/runs/44687646677). El backend ejecutó **119 pruebas sobre MySQL 8.4.13**; también pasaron los tests frontend/WhatsApp y las imágenes de producción. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
+La ejecución integral más reciente de GitHub Actions validó el commit `816d2a9` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44688798913](https://github.com/Oaquinor/BarberFlow/actions/runs/44688798913). El backend ejecutó **119 pruebas sobre MySQL 8.4.13**; también pasaron los tests frontend/WhatsApp, las imágenes de producción y la validación de `docker-compose.prod.yml`. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
 
 - Backend: Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **119 passed**, 1 warning. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente y las carreras MySQL de cierre de caja.
 - Frontend/WhatsApp: pruebas y auditoría de dependencias pasaron.
 - Imágenes de producción: builds, usuario sin privilegios y smoke test de API pasaron.
+- Compose de producción: `docker compose -f docker-compose.prod.yml config --quiet` pasó con variables de CI.
 - El CI también ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` sin vulnerabilidades conocidas.
 - Las ejecuciones previas incluyen pruebas específicas de bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
 - Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT` y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
