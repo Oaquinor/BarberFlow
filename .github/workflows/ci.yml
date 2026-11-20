@@ -17,6 +17,8 @@ jobs:
         run: docker build -f backend/Dockerfile -t kingflow-api:ci .
       - name: Verify API image defaults to an unprivileged user
         run: test "$(docker image inspect kingflow-api:ci --format '{{.Config.User}}')" = "10001:10001"
+      - name: Smoke-test API image as its unprivileged user
+        run: docker run --rm --entrypoint python kingflow-api:ci -c "from fastapi.testclient import TestClient; from app.main import app; response=TestClient(app).get('/'); assert response.status_code == 200"
       - name: Build WhatsApp image
         run: docker build -t kingflow-whatsapp:ci ./whatsapp-service
       - name: Verify WhatsApp image defaults to an unprivileged user
