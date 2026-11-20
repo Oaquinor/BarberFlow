@@ -1629,6 +1629,18 @@ def barber_create_slots(
     start_dt = _to_utc_naive(local_start, shop)
     end_dt = _to_utc_naive(local_end, shop)
     now = utc_now_naive()
+    business_date = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+    if local_start.date() == business_date:
+        locked_shop = db.query(Barbershop).filter(
+            Barbershop.id == shop.id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not locked_shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
+        if _cash_register_closed_for_user(
+            db, user, shop.id, datetime.combine(business_date, time.min),
+        ):
+            raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se puede agregar disponibilidad para hoy")
     if (
         start_dt <= now
         or start_dt > now + timedelta(days=MAX_ADVANCE_BOOKING_DAYS)

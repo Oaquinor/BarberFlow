@@ -114,6 +114,11 @@ def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
         "scheduled_time": today_slot_start.replace(tzinfo=timezone.utc).isoformat(),
     })
     assert booking.status_code == 409
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id)})}"}
+    added_slots = client.post("/api/v1/barber/slots", headers=barber_headers, json={
+        "date": "2026-11-20", "start_time": "14:00", "end_time": "15:00", "slot_minutes": 30,
+    })
+    assert added_slots.status_code == 409
     rescheduled = client.post(f"/api/v1/public/{shop.slug}/appointments/reschedule", json={
         "token": reschedule_token, "availability_id": today_slot.id,
     })
