@@ -6,7 +6,7 @@ Esta guía describe comprobaciones que existen en el repositorio. No presupone c
 
 - MySQL 8 con una base de desarrollo y una base desechable para pruebas.
 - Python 3.12 o posterior, con dependencias de `backend/requirements.txt`.
-- Node.js 20 o posterior para las pruebas de frontend y WhatsApp.
+- Node.js 24 LTS para las pruebas de frontend y WhatsApp.
 
 KingFlow usa SQLAlchemy síncrono con PyMySQL y MySQL. SQLite no está soportado.
 
