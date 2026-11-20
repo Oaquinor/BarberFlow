@@ -19,6 +19,10 @@ let ownerClientsOffset = 0;
 let ownerClientsSearch = '';
 let ownerClientsSearchTimer = null;
 let ownerClientsRequestId = 0;
+const OWNER_CLIENT_HISTORY_PAGE_SIZE = 20;
+let ownerClientHistoryClientId = null;
+let ownerClientHistoryOffset = 0;
+let ownerClientHistoryRequestId = 0;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -922,7 +926,7 @@ async function loadOwnerClients() {
                 <td data-label="Citas">${Number(client.appointment_count || 0)}</td><td data-label="Completadas">${Number(client.completed_count || 0)}</td>
                 <td data-label="Última visita">${client.last_visit ? escapeHtml(new Date(client.last_visit).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })) : '—'}</td>
                 <td data-label="Total pagado">${fmtMoneyFromCents(client.total_paid_cents || 0)}</td><td data-label="Estado">${client.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td data-label="Acciones"><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
+                <td data-label="Acciones"><button class="btn-secondary owner-client-history" type="button" data-id="${Number(client.id)}">Historial</button><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
                     <button class="btn-secondary owner-client-status" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
         result.textContent = ownerClientsSearch
@@ -934,6 +938,87 @@ async function loadOwnerClients() {
         result.textContent = error.message || 'No se pudieron cargar los clientes.';
     }
 }
+
+async function loadOwnerClientHistory() {
+    const dialog = document.getElementById('ownerClientHistoryDialog');
+    const list = document.getElementById('ownerClientHistoryItems');
+    const result = document.getElementById('ownerClientHistoryResult');
+    if (!dialog?.open || !list || !result || !ownerClientHistoryClientId
+        || currentUser?.role !== 'barbershop_owner') return;
+    const requestId = ++ownerClientHistoryRequestId;
+    const query = new URLSearchParams({
+        limit: String(OWNER_CLIENT_HISTORY_PAGE_SIZE),
+        offset: String(ownerClientHistoryOffset),
+    });
+    result.textContent = 'Cargando historial…';
+    list.replaceChildren();
+    const previous = document.getElementById('previousOwnerClientHistory');
+    const next = document.getElementById('nextOwnerClientHistory');
+    if (previous) previous.disabled = true;
+    if (next) next.disabled = true;
+    try {
+        const data = await ownerFetch(
+            `/owner/clients/${Number(ownerClientHistoryClientId)}/appointments?${query.toString()}`,
+        );
+        if (requestId !== ownerClientHistoryRequestId) return;
+        const items = data.items || [];
+        const total = Number(data.total) || 0;
+        const timezone = barbershopProfile?.timezone || 'UTC';
+        const statusLabels = {
+            pending: 'Pendiente', confirmed: 'Confirmada', in_progress: 'En servicio',
+            completed: 'Completada', cancelled: 'Cancelada', no_show: 'No asistió',
+        };
+        const methodLabels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };
+        list.innerHTML = items.map((item) => {
+            const payment = item.payment;
+            const paymentSummary = payment
+                ? `Cobro: ${fmtMoneyFromCents(Number(payment.amount_cents || 0) + Number(payment.tip_cents || 0))} ${escapeHtml(payment.currency)} · ${escapeHtml(methodLabels[payment.method] || payment.method)}${Number(payment.tip_cents) > 0 ? ` (incluye propina de ${fmtMoneyFromCents(payment.tip_cents)})` : ''}`
+                : 'Sin cobro registrado';
+            const actualDuration = item.actual_duration == null
+                ? '' : ` · Atención real: ${Number(item.actual_duration)} min`;
+            return `<article class="appointment-card">
+                <div class="appointment-header"><h4>${escapeHtml(item.service_type)}</h4><span class="status-badge">${escapeHtml(statusLabels[item.status] || item.status)}</span></div>
+                <p>${escapeHtml(new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: timezone }))} · ${Number(item.estimated_duration)} min estimados${actualDuration}</p>
+                <p>Barbero: ${escapeHtml(item.barber_name || 'No disponible')} · Precio del servicio: ${fmtMoneyFromCents(item.service_price_cents || 0)}</p>
+                <p>${paymentSummary}</p>
+                ${payment ? `<small>Pago recibido: ${escapeHtml(new Date(payment.received_at).toLocaleString('es-DO', { timeZone: timezone }))}</small>` : ''}
+            </article>`;
+        }).join('') || '<p>Este cliente aún no tiene citas registradas.</p>';
+        const page = document.getElementById('ownerClientHistoryPage');
+        if (page) page.textContent = total
+            ? `Citas ${ownerClientHistoryOffset + 1}–${ownerClientHistoryOffset + items.length} de ${total}`
+            : '0 citas';
+        if (previous) previous.disabled = ownerClientHistoryOffset === 0;
+        if (next) next.disabled = ownerClientHistoryOffset + items.length >= total;
+        result.textContent = `${total} cita(s) en el historial`;
+    } catch (error) {
+        if (requestId !== ownerClientHistoryRequestId) return;
+        list.textContent = '';
+        result.textContent = error.message || 'No se pudo cargar el historial.';
+    }
+}
+
+document.getElementById('previousOwnerClientHistory')?.addEventListener('click', async () => {
+    if (ownerClientHistoryOffset <= 0) return;
+    ownerClientHistoryOffset = Math.max(0, ownerClientHistoryOffset - OWNER_CLIENT_HISTORY_PAGE_SIZE);
+    await loadOwnerClientHistory();
+});
+
+document.getElementById('nextOwnerClientHistory')?.addEventListener('click', async () => {
+    if (document.getElementById('nextOwnerClientHistory')?.disabled) return;
+    ownerClientHistoryOffset += OWNER_CLIENT_HISTORY_PAGE_SIZE;
+    await loadOwnerClientHistory();
+});
+
+document.getElementById('closeOwnerClientHistory')?.addEventListener('click', () => {
+    document.getElementById('ownerClientHistoryDialog')?.close();
+});
+
+document.getElementById('ownerClientHistoryDialog')?.addEventListener('close', () => {
+    ownerClientHistoryRequestId += 1;
+    ownerClientHistoryClientId = null;
+    ownerClientHistoryOffset = 0;
+});
 
 document.getElementById('previousOwnerClients')?.addEventListener('click', async () => {
     if (ownerClientsOffset <= 0) return;
@@ -989,8 +1074,19 @@ async function loadOwnerSubscription() {
 document.getElementById('refreshOwnerSubscription')?.addEventListener('click', loadOwnerSubscription);
 
 document.getElementById('ownerClientsBody')?.addEventListener('click', async (event) => {
+    const historyButton = event.target.closest('.owner-client-history');
     const editButton = event.target.closest('.owner-client-edit');
     const statusButton = event.target.closest('.owner-client-status');
+    if (historyButton && currentUser?.role === 'barbershop_owner') {
+        const client = ownerClientCache.get(Number(historyButton.dataset.id));
+        if (!client) return;
+        ownerClientHistoryClientId = client.id;
+        ownerClientHistoryOffset = 0;
+        document.getElementById('ownerClientHistoryTitle').textContent = `Historial · ${client.full_name}`;
+        document.getElementById('ownerClientHistoryDialog').showModal();
+        await loadOwnerClientHistory();
+        return;
+    }
     if (editButton && currentUser?.role === 'barbershop_owner') {
         const client = ownerClientCache.get(Number(editButton.dataset.id));
         if (!client) return;
@@ -1566,6 +1662,8 @@ function resetSessionInterface(message = '') {
     if (notificationButton) notificationButton.hidden = true;
     const inbox = document.getElementById('inAppNotificationInbox');
     if (inbox) inbox.hidden = true;
+    const clientHistoryDialog = document.getElementById('ownerClientHistoryDialog');
+    if (clientHistoryDialog?.open) clientHistoryDialog.close();
     const ownerClientSearch = document.getElementById('ownerClientSearch');
     if (ownerClientSearch) ownerClientSearch.value = '';
 

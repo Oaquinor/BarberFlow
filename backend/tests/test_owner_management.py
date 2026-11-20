@@ -329,6 +329,29 @@ def test_owner_can_edit_and_deactivate_client_without_losing_history(client: Tes
         "/api/v1/owner/clients?search=Foreign", headers=owner_headers,
     )
     assert foreign_search.json()["total"] == 0
+    history = client.get(
+        f"/api/v1/owner/clients/{customer.id}/appointments", headers=owner_headers,
+    )
+    assert history.status_code == 200
+    assert history.json()["total"] == 1
+    appointment_history = history.json()["items"][0]
+    assert appointment_history["service_type"] == "Corte"
+    assert appointment_history["barber_name"] == "Barber Management"
+    assert appointment_history["scheduled_time"].endswith("Z")
+    assert appointment_history["payment"]["amount_cents"] == 2500
+    assert appointment_history["payment"]["tip_cents"] == 500
+    assert appointment_history["payment"]["currency"] == "DOP"
+    assert appointment_history["payment"]["method"] == "cash"
+    assert appointment_history["payment"]["received_at"].endswith("Z")
+    assert client.get(
+        f"/api/v1/owner/clients/{customer.id}/appointments?limit=0", headers=owner_headers,
+    ).status_code == 422
+    assert client.get(
+        f"/api/v1/owner/clients/{foreign_customer.id}/appointments", headers=owner_headers,
+    ).status_code == 404
+    assert client.get(
+        f"/api/v1/owner/clients/{customer.id}/appointments", headers=barber_headers,
+    ).status_code == 403
     assert test_db.query(AuditLog).filter(
         AuditLog.action.in_(["client.profile_updated", "client.status_changed"]),
         AuditLog.entity_id == customer.id, AuditLog.barbershop_id == shop.id,

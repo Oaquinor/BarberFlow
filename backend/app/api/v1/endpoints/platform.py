@@ -2635,6 +2635,84 @@ def owner_list_clients(
     } for client in clients], "limit": limit, "offset": offset, "total": total}
 
 
+@router.get("/owner/clients/{client_id}/appointments")
+def owner_list_client_appointment_history(
+    client_id: int,
+    limit: int = 20,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    owner = _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el propietario puede consultar el historial")
+    if not 1 <= limit <= 100 or offset < 0:
+        raise HTTPException(status_code=422, detail="Paginación fuera de rango")
+    client = db.query(User).filter(
+        User.id == client_id,
+        User.barbershop_id == owner.barbershop_id,
+        User.role == "client",
+        User.is_deleted == False,
+    ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    appointment_query = db.query(Appointment).filter(
+        Appointment.barbershop_id == owner.barbershop_id,
+        Appointment.client_id == client.id,
+        Appointment.is_deleted == False,
+    )
+    total = appointment_query.count()
+    appointments = appointment_query.order_by(
+        Appointment.scheduled_time.desc(), Appointment.id.desc(),
+    ).offset(offset).limit(limit).all()
+    appointment_ids = [appointment.id for appointment in appointments]
+    payments = db.query(Payment).filter(
+        Payment.barbershop_id == owner.barbershop_id,
+        Payment.appointment_id.in_(appointment_ids),
+        Payment.is_deleted == False,
+    ).all() if appointment_ids else []
+    payments_by_appointment = {payment.appointment_id: payment for payment in payments}
+    barber_ids = {appointment.barber_id for appointment in appointments}
+    barbers = db.query(User).filter(
+        User.id.in_(barber_ids),
+        User.barbershop_id == owner.barbershop_id,
+        User.role == "barber",
+    ).all() if barber_ids else []
+    barber_names = {barber.id: barber.full_name for barber in barbers}
+
+    def utc_iso(value: Optional[datetime]) -> Optional[str]:
+        return f"{value.isoformat()}Z" if value else None
+
+    items = []
+    for appointment in appointments:
+        payment = payments_by_appointment.get(appointment.id)
+        actual_duration = None
+        if appointment.actual_start_time and appointment.actual_end_time:
+            actual_duration = max(
+                0,
+                int((appointment.actual_end_time - appointment.actual_start_time).total_seconds() / 60),
+            )
+        items.append({
+            "id": appointment.id,
+            "scheduled_time": utc_iso(appointment.scheduled_time),
+            "status": appointment.status,
+            "service_type": appointment.service_type,
+            "estimated_duration": appointment.estimated_duration,
+            "actual_duration": actual_duration,
+            "service_price_cents": appointment.service_price,
+            "barber_name": barber_names.get(appointment.barber_id),
+            "payment": {
+                "amount_cents": payment.amount_cents,
+                "tip_cents": payment.tip_cents,
+                "currency": payment.currency,
+                "method": payment.method,
+                "received_at": utc_iso(payment.received_at),
+            } if payment else None,
+        })
+    return {"items": items, "limit": limit, "offset": offset, "total": total}
+
+
 @router.post("/owner/clients", status_code=201)
 def owner_create_client(
     data: OwnerClientCreateRequest,
