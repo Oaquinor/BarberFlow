@@ -34,11 +34,21 @@ def upgrade():
 
 def downgrade():
     connection = op.get_bind()
-    row = connection.execute(sa.text(
-        "SELECT registrations_enabled, free_period_days FROM platform_settings WHERE id = 1"
-    )).first()
-    if row and (not row.registrations_enabled or row.free_period_days != 30):
+    rows = connection.execute(sa.text(
+        "SELECT id, registrations_enabled, free_period_days, updated_by_user_id, "
+        "is_deleted, deleted_at FROM platform_settings"
+    )).mappings().all()
+    if len(rows) > 1 or any(
+        row["id"] != 1
+        or not row["registrations_enabled"]
+        or row["free_period_days"] != 30
+        or row["updated_by_user_id"] is not None
+        or row["is_deleted"]
+        or row["deleted_at"] is not None
+        for row in rows
+    ):
         raise RuntimeError(
-            "Refusing to drop customized platform settings; export or restore the default values before downgrade."
+            "Refusing to drop customized or additional platform settings; "
+            "export or restore the default singleton before downgrade."
         )
     op.drop_table("platform_settings")

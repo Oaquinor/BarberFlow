@@ -37,13 +37,13 @@ def downgrade():
     connection = op.get_bind()
     fields = (
         "name", "description", "icon", "category", "requirement_type",
-        "requirement_value", "points", "rarity", "is_active",
+        "requirement_value", "points", "rarity", "is_active", "is_deleted", "deleted_at",
     )
     for expected in ACHIEVEMENTS:
         row = connection.execute(
             sa.text(
                 "SELECT id, name, description, icon, category, requirement_type, "
-                "requirement_value, points, rarity, is_active "
+                "requirement_value, points, rarity, is_active, is_deleted, deleted_at "
                 "FROM achievements WHERE code = :code"
             ),
             {"code": expected["code"]},
