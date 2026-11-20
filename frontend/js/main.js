@@ -570,6 +570,7 @@ function renderAppointmentDay(businessDate, appointments) {
                     <span>💰 ${fmtMoneyFromCents(appointment.service_price || 0)}</span>
                 </div>
                 <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                    ${appointment.status === 'pending' ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'confirmed')">✅ Confirmar</button>` : ''}
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'in_progress')">▶️ Iniciar</button>` : ''}
                     ${appointment.status === 'in_progress' ? `<button class="btn-secondary" type="button" onclick="collectAppointmentPayment(${Number(appointment.id)})">💳 Cobrar y finalizar</button>` : ''}
                     ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary" type="button" onclick="updateAppointmentStatus(${Number(appointment.id)}, 'cancelled')">❌ Cancelar</button>` : ''}

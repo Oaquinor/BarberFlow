@@ -25,5 +25,6 @@ test("no-show action becomes available only after the scheduled service duration
   assert.equal(sandbox.canMarkAppointmentNoShow(appointment, deadline), true);
   assert.equal(sandbox.canMarkAppointmentNoShow({ ...appointment, status: "in_progress" }, deadline), false);
   assert.equal(sandbox.canMarkAppointmentNoShow({ ...appointment, scheduled_time: "invalid" }, deadline), false);
+  assert.match(source, /appointment\.status === 'pending' \? `.*updateAppointmentStatus\(\$\{Number\(appointment\.id\)\}, 'confirmed'\)/s);
   assert.match(source, /canMarkAppointmentNoShow\(appointment\).*no_show/s);
 });
