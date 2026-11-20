@@ -64,16 +64,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Tracking tokens and other credentials must not be persisted as cache keys.
-  const sensitiveQueryKeys = [...requestUrl.searchParams.keys()].some((key) => {
-    const normalizedKey = key.toLowerCase().replaceAll('-', '_');
-    return [
-      'token', 'code', 'secret', 'key', 'auth', 'authorization', 'session',
-      'email', 'phone', 'password', 'credential', 'otp', 'state', 'signature', 'jwt', 'ticket',
-    ].includes(normalizedKey) ||
-      /(?:^|_)(?:token|code|secret|key)$/.test(normalizedKey);
-  });
-  if (sensitiveQueryKeys) {
+  // URLs with query strings can contain credentials or personalized data under
+  // names the worker cannot predict. Do not persist them as cache keys or bodies.
+  if (requestUrl.search) {
     event.respondWith(
       fetch(event.request).catch(() =>
         event.request.mode === 'navigate' ? caches.match('/offline.html') : Response.error()

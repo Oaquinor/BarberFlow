@@ -429,8 +429,8 @@ test("leaves authenticated requests to the network without caching them", () => 
   assert.deepEqual(worker.writes, []);
 });
 
-test("does not persist recovery links containing one-time secrets", async () => {
-  for (const queryKey of ["token", "code", "reset_token", "access_token", "refresh-token", "verification_code", "auth", "email", "otp"]) {
+test("does not persist navigations with query parameters that may carry secrets", async () => {
+  for (const queryKey of ["token", "code", "reset_token", "access_token", "refresh-token", "verification_code", "auth", "email", "otp", "opaque_credential"]) {
     const worker = createWorker(async () => ({ status: 200 }));
     let responsePromise;
     worker.listeners.get("fetch")({
@@ -449,7 +449,7 @@ test("does not persist recovery links containing one-time secrets", async () => 
   }
 });
 
-test("sensitive query parameter matching ignores case", async () => {
+test("does not persist query URLs with mixed-case parameter names", async () => {
   const worker = createWorker(async () => ({ status: 200 }));
   let responsePromise;
   worker.listeners.get("fetch")({
