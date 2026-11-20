@@ -1,5 +1,7 @@
 # ✅ INTEGRACIÓN COMPLETA - Dashboard Personalizado
 
+> **Registro histórico de la fase inicial (2024):** los porcentajes, archivos y pasos pendientes de este informe no describen el estado actual. El proyecto usa MySQL y la personalización vigente se comprueba en el código y las pruebas. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) y [docs/API_REFERENCE.md](docs/API_REFERENCE.md) antes de operar o continuar el desarrollo.
+
 ## 🎯 Estado: FASE 1 COMPLETA (100%)
 
 ### 📋 Resumen de Cambios

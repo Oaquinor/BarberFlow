@@ -1,5 +1,7 @@
 # ⚠️ VALIDACIÓN CRÍTICA - VISIÓN Y EXPERIENCIA DEL PRODUCTO
 
+> **Auditoría histórica del 30 de mayo de 2024:** los hallazgos y porcentajes pertenecen a aquella versión y pueden estar resueltos o haber cambiado. No los uses como evaluación actual; contrástalos con [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md), las pruebas vigentes y el código. La plataforma usa MySQL.
+
 **Fecha:** 2024-05-30  
 **Sistema:** KingFlow Barber v1.0  
 **Estado:** 🔴 NO CUMPLE LA VISIÓN ORIGINAL

@@ -1,5 +1,7 @@
 # 🚀 KingFlow Barber - Quick Start Guide
 
+> **Guía heredada, no operativa:** algunos comandos, rutas y ejemplos de este documento ya no coinciden con el repositorio. No ejecutes instrucciones de rollback/reset aquí sin una base desechable. Usa el [README vigente](README.md) y la [guía de validación actual](VALIDATION_GUIDE.md); la única base soportada es MySQL.
+
 Get up and running in **5 minutes**!
 
 ---

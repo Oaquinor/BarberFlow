@@ -1,5 +1,7 @@
 # ✅ KingFlow Barber - Verification & Testing Guide
 
+> **Checklist histórica, no apta para validar la versión actual:** contiene ejemplos de endpoints, IDs, migraciones y comandos de base de datos que pueden ser obsoletos o destructivos. No la uses para operar ni para restablecer datos. Consulta [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md), [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) y la suite CI vigente. Las pruebas requieren una base MySQL dedicada terminada en `_test`.
+
 **How to verify everything is working correctly**
 
 ---

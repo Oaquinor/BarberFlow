@@ -1,5 +1,7 @@
 # 🎯 RESUMEN EJECUTIVO - Integración Completa
 
+> **Resumen histórico de la fase inicial:** el “100% completada” de este documento aplica únicamente a aquel alcance de personalización; no representa el estado integral ni la preparación para producción. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) para el estado verificado de KingFlow y su base MySQL.
+
 ## ✅ FASE 1: 100% COMPLETADA
 
 ---
