@@ -148,7 +148,7 @@ Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva espera
 | `PUT` | `/services/{service_id}` | Owner |
 | `DELETE` | `/services/{service_id}` | Owner; baja lógica |
 
-`price` es entero en centavos; todos los registros se restringen al tenant autenticado.
+`name` admite hasta 100 caracteres y se conserva como snapshot en la cita; `price` es entero en centavos. Todos los registros se restringen al tenant autenticado.
 
 ## Rendimiento y logros
 
