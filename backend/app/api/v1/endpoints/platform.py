@@ -3302,13 +3302,13 @@ def barber_close_cash_register(
         closed_at=utc_now_naive(),
     )
     db.add(close)
-    db.flush()
-    _audit(db, user, "cash.closed", "cash_register_close", close.id, shop.id,
-           {"business_date": data.business_date, "expected_cents": expected,
-            "cash_commissions_paid_cents": int(cash_commissions_paid),
-            "declared_cents": data.declared_cash_cents,
-            "difference_cents": data.declared_cash_cents - expected})
     try:
+        db.flush()
+        _audit(db, user, "cash.closed", "cash_register_close", close.id, shop.id,
+               {"business_date": data.business_date, "expected_cents": expected,
+                "cash_commissions_paid_cents": int(cash_commissions_paid),
+                "declared_cents": data.declared_cash_cents,
+                "difference_cents": data.declared_cash_cents - expected})
         db.commit()
     except IntegrityError as exc:
         db.rollback()
