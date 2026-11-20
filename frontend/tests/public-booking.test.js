@@ -75,6 +75,27 @@ test('public booking lets a client choose a barber and submits the selected barb
   assert.match(clientScript, /value="\$\{Number\(s\.availability_id\)\}"/);
 });
 
+test('shop profile loading exposes a retry control after server and network failures', async () => {
+  const start = clientScript.indexOf('async function loadShop()');
+  const end = clientScript.indexOf('\nfunction selectedServiceDuration', start);
+  const functionSource = clientScript.slice(start, end);
+  const retryButton = { hidden: true, disabled: false };
+  const shopNameEl = { textContent: '' };
+  const sandbox = {
+    shopSlug: 'kingflow-shop',
+    shopNameEl,
+    document: { getElementById: () => retryButton },
+    fetch: async () => { throw new Error('offline'); },
+  };
+  vm.runInNewContext(`${functionSource}\nthis.loadShop = loadShop;`, sandbox);
+
+  await sandbox.loadShop();
+
+  assert.match(shopNameEl.textContent, /Comprueba tu conexión/);
+  assert.equal(retryButton.hidden, false);
+  assert.equal(retryButton.disabled, false);
+});
+
 test('booking only exposes tracking links for the app or configured API origin', () => {
   const start = clientScript.indexOf('function trustedTrackingUrl(');
   const end = clientScript.indexOf('\n}', start) + 2;
