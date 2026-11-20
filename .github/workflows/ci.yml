@@ -126,10 +126,24 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: whatsapp-service/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            whatsapp-service/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Audit frontend dependencies
+        working-directory: frontend
+        run: npm audit
+      - name: Install Chromium for responsive browser tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
       - name: Test frontend
         working-directory: frontend
         run: npm test
+      - name: Test responsive pages in Chromium
+        working-directory: frontend
+        run: npm run test:browser -- --reporter=line
       - name: Install WhatsApp dependencies
         working-directory: whatsapp-service
         run: npm ci

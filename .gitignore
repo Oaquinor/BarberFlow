@@ -28,6 +28,8 @@ build/
 .coverage
 htmlcov/
 .tox/
+frontend/test-results/
+frontend/playwright-report/
 
 # IDEs
 .vscode/
