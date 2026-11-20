@@ -16,6 +16,9 @@ def test_browser_security_headers_cover_frontend_and_api(client: TestClient):
     assert page.headers["x-frame-options"] == "DENY"
     assert page.headers["referrer-policy"] == "strict-origin-when-cross-origin"
     assert page.headers["permissions-policy"] == "camera=(), geolocation=(), microphone=()"
+    assert page.headers["content-security-policy"] == (
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
+    )
 
     api_response = client.get("/api/v1/saas/registration-status")
     assert api_response.status_code == 200

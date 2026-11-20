@@ -11,6 +11,10 @@ async def add_security_headers(request: Request, call_next) -> Response:
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
+    )
 
     if get_settings().ENVIRONMENT.lower() == "production":
         response.headers.setdefault(
