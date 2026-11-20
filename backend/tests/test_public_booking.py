@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.models import (
-    Appointment, AuditLog, BarberAvailability, BarberAvailabilityBlock,
+    Appointment, AuditLog, BarberAvailability, BarberAvailabilityBlock, InAppNotification,
     Barbershop, CashRegisterClose, NotificationDelivery, Service, Subscription, User,
 )
 from app.api.v1.endpoints.platform import _slot_available_for_duration
@@ -312,12 +312,39 @@ def test_public_booking_tracking_and_cancel_are_connected(
     assert reschedule_email.subject == f"Cita reprogramada - {shop.name}"
     assert reschedule_email.status == "pending"
 
+    rescheduled_again = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/reschedule",
+        json={"token": tracking_token, "availability_id": preferred_slot.id},
+    )
+    assert rescheduled_again.status_code == 200
+    test_db.refresh(preferred_slot)
+    test_db.refresh(replacement_slot)
+    assert preferred_slot.is_booked is True
+    assert replacement_slot.is_booked is False
+    assert test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == booking["appointment_id"],
+        NotificationDelivery.event_type == "appointment_reschedule",
+        NotificationDelivery.channel == "email",
+    ).count() == 2
+    assert test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == booking["appointment_id"],
+        NotificationDelivery.event_type == "appointment_rescheduled",
+        NotificationDelivery.channel == "whatsapp",
+    ).count() == 2
+    assert test_db.query(InAppNotification).filter(
+        InAppNotification.barbershop_id == shop.id,
+        InAppNotification.entity_id == booking["appointment_id"],
+        InAppNotification.event_type == "appointment_rescheduled",
+    ).count() == 6
+
     cancelled = client.post(
         f"/api/v1/public/{shop.slug}/appointments/cancel",
         json={"token": tracking_token, "reason": "Cambio de horario"},
     )
     assert cancelled.status_code == 200
+    test_db.refresh(preferred_slot)
     test_db.refresh(replacement_slot)
+    assert preferred_slot.is_booked is False
     assert replacement_slot.is_booked is False
     assert cancelled.json()["status"] == "cancelled"
 

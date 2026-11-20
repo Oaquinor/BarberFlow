@@ -237,6 +237,7 @@ def _notify_appointment_staff(
     message: str,
     additional_barber_ids: tuple[int, ...] = (),
     exclude_user_id: Optional[int] = None,
+    dedupe_suffix: Optional[str] = None,
 ) -> None:
     """Add idempotent tenant staff inbox rows to the current business transaction."""
     recipient_ids = set(additional_barber_ids)
@@ -248,10 +249,11 @@ def _notify_appointment_staff(
         User.is_active == True,
         User.is_deleted == False,
     ).all())
+    suffix = f":{dedupe_suffix}" if dedupe_suffix else ""
     for recipient_id in recipient_ids:
         if recipient_id == exclude_user_id:
             continue
-        dedupe_key = f"appointment:{appointment.id}:{event_type}:user:{recipient_id}"
+        dedupe_key = f"appointment:{appointment.id}:{event_type}{suffix}:user:{recipient_id}"
         exists = db.query(InAppNotification.id).filter(
             InAppNotification.recipient_user_id == recipient_id,
             InAppNotification.dedupe_key == dedupe_key,
@@ -417,17 +419,22 @@ def _email_html_lines(lines: list[str]) -> str:
 
 
 def _queue_appointment_email(
-    db: Session, appointment: Appointment, event: str, reason: str | None = None
+    db: Session,
+    appointment: Appointment,
+    event: str,
+    reason: str | None = None,
+    dedupe_suffix: str | None = None,
 ) -> None:
     email = _prepare_appointment_email(db, appointment, event, reason)
     if not email:
         return
     recipient, subject, body = email
+    suffix = f":{dedupe_suffix}" if dedupe_suffix else ""
     enqueue_delivery(
         db,
         barbershop_id=appointment.barbershop_id,
         appointment_id=appointment.id,
-        dedupe_key=f"appointment:{appointment.id}:{event}:email",
+        dedupe_key=f"appointment:{appointment.id}:{event}{suffix}:email",
         channel="email",
         event_type=f"appointment_{event.split(':', 1)[0]}",
         recipient=recipient,
@@ -437,13 +444,22 @@ def _queue_appointment_email(
 
 
 def _queue_appointment_whatsapp(
-    db: Session, appointment: Appointment, recipient: str, message: str, event: str
+    db: Session,
+    appointment: Appointment,
+    recipient: str,
+    message: str,
+    event: str,
+    dedupe_suffix: str | None = None,
 ) -> None:
+    suffix = f":{dedupe_suffix}" if dedupe_suffix else ""
     enqueue_delivery(
         db,
         barbershop_id=appointment.barbershop_id,
         appointment_id=appointment.id,
-        dedupe_key=f"appointment:{appointment.id}:{event}:whatsapp:{hashlib.sha256(recipient.encode()).hexdigest()[:16]}",
+        dedupe_key=(
+            f"appointment:{appointment.id}:{event}{suffix}:whatsapp:"
+            f"{hashlib.sha256(recipient.encode()).hexdigest()[:16]}"
+        ),
         channel="whatsapp",
         event_type=f"appointment_{event.split(':', 1)[0]}",
         recipient=recipient,
@@ -2186,6 +2202,7 @@ def public_reschedule_appointment(
 
     old_start = appointment.scheduled_time
     old_barber_id = appointment.barber_id
+    reschedule_event_id = secrets.token_hex(12)
     db.query(BarberAvailability).filter(
         BarberAvailability.barbershop_id == shop.id,
         BarberAvailability.barber_id == old_barber_id,
@@ -2199,6 +2216,7 @@ def public_reschedule_appointment(
         db, appointment, "appointment_rescheduled", "Cita reprogramada",
         f"{appointment.service_type} · {_utc_aware(new_start).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')}",
         additional_barber_ids=(old_barber_id,),
+        dedupe_suffix=reschedule_event_id,
     )
     _audit(db, None, "appointment.rescheduled_by_client", "appointment", appointment.id, shop.id,
            {"previous_time": old_start.isoformat(), "new_time": new_start.isoformat(),
@@ -2209,8 +2227,9 @@ def public_reschedule_appointment(
             f"Tu cita en {shop.name} fue reprogramada para "
             f"{_utc_aware(new_start).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')}.",
             "rescheduled:client",
+            dedupe_suffix=reschedule_event_id,
         )
-    _queue_appointment_email(db, appointment, "reschedule")
+    _queue_appointment_email(db, appointment, "reschedule", dedupe_suffix=reschedule_event_id)
     db.commit()
     return {"success": True, "appointment_id": appointment.id, "status": appointment.status,
             "scheduled_time": _utc_aware(new_start), "barber_name": barber.full_name}
