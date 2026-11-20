@@ -1,6 +1,7 @@
 """MySQL integration coverage for appointment checkout and daily cash close."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +10,62 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token
 from app.models import Appointment, AuditLog, BarberPerformance, Barbershop, NotificationDelivery, Payment, User
 from app.utils.datetime import utc_now_naive
+
+
+def test_historical_cash_close_requires_resolving_scheduled_appointments(
+    client: TestClient, test_db: Session,
+):
+    shop = Barbershop(
+        name="Cierre histórico", slug="historical-cash-close-test",
+        email="historical-cash-close@example.com", phone="8095551099",
+        address_line1="Calle 10", city="Santo Domingo", state="DN",
+        postal_code="10101", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP",
+    )
+    test_db.add(shop)
+    test_db.flush()
+    owner = User(
+        email="historical-cash-owner@example.com", password_hash="unused",
+        first_name="Dueño", last_name="Histórico", role="barbershop_owner",
+        is_active=True, barbershop_id=shop.id,
+    )
+    barber = User(
+        email="historical-cash-barber@example.com", password_hash="unused",
+        first_name="Barbero", last_name="Histórico", role="barber",
+        is_active=True, barbershop_id=shop.id,
+    )
+    customer = User(
+        email="historical-cash-client@example.com", password_hash="unused",
+        first_name="Cliente", last_name="Histórico", role="client",
+        is_active=True, barbershop_id=shop.id,
+    )
+    test_db.add_all([owner, barber, customer])
+    test_db.flush()
+    scheduled_local = datetime.now(ZoneInfo(shop.timezone)).replace(
+        hour=10, minute=0, second=0, microsecond=0,
+    ) - timedelta(days=1)
+    scheduled_utc = scheduled_local.astimezone(timezone.utc).replace(tzinfo=None)
+    appointment = Appointment(
+        barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
+        scheduled_time=scheduled_utc, estimated_duration=30,
+        service_type="Corte", service_price=18000, status="confirmed",
+    )
+    test_db.add(appointment)
+    test_db.commit()
+
+    owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id)})}"}
+    payload = {"business_date": scheduled_local.date().isoformat(), "declared_cash_cents": 0}
+    refused = client.post("/api/v1/barber/cash/close", headers=owner_headers, json=payload)
+    assert refused.status_code == 409
+
+    cancelled = client.put(
+        f"/api/v1/barber/appointments/{appointment.id}/status",
+        headers=barber_headers, json={"status": "cancelled"},
+    )
+    assert cancelled.status_code == 200
+    closed = client.post("/api/v1/barber/cash/close", headers=owner_headers, json=payload)
+    assert closed.status_code == 201
 
 
 def test_service_requires_payment_and_cash_close_reconciles(client: TestClient, test_db: Session):

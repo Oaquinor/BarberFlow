@@ -136,7 +136,7 @@ Cierre:
 {"business_date":"2026-11-19","declared_cash_cents":30000,"notes":"Conteo revisado"}
 ```
 
-Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva esperado, declarado y diferencia. Una segunda conciliación de la misma fecha y usuario se rechaza.
+Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva esperado, declarado y diferencia. Una segunda conciliación de la misma fecha y usuario se rechaza. Antes de cerrar, se deben resolver las citas pendientes o confirmadas y finalizar los servicios en curso de esa fecha, también cuando se cierra un día anterior.
 
 ## Catálogo de servicios
 
