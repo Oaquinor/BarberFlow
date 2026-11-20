@@ -324,6 +324,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     test_db.commit()
     inactive_booking_payload = {
         **payload,
+        "barber_id": barber.id,
         "scheduled_time": replacement_slot.slot_start.replace(tzinfo=timezone.utc).isoformat(),
     }
     inactive_booking = client.post(
