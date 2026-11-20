@@ -3229,7 +3229,7 @@ def barber_close_cash_register(
             CashRegisterClose.is_deleted == False,
             User.role == "barbershop_owner",
             User.barbershop_id == shop.id,
-        ).first()
+        ).with_for_update().first()
         if owner_close:
             raise HTTPException(status_code=409, detail="La caja del negocio ya fue cerrada por un propietario")
     existing = db.query(CashRegisterClose.id).filter(
@@ -3237,7 +3237,7 @@ def barber_close_cash_register(
         CashRegisterClose.closed_by_user_id == user.id,
         CashRegisterClose.business_date == date_key,
         CashRegisterClose.is_deleted == False,
-    ).first()
+    ).with_for_update().first()
     if existing:
         raise HTTPException(status_code=409, detail="La caja de esta fecha ya fue cerrada")
     start = local_day_start_utc_naive(business_date, _get_timezone(shop))
