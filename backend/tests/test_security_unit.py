@@ -23,6 +23,7 @@ from app.services.onboarding_service import OnboardingService
 from app.services.performance_service import PerformanceService
 from app.main import app
 from app.schemas.onboarding import OnboardingComplete
+from app.schemas.auth import PasswordChangeRequest, PasswordResetConfirm, RegisterRequest
 from app.schemas.platform import BarberCreateSlotsRequest, PublicCreateAppointmentRequest, TenantRegistrationRequest
 
 
@@ -60,6 +61,33 @@ def test_super_admin_must_select_tenant_explicitly():
         _get_tenant_id(admin)
     assert error.value.status_code == 400
     assert _get_tenant_id(admin, requested_id=12) == 12
+
+
+def test_new_passwords_use_the_same_twelve_character_policy():
+    strong_password = "StrongPassword123"
+    assert RegisterRequest(
+        email="owner@example.com", password=strong_password,
+        first_name="Owner", last_name="Test", phone="8095551234",
+    ).password == strong_password
+    assert PasswordChangeRequest(
+        current_password="CurrentPassword123", new_password=strong_password,
+    ).new_password == strong_password
+    assert PasswordResetConfirm(
+        token="x" * 43, new_password=strong_password,
+    ).new_password == strong_password
+
+    for schema, data in (
+        (RegisterRequest, {
+            "email": "owner@example.com", "password": "Strong123",
+            "first_name": "Owner", "last_name": "Test", "phone": "8095551234",
+        }),
+        (PasswordChangeRequest, {
+            "current_password": "CurrentPassword123", "new_password": "Strong123",
+        }),
+        (PasswordResetConfirm, {"token": "x" * 43, "new_password": "Strong123"}),
+    ):
+        with pytest.raises(ValueError):
+            schema(**data)
 
 
 def test_jwt_subject_must_be_a_decimal_user_id():

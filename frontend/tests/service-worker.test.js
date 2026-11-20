@@ -153,8 +153,13 @@ test("owner, barber, and platform admin can change passwords from their authenti
     assert.match(html, /id="passwordCurrent"/);
     assert.match(html, /id="passwordNew"/);
     assert.match(html, /id="passwordConfirm"/);
+    assert.match(html, /id="passwordNew"[^>]*minlength="12"/);
+    assert.match(html, /id="passwordConfirm"[^>]*minlength="12"/);
+    assert.match(html, /al menos 12 caracteres/);
     assert.ok(html.indexOf("js/auth.js") < html.indexOf("js/account-security.js"));
   }
+  const resetPage = fs.readFileSync(path.join(__dirname, "..", "reset-password.html"), "utf8");
+  assert.match(resetPage, /id="newPassword"[^>]*minlength="12"/);
   const script = fs.readFileSync(path.join(__dirname, "..", "js", "account-security.js"), "utf8");
   assert.match(script, /api\/v1\/auth\/change-password/);
   assert.match(script, /newPassword !== confirmation/);

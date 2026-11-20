@@ -12,7 +12,7 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Flujos implementados
 
-- Registro de barbería y owner, login, renovación/revocación de sesiones, cambio de contraseña desde los portales de owner/barbero y superadmin, y recuperación por correo con token de un solo uso.
+- Registro de barbería y owner, login, renovación/revocación de sesiones, cambio de contraseña desde los portales de owner/barbero y superadmin, y recuperación por correo con token de un solo uso. Las contraseñas nuevas comparten una regla uniforme de 12 caracteres, mayúscula y número.
 - Autorización por rol y aislamiento por `barbershop_id` en rutas de negocio.
 - Página pública: catálogo, turnos calculados para la duración del servicio y filtrados por citas/ausencias, reserva sin cuenta, seguimiento mediante token, reprogramación y cancelación.
 - Operación de barbero: agenda día/semana/mes, transiciones de cita, atención presencial, cobro y comisión. El checkout persiste pago, cita, notificaciones, rendimiento y logros en una sola transacción MySQL.

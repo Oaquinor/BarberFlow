@@ -143,6 +143,13 @@ def test_password_change_revokes_refresh_sessions_and_requires_new_password(
     assert logged_in.status_code == 200
     tokens = logged_in.json()
 
+    rejected_weak_password = client.post(
+        "/api/v1/auth/change-password",
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        json={"current_password": "TestPassword123", "new_password": "Updated123"},
+    )
+    assert rejected_weak_password.status_code == 422
+
     changed = client.post(
         "/api/v1/auth/change-password",
         headers={"Authorization": f"Bearer {tokens['access_token']}"},

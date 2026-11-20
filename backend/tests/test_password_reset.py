@@ -128,6 +128,10 @@ def test_password_reset_rejects_weak_or_expired_credentials(
     ).status_code == 422
     assert client.post(
         "/api/v1/auth/password-reset/confirm",
+        json={"token": "x" * 43, "new_password": "Strong123"},
+    ).status_code == 422
+    assert client.post(
+        "/api/v1/auth/password-reset/confirm",
         json={"token": "x" * 43, "new_password": "A1" + "x" * 71},
     ).status_code == 422
     expired_token = "x" * 43

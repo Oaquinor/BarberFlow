@@ -55,7 +55,7 @@ class LoginResponse(BaseModel):
 class RegisterRequest(BaseModel):
     """Registration request schema."""
     email: EmailStr = Field(..., description="User email")
-    password: str = Field(..., min_length=8, max_length=72, description="User password")
+    password: str = Field(..., min_length=12, max_length=72, description="User password")
     first_name: str = Field(..., min_length=2, max_length=50, description="First name")
     last_name: str = Field(..., min_length=2, max_length=50, description="Last name")
     phone: str = Field(..., description="Phone number")
@@ -64,8 +64,8 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_password(cls, v: str) -> str:
         """Validate password strength."""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters")
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain at least one digit")
         if not any(char.isupper() for char in v):
@@ -98,14 +98,14 @@ class RefreshTokenResponse(BaseModel):
 class PasswordChangeRequest(BaseModel):
     """Password change request schema."""
     current_password: str = Field(..., description="Current password")
-    new_password: str = Field(..., min_length=8, max_length=72, description="New password")
+    new_password: str = Field(..., min_length=12, max_length=72, description="New password")
 
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
         """Validate new password strength."""
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters")
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain at least one digit")
         if not any(char.isupper() for char in v):
@@ -121,13 +121,13 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetConfirm(BaseModel):
     """Password reset confirmation schema."""
     token: str = Field(..., min_length=32, max_length=128, description="Reset token")
-    new_password: str = Field(..., min_length=8, max_length=72, description="New password")
+    new_password: str = Field(..., min_length=12, max_length=72, description="New password")
 
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters")
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain at least one digit")
         if not any(char.isupper() for char in v):
