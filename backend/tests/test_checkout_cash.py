@@ -190,6 +190,58 @@ def test_owner_close_blocks_barber_checkout_for_the_same_business_day(
     assert later_appointment.status == "confirmed"
 
 
+def test_cash_close_waits_for_remaining_same_day_appointments(
+    client: TestClient, test_db: Session, monkeypatch,
+):
+    import app.api.v1.endpoints.platform as platform
+
+    now = datetime(2026, 11, 20, 15, 0)
+    monkeypatch.setattr(platform, "utc_now_naive", lambda: now)
+    shop = Barbershop(
+        name="Caja con agenda", slug="cash-close-agenda-test", email="cash-agenda@example.com",
+        phone="8095551020", address_line1="Calle 30", city="Santo Domingo",
+        state="DN", postal_code="10120", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP",
+    )
+    test_db.add(shop)
+    test_db.flush()
+    owner = User(
+        email="cash-agenda-owner@example.com", password_hash="unused", first_name="Dueño",
+        last_name="Agenda", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
+    )
+    barber = User(
+        email="cash-agenda-barber@example.com", password_hash="unused", first_name="Barbero",
+        last_name="Agenda", role="barber", is_active=True, barbershop_id=shop.id,
+    )
+    customer = User(
+        email="cash-agenda-client@example.com", password_hash="unused", first_name="Cliente",
+        last_name="Agenda", role="client", is_active=True, barbershop_id=shop.id,
+    )
+    test_db.add_all([owner, barber, customer])
+    test_db.flush()
+    appointment = Appointment(
+        barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
+        scheduled_time=now + timedelta(hours=1), estimated_duration=30,
+        service_type="Corte", service_price=18000, status="confirmed",
+    )
+    test_db.add(appointment)
+    test_db.commit()
+
+    owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(barber.id)})}"}
+    payload = {"business_date": "2026-11-20", "declared_cash_cents": 0}
+    refused = client.post("/api/v1/barber/cash/close", headers=owner_headers, json=payload)
+    assert refused.status_code == 409
+
+    cancelled = client.put(
+        f"/api/v1/barber/appointments/{appointment.id}/status",
+        headers=barber_headers, json={"status": "cancelled"},
+    )
+    assert cancelled.status_code == 200
+    closed = client.post("/api/v1/barber/cash/close", headers=owner_headers, json=payload)
+    assert closed.status_code == 201
+
+
 def test_future_appointment_cannot_be_marked_no_show(client: TestClient, test_db: Session):
     shop = Barbershop(
         name="No Show Test", slug="no-show-test", email="noshow-shop@example.com",

@@ -1108,6 +1108,32 @@ def public_slots(
         .all()
     )
 
+    business_date = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+    business_date_key = datetime.combine(business_date, time.min)
+    next_business_date_key = datetime.combine(business_date + timedelta(days=1), time.min)
+    business_day_start = _to_utc_naive(business_date_key, shop)
+    business_day_end = _to_utc_naive(next_business_date_key, shop)
+    closing_rows = db.query(CashRegisterClose.closed_by_user_id, User.role).join(
+        User, User.id == CashRegisterClose.closed_by_user_id,
+    ).filter(
+        CashRegisterClose.barbershop_id == shop.id,
+        CashRegisterClose.business_date == business_date_key,
+        CashRegisterClose.is_deleted == False,
+        User.is_deleted == False,
+    ).all()
+    owner_closed = any(role == "barbershop_owner" for _, role in closing_rows)
+    closed_barbers = {
+        user_id for user_id, role in closing_rows if role == "barber"
+    }
+    if owner_closed or closed_barbers:
+        rows = [
+            slot for slot in rows
+            if not (
+                business_day_start <= slot.slot_start < business_day_end
+                and (owner_closed or slot.barber_id in closed_barbers)
+            )
+        ]
+
     blocks = db.query(BarberAvailabilityBlock).filter(
         BarberAvailabilityBlock.barbershop_id == shop.id,
         BarberAvailabilityBlock.starts_at < horizon,
@@ -1219,6 +1245,19 @@ def public_create_appointment(
     ).with_for_update().first()
     if not barber:
         raise HTTPException(status_code=400, detail="El barbero del turno no está disponible")
+
+    booking_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    if _utc_aware(scheduled_time).astimezone(_get_timezone(shop)).date() == booking_business_date:
+        locked_shop = db.query(Barbershop).filter(
+            Barbershop.id == shop.id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not locked_shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
+        if _cash_register_closed_for_user(
+            db, barber, shop.id, datetime.combine(booking_business_date, time.min),
+        ):
+            raise HTTPException(status_code=409, detail="La caja de hoy está cerrada; no se aceptan reservas para hoy")
 
     blocked_range = db.query(BarberAvailabilityBlock.id).filter(
         BarberAvailabilityBlock.barbershop_id == shop.id,
@@ -3027,20 +3066,34 @@ def barber_close_cash_register(
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="La caja de esta fecha ya fue cerrada")
-    open_services = db.query(Appointment.id).filter(
-        Appointment.barbershop_id == shop.id,
-        Appointment.status == "in_progress",
-        Appointment.is_deleted == False,
-    )
-    if user.role == "barber":
-        open_services = open_services.filter(Appointment.barber_id == user.id)
-    if open_services.first():
-        raise HTTPException(
-            status_code=409,
-            detail="Termina y cobra los servicios en curso antes de cerrar la caja",
-        )
     start = _to_utc_naive(date_key, shop)
     end = _to_utc_naive(datetime.combine(business_date + timedelta(days=1), time.min), shop)
+    if business_date == local_today:
+        open_services = db.query(Appointment.id).filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.status == "in_progress",
+            Appointment.is_deleted == False,
+        )
+        remaining_appointments = db.query(Appointment.id).filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.status.in_({"pending", "confirmed"}),
+            Appointment.scheduled_time >= start,
+            Appointment.scheduled_time < end,
+            Appointment.is_deleted == False,
+        )
+        if user.role == "barber":
+            open_services = open_services.filter(Appointment.barber_id == user.id)
+            remaining_appointments = remaining_appointments.filter(Appointment.barber_id == user.id)
+        if open_services.first():
+            raise HTTPException(
+                status_code=409,
+                detail="Termina y cobra los servicios en curso antes de cerrar la caja",
+            )
+        if remaining_appointments.first():
+            raise HTTPException(
+                status_code=409,
+                detail="Resuelve las citas del día antes de cerrar la caja",
+            )
     payment_query = db.query(Payment).filter(
         Payment.barbershop_id == shop.id,
         Payment.method == "cash",

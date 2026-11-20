@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     Appointment, AuditLog, BarberAvailability, BarberAvailabilityBlock,
-    Barbershop, NotificationDelivery, Service, Subscription, User,
+    Barbershop, CashRegisterClose, NotificationDelivery, Service, Subscription, User,
 )
 from app.api.v1.endpoints.platform import _slot_available_for_duration
 from app.core.security import create_access_token
@@ -32,6 +32,71 @@ def test_public_slot_filter_uses_service_duration_for_conflicts_and_absences():
     assert not _slot_available_for_duration(available, [], [appointment_overlap], 30)
     assert _slot_available_for_duration(available, [block_at_slot_tail], [], 30)
     assert not _slot_available_for_duration(available, [block_at_slot_tail], [], 60)
+
+
+def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
+    client: TestClient, test_db: Session, monkeypatch,
+):
+    import app.api.v1.endpoints.platform as platform
+
+    now = datetime(2026, 11, 20, 15, 0)
+    monkeypatch.setattr(platform, "utc_now_naive", lambda: now)
+    subscription = Subscription(
+        plan="free", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=1,
+        max_appointments_per_month=50, max_clients=50, auto_renew=False,
+    )
+    test_db.add(subscription)
+    test_db.flush()
+    shop = Barbershop(
+        name="Reservas con caja cerrada", slug="closed-cash-public-slots",
+        email="closed-slots@example.com", phone="8095550109", address_line1="Calle 9",
+        city="Santo Domingo", state="DN", postal_code="10109", country="DO",
+        timezone="America/Santo_Domingo", subscription_id=subscription.id,
+    )
+    test_db.add(shop)
+    test_db.flush()
+    owner = User(
+        email="closed-slots-owner@example.com", password_hash="unused", first_name="Dueño",
+        last_name="Agenda", role="barbershop_owner", is_active=True, barbershop_id=shop.id,
+    )
+    barber = User(
+        email="closed-slots-barber@example.com", password_hash="unused", first_name="Barbero",
+        last_name="Agenda", role="barber", is_active=True, barbershop_id=shop.id,
+    )
+    service = Service(
+        barbershop_id=shop.id, name="Corte", duration_minutes=30, price=1800,
+        category="haircut", is_active=True,
+    )
+    test_db.add_all([owner, barber, service])
+    test_db.flush()
+    today_slot_start = datetime(2026, 11, 20, 17, 0)
+    future_slot_start = datetime(2026, 11, 21, 17, 0)
+    today_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id, slot_start=today_slot_start,
+        slot_end=today_slot_start + timedelta(minutes=30), is_active=True, is_booked=False,
+    )
+    future_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id, slot_start=future_slot_start,
+        slot_end=future_slot_start + timedelta(minutes=30), is_active=True, is_booked=False,
+    )
+    test_db.add_all([today_slot, future_slot])
+    test_db.add(CashRegisterClose(
+        barbershop_id=shop.id, closed_by_user_id=owner.id,
+        business_date=datetime(2026, 11, 20), expected_cash_cents=0,
+        declared_cash_cents=0, difference_cents=0, payment_count=0,
+        closed_at=now,
+    ))
+    test_db.commit()
+
+    available = client.get(f"/api/v1/public/{shop.slug}/slots?duration_minutes=30")
+    assert available.status_code == 200
+    assert [row["availability_id"] for row in available.json()] == [future_slot.id]
+    booking = client.post(f"/api/v1/public/{shop.slug}/appointments", json={
+        "client_name": "Cliente Hoy", "phone": "8095550108", "service_id": service.id,
+        "scheduled_time": today_slot_start.replace(tzinfo=timezone.utc).isoformat(),
+    })
+    assert booking.status_code == 409
 
 
 def test_public_booking_tracking_and_cancel_are_connected(
