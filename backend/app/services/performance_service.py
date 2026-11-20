@@ -106,7 +106,7 @@ class PerformanceService:
                 BarberPerformance.barber_id == barber_id,
                 BarberPerformance.date == target_date
             )
-        ).first()
+        ).with_for_update().first()
 
         if not performance:
             performance = BarberPerformance(
