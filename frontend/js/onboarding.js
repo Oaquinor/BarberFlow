@@ -400,6 +400,10 @@ function goToDashboard() {
 }
 
 // Initialize
+window.addEventListener('kingflow:auth-expired', () => {
+    window.location.replace('/index.html');
+});
+
 if (!accessToken) {
     window.location.replace('/');
 }
