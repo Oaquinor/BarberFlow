@@ -79,14 +79,13 @@ Ayudamos a:
 1. El servicio debe estar en estado `in_progress`
 2. El barbero debe ser el asignado
 3. Debe haber transcurrido al menos 5 minutos
+4. Debe registrarse el cobro con un método de pago válido
 
-**Al finalizar servicio:**
-1. Estado cambia a `completed`
-2. Se registra `actual_end_time`
-3. Se calcula duración real
-4. Se compara con duración estimada
-5. Se actualiza performance diaria
-6. Se verifican logros automáticamente
+**Al registrar el cobro:**
+1. Se crea un pago inmutable con el precio del servicio, propina, método y moneda del negocio.
+2. En la misma transacción, la cita cambia a `completed` y se registra `actual_end_time`.
+3. Se actualizan comisión, rendimiento, logros y notificaciones.
+4. Si no se pueden persistir las consecuencias operativas, se revierte el cobro y la finalización.
 
 ### Alertas de Tiempo
 
