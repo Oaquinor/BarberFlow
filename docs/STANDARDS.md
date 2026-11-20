@@ -171,7 +171,7 @@ Follow the structure that exists in the repository; do not add layers only to ma
 - `core/database/`: synchronous SQLAlchemy sessions backed only by MySQL 8 through `mysql+pymysql://`.
 - `alembic/`: all schema changes must be versioned migrations.
 
-Do not assume a file is active because it exists. Verify router registration and actual imports. In particular, `api/v1/appointments.py` is not mounted and its async database handlers are incompatible with the configured synchronous session. It is not a template for new endpoints.
+Do not assume a file is active because it exists. Verify router registration and actual imports. The former unmounted async appointment and service-mode modules were removed; the active operational flow is synchronous SQLAlchemy over MySQL and is documented in `docs/API_REFERENCE.md`.
 
 Active request handlers use synchronous database operations (`Session.query`, `Session.execute`, `commit`, `rollback`). FastAPI endpoints may be declared `async` for async I/O, but synchronous SQLAlchemy calls must not be awaited. Prefer ordinary `def` handlers for database-bound synchronous work where appropriate.
 

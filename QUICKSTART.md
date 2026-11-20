@@ -60,8 +60,8 @@ cp .env.example .env
 # Run migrations
 alembic upgrade head
 
-# Seed database with test data
-python scripts/seed_db.py
+# Create the first platform administrator interactively
+python -m scripts.create_admin
 
 # Start server
 uvicorn app.main:app --reload
@@ -81,10 +81,10 @@ After running migrations, create an administrator interactively:
 
 ```bash
 cd backend
-python scripts/create_admin.py
+python -m scripts.create_admin
 ```
 
-KingFlow does not ship with reusable demo or default login credentials. Disposable demo records are available only through the development-only `python scripts/seed_db.py --allow-demo-data` command.
+KingFlow does not ship with reusable demo or default login credentials. Disposable demo records can be created only in development with `ENVIRONMENT=development python -m scripts.seed_db --allow-demo-data`; the script asks for confirmation and refuses to alter an existing demo tenant.
 
 ---
 
@@ -99,8 +99,8 @@ docker-compose up -d
 # Run migrations
 docker-compose exec backend alembic upgrade head
 
-# Seed database
-docker-compose exec backend python scripts/seed_db.py
+# Optional: create disposable demo records; only use on a development database
+docker-compose exec backend python -m scripts.seed_db --allow-demo-data
 
 # View logs
 docker-compose logs -f backend

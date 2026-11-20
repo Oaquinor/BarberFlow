@@ -59,7 +59,7 @@ def main() -> int:
             print("Backend did not become healthy. Check its startup output above.")
             return 1
         print("KingFlow is available at http://127.0.0.1:8000")
-        print("Create the first administrator with: python scripts/create_admin.py")
+        print("Create the first administrator with: python -m scripts.create_admin")
         webbrowser.open(base_url)
         process.wait()
         return process.returncode or 0

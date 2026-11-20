@@ -94,7 +94,7 @@ EXIT;
 ### Step 3: Test Connection
 
 ```bash
-psql -U kingflow -d kingflow_barber -h localhost
+mysql -h localhost -u kingflow -p kingflow_barber
 
 # Should connect successfully
 ```
@@ -145,15 +145,15 @@ alembic upgrade head
 ### Step 3: Verify Tables
 
 ```bash
-psql -U kingflow -d kingflow_barber
+mysql -h localhost -u kingflow -p kingflow_barber
 
-\dt
+SHOW TABLES;
 # Should show tables: users, barbershops, appointments, subscriptions
 
-\d users
+DESCRIBE users;
 # Should show user table structure
 
-\q
+EXIT;
 ```
 
 ---
@@ -163,27 +163,24 @@ psql -U kingflow -d kingflow_barber
 ### Step 1: Seed Database
 
 ```bash
-python scripts/seed_db.py
+python -m scripts.seed_db --allow-demo-data
 
-# Should see:
-# 🌱 Starting database seeding...
-# ✅ Database seeded successfully!
-# 📋 Test Accounts:
-# (account list)
+# The script requires ENVIRONMENT=development, asks for confirmation,
+# and prints only whether disposable demo records were created.
 ```
 
 ### Step 2: Verify Data
 
 ```bash
-psql -U kingflow -d kingflow_barber
+mysql -h localhost -u kingflow -p kingflow_barber
 
 SELECT email, role FROM users;
 # Should show test users
 
-SELECT name FROM barbershops;
-# Should show King's Barbershop
+SELECT name FROM barbershops WHERE slug = 'kings-barbershop-demo';
+# Shows the disposable demo tenant only when seeding was explicitly run.
 
-\q
+EXIT;
 ```
 
 ---
@@ -344,7 +341,7 @@ docker ps
 
 ```bash
 docker-compose exec backend alembic upgrade head
-docker-compose exec backend python scripts/seed_db.py
+docker-compose exec backend python -m scripts.seed_db --allow-demo-data
 
 # Then test API at http://localhost:8000
 ```

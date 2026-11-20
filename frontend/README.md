@@ -20,7 +20,7 @@ python scripts/serve_frontend.py
 
 Abre `http://localhost:3000`. `js/config.js` dirige las llamadas de API al backend `http://localhost:8000`; en producción, las páginas usan el mismo origen. Abrir HTML mediante `file://` no es compatible con el service worker, el routing de API ni las reglas CORS.
 
-Para instalar el esquema en una base local, configura antes `DATABASE_URL=mysql+pymysql://...` y ejecuta `alembic upgrade head`. Las cuentas iniciales se crean explícitamente con `backend/scripts/create_admin.py`; el repositorio no incluye credenciales de demostración.
+Para instalar el esquema en una base local, configura antes `DATABASE_URL=mysql+pymysql://...` y ejecuta `alembic upgrade head`. Desde `backend`, crea la cuenta inicial con `python -m scripts.create_admin`; el comando solicita credenciales y el repositorio no incluye cuentas de demostración.
 
 ## Portales y flujos
 

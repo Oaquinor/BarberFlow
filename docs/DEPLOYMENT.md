@@ -45,7 +45,7 @@ Alembic migrations run as part of backend startup. The production Compose file r
 
 4. **Create the first platform admin**
 ```bash
-docker compose -f docker-compose.prod.yml exec backend python scripts/create_admin.py
+docker compose -f docker-compose.prod.yml exec backend python -m scripts.create_admin
 ```
 
 Terminate TLS at a trusted HTTPS reverse proxy or managed load balancer, restrict direct access to port 8000 to that proxy, and configure backups for the MySQL volume and `frontend/uploads`. The Compose stack does not configure a TLS proxy or automated backups by itself.
