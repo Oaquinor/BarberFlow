@@ -28,15 +28,15 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución integral más reciente de GitHub Actions validó el commit `e583dfb` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44689205484](https://github.com/Oaquinor/BarberFlow/actions/runs/44689205484). El backend ejecutó **119 pruebas sobre MySQL 8.4.13**; también pasaron los tests frontend/WhatsApp, las imágenes de producción y la validación de `docker-compose.prod.yml`. Las acciones oficiales de CI usan runtime Node 24. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
+La ejecución integral de GitHub Actions validó el commit `02d3d3d` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44689802178](https://github.com/Oaquinor/BarberFlow/actions/runs/44689802178). El backend ejecutó **119 pruebas sobre MySQL 8.4.13, sin advertencias de pytest**; también pasaron los tests frontend/WhatsApp, las imágenes de producción y la validación de `docker-compose.prod.yml`. Las acciones oficiales de CI usan runtime Node 24. La cobertura incluye carreras de cierre de caja entre propietario y barbero, y entre cobro y cierre, además de renovaciones SaaS simultáneas. `main` permanece intacta.
 
-- Backend: Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **119 passed**, 1 warning. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente y las carreras MySQL de cierre de caja.
+- Backend: Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **119 passed**, sin advertencias. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente y las carreras MySQL de cierre de caja.
 - Frontend/WhatsApp: pruebas y auditoría de dependencias pasaron.
 - Imágenes de producción: builds, usuario sin privilegios y smoke test de API pasaron.
 - Compose de producción: `docker compose -f docker-compose.prod.yml config --quiet` pasó con variables de CI.
 - El CI también ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` sin vulnerabilidades conocidas.
 - Las ejecuciones previas incluyen pruebas específicas de bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
-- Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT` y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
+- Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT`, se usa `httpx2` para el TestClient compatible con Starlette actual y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
 - La suite local, sin base MySQL de prueba configurada, fue **28 passed, 53 skipped**; no sustituye la ejecución MySQL de CI indicada arriba.
 - Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
 - No se validó Docker Compose en runtime en el equipo local porque Docker no está instalado.
