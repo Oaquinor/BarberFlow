@@ -7,6 +7,7 @@ Create Date: 2026-06-06
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 
 revision = "004_add_barber_availability"
@@ -41,4 +42,5 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'barber_availabilities')
     op.drop_table("barber_availabilities")

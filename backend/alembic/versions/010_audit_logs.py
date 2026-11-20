@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 revision = "010_audit_logs"
 down_revision = "009_login_attempt_limits"
@@ -34,4 +35,5 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'audit_logs')
     op.drop_table("audit_logs")

@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 revision = "013_commission_currency"
 down_revision = "012_subscription_payments"
@@ -19,4 +20,5 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'commissions')
     op.drop_column("commissions", "currency")

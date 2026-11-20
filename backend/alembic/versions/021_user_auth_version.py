@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 
 revision = "021_user_auth_version"
@@ -19,6 +20,7 @@ def upgrade():
 
 def downgrade():
     connection = op.get_bind()
+    require_empty_tables(connection, "refresh_sessions")
     changed_accounts = connection.execute(sa.text(
         "SELECT COUNT(*) FROM users WHERE auth_version <> 0"
     )).scalar_one()

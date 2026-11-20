@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 
 revision = "008_payments_cash_register"
@@ -54,5 +55,6 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'cash_register_closes', 'payments')
     op.drop_table("cash_register_closes")
     op.drop_table("payments")

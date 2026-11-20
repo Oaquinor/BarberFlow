@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 
 revision = "009_login_attempt_limits"
@@ -30,5 +31,6 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'login_attempts')
     op.drop_index("ix_login_attempts_locked_until", table_name="login_attempts")
     op.drop_table("login_attempts")

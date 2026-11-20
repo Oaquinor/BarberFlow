@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables, require_no_matching_rows
 
 revision = "015_barber_commissions"
 down_revision = "014_align_mysql_schema"
@@ -47,5 +48,10 @@ def upgrade():
 
 
 def downgrade():
+    connection = op.get_bind()
+    require_empty_tables(connection, 'barber_commissions')
+    require_no_matching_rows(
+        connection, 'users', 'commission_rate_basis_points <> 0', 'custom barber commission rates',
+    )
     op.drop_table("barber_commissions")
     op.drop_column("users", "commission_rate_basis_points")

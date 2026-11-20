@@ -11,6 +11,7 @@ Creates tables for:
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
+from migration_safety import require_empty_tables
 
 revision = '001_initial'
 down_revision = None
@@ -135,6 +136,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    connection = op.get_bind()
+    require_empty_tables(connection, 'appointments', 'users', 'barbershops', 'subscriptions')
     op.drop_table('appointments')
     op.drop_table('users')
     op.drop_table('barbershops')

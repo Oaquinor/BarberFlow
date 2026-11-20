@@ -7,6 +7,7 @@ Create Date: 2026-06-06
 
 from alembic import context, op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables, require_no_matching_rows
 
 
 revision = "005_user_support_flags"
@@ -67,5 +68,10 @@ def upgrade():
 
 
 def downgrade():
+    connection = op.get_bind()
+    require_empty_tables(connection, 'user_feature_flags')
+    require_no_matching_rows(
+        connection, 'users', 'support_contact_enabled <> 0', 'custom support-contact settings',
+    )
     op.drop_table("user_feature_flags")
     op.drop_column("users", "support_contact_enabled")

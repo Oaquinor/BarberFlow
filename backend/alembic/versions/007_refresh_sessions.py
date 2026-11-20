@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 
 revision = "007_refresh_sessions"
@@ -31,4 +32,5 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'refresh_sessions')
     op.drop_table("refresh_sessions")

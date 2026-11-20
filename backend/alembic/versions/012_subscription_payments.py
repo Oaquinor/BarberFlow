@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 revision = "012_subscription_payments"
 down_revision = "011_seed_achievements"
@@ -37,6 +38,7 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'subscription_payments')
     # MySQL may use the composite index for the barbershop_id foreign key;
     # dropping the table removes its indexes and constraints safely together.
     op.drop_table("subscription_payments")

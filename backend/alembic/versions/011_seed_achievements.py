@@ -34,9 +34,35 @@ def upgrade():
 
 
 def downgrade():
-    codes = [item["code"] for item in ACHIEVEMENTS]
-    quoted_codes = ",".join(f"'{code}'" for code in codes)
-    op.execute(sa.text(
-        "DELETE FROM achievements WHERE code IN (" + quoted_codes + ") "
-        "AND id NOT IN (SELECT achievement_id FROM user_achievements)"
-    ))
+    connection = op.get_bind()
+    fields = (
+        "name", "description", "icon", "category", "requirement_type",
+        "requirement_value", "points", "rarity", "is_active",
+    )
+    for expected in ACHIEVEMENTS:
+        row = connection.execute(
+            sa.text(
+                "SELECT id, name, description, icon, category, requirement_type, "
+                "requirement_value, points, rarity, is_active "
+                "FROM achievements WHERE code = :code"
+            ),
+            {"code": expected["code"]},
+        ).mappings().first()
+        if not row:
+            continue
+        if any(row[field] != expected[field] for field in fields):
+            raise RuntimeError(
+                f"Refusing to remove customized achievement {expected['code']}; "
+                "export or restore its original values before downgrade."
+            )
+        earned_count = connection.execute(
+            sa.text("SELECT COUNT(*) FROM user_achievements WHERE achievement_id = :id"),
+            {"id": row["id"]},
+        ).scalar_one()
+        if earned_count:
+            raise RuntimeError(
+                f"Refusing to remove achievement {expected['code']} because it has earned records."
+            )
+        connection.execute(
+            sa.text("DELETE FROM achievements WHERE id = :id"), {"id": row["id"]},
+        )

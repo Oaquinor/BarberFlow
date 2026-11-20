@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables
 
 revision = "016_in_app_notifications"
 down_revision = "015_barber_commissions"
@@ -42,4 +43,5 @@ def upgrade():
 
 
 def downgrade():
+    require_empty_tables(op.get_bind(), 'in_app_notifications')
     op.drop_table("in_app_notifications")

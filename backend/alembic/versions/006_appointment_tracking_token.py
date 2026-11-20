@@ -2,6 +2,7 @@
 
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_no_matching_rows
 
 
 revision = "006_appointment_tracking_token"
@@ -24,5 +25,8 @@ def upgrade():
 
 
 def downgrade():
+    require_no_matching_rows(
+        op.get_bind(), 'appointments', 'tracking_token_hash IS NOT NULL', 'private appointment tracking tokens',
+    )
     op.drop_index("ix_appointments_tracking_token_hash", table_name="appointments")
     op.drop_column("appointments", "tracking_token_hash")

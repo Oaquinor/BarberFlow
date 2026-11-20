@@ -7,6 +7,7 @@ Create Date: 2024-05-30
 """
 from alembic import op
 import sqlalchemy as sa
+from migration_safety import require_no_matching_rows
 
 
 # revision identifiers, used by Alembic.
@@ -27,6 +28,13 @@ def upgrade():
 
 
 def downgrade():
+    connection = op.get_bind()
+    require_no_matching_rows(
+        connection, 'barbershops',
+        'style IS NOT NULL OR primary_goal IS NOT NULL OR team_size IS NOT NULL '
+        'OR avg_service_duration IS NOT NULL OR personality IS NOT NULL OR onboarding_completed <> 0',
+        'barbershop onboarding data',
+    )
     # Remove personalization columns
     op.drop_column('barbershops', 'style')
     op.drop_column('barbershops', 'primary_goal')
