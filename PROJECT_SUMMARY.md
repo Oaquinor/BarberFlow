@@ -28,9 +28,9 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución más reciente de GitHub Actions corresponde al commit `a47e67cb36d0e865818c3a01c012053ad57ba4c1` en la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44682570144](https://github.com/Oaquinor/BarberFlow/actions/runs/44682570144). La rama local coincide con `origin/codex/kingflow-completion`; `main` permanece intacta.
+La última ejecución integral observada de GitHub Actions corresponde al commit `5a3cef5e` de la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44683139073](https://github.com/Oaquinor/BarberFlow/actions/runs/44683139073). El backend ejecutó **116 pruebas sobre MySQL 8.4.13**; también pasaron los tests frontend/WhatsApp y las imágenes de producción. La rama local coincide con GitHub y `main` permanece intacta.
 
-- Backend: MySQL **8.4.13**; Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **116 passed**, 1 warning. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente.
+- Backend: Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **116 passed**, 1 warning. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente.
 - Frontend/WhatsApp: pruebas y auditoría de dependencias pasaron.
 - Imágenes de producción: builds, usuario sin privilegios y smoke test de API pasaron.
 - El CI también ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` sin vulnerabilidades conocidas.
