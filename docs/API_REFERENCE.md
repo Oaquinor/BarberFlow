@@ -189,15 +189,19 @@ Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `G
 | Método | Ruta | Acceso |
 |---|---|---|
 | `GET` / `POST` | `/owner/barbers` | Owner del tenant; listado y alta con límites del plan |
+| `PUT` | `/owner/barbers/{barber_id}` | Actualiza nombre y teléfono de un barbero del tenant, con auditoría |
 | `PUT` | `/owner/barbers/{barber_id}/status` | Owner del tenant; activar o desactivar |
 | `PUT` | `/owner/barbers/{barber_id}/commission-rate` | Configurar tasa del barbero (puntos base; 0 a 10 000) |
 | `GET` | `/owner/barber-commissions` | Consultar comisiones generadas por cobros del tenant |
 | `POST` | `/owner/barber-commissions/{commission_id}/pay` | Registrar liquidación de comisión con método y referencia |
-| `GET` | `/owner/clients` | Owner del tenant; historial agregado, paginado y de solo lectura |
+| `GET` | `/owner/clients` | Owner del tenant; historial agregado y paginado |
+| `POST` | `/owner/clients` | Registrar cliente manualmente, con límite del plan y auditoría |
+| `PUT` | `/owner/clients/{client_id}` | Editar nombre y teléfono, con auditoría |
+| `PUT` | `/owner/clients/{client_id}/status` | Activar o desactivar acceso conservando citas y cobros |
 | `POST` | `/barber/slots` | Barbero propio; turnos dentro del horario configurado |
 | `GET` | `/barber/dashboard` | Barbero propio u owner; agenda operativa del día |
 
-La gestión de clientes permite editar nombre y teléfono y desactivar el acceso conservando citas y cobros. La gestión de barberos permite alta, activación y tasa de comisión, pero no edición de perfil ni eliminación. Los turnos creados se serializan por barbero en MySQL para evitar solapamientos concurrentes.
+La gestión de clientes permite alta manual, edición de nombre y teléfono, y desactivar el acceso conservando citas y cobros. La gestión de barberos permite alta, edición de nombre y teléfono, activación y tasa de comisión; no hay eliminación de perfiles. Los turnos creados se serializan por barbero en MySQL para evitar solapamientos concurrentes.
 
 El portal público envía la duración seleccionada al consultar turnos. Si no se indica `duration_minutes`, el endpoint usa la duración del servicio activo más corto. El servidor vuelve a validar el turno al reservar y reprogramar.
 
@@ -253,4 +257,4 @@ Errores usan JSON `{"detail":"..."}`. Códigos usados: `401` autenticación, `40
 
 Las respuestas incluyen `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, una CSP que limita los scripts al mismo origen, restringe las URL base y formularios al mismo origen y bloquea objetos y marcos, y una `Permissions-Policy` que bloquea cámara, micrófono y geolocalización. La CSP se omite solo en Swagger/ReDoc cuando se habilitan explícitamente como documentación de desarrollo. En producción también se incluye HSTS. Las rutas bajo `/api/` añaden `Cache-Control: no-store` y `Pragma: no-cache` para impedir que el navegador almacene respuestas operativas o datos personales.
 
-La API no implementa actualmente cobro automatizado de suscripciones, creación/eliminación manual de clientes o edición/eliminación de perfil de barberos, ni notificaciones push. Los recordatorios se encolan y procesan mediante el worker MySQL configurado.
+La API no implementa actualmente cobro automatizado de suscripciones ni notificaciones push. El owner puede registrar, editar y desactivar clientes; no hay eliminación de clientes para conservar su historial. El owner puede registrar y editar los datos básicos de barberos, activarlos y configurar su comisión, pero no eliminarlos. Los recordatorios se encolan y procesan mediante el worker MySQL configurado.

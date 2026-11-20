@@ -28,13 +28,13 @@ Este resumen refleja el código y las pruebas disponibles, no una lista de funci
 
 ## Verificación
 
-La ejecución de GitHub Actions que validó estos cambios corresponde al commit `cd19b61930973e3a8a74be40af41c060a2437198` en la rama `codex/kingflow-completion` (19 de noviembre de 2026). Ambos jobs terminaron en `success`:
+La ejecución más reciente de GitHub Actions corresponde al commit `a47e67cb36d0e865818c3a01c012053ad57ba4c1` en la rama `codex/kingflow-completion` (20 de noviembre de 2026) y terminó en `success`: [run 44682570144](https://github.com/Oaquinor/BarberFlow/actions/runs/44682570144). La rama local coincide con `origin/codex/kingflow-completion`; `main` permanece intacta.
 
-- Backend: MySQL **8.4.13**; Alembic aplicó desde cero todas las migraciones 001→023; `python -m pytest backend/tests -q` — **81 passed**, 1 warning. Incluye atomicidad del checkout ante fallos de rendimiento/logros, auditoría de onboarding, carga y reemplazo de logo, alta manual de clientes con límites del plan y aislamiento multitenant.
-- Dependencias Python: `pip-audit -r backend/requirements.txt` — **no known vulnerabilities**; CI ejecuta esta auditoría en cada push y pull request.
-- Frontend: `npm test` — **25 passed**. Incluye bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
-- WhatsApp: `npm test` — **6 passed**.
-- Dependencias WhatsApp: `npm audit` — **0 vulnerabilidades** después de actualizar Express y dependencias transitivas; CI ejecuta esta auditoría en cada push y pull request.
+- Backend: MySQL **8.4.13**; Alembic aplicó y revirtió las migraciones; `python -m pytest backend/tests -q` — **116 passed**, 1 warning. Incluye recuperación de recordatorios cuando vuelve a estar disponible el contacto del cliente.
+- Frontend/WhatsApp: pruebas y auditoría de dependencias pasaron.
+- Imágenes de producción: builds, usuario sin privilegios y smoke test de API pasaron.
+- El CI también ejecutó `pip-audit -r backend/requirements.txt` y `npm audit` sin vulnerabilidades conocidas.
+- Las ejecuciones previas incluyen pruebas específicas de bloqueo de envíos dobles, manejo de respuestas de red inciertas, gestión de la ficha del barbero, bandeja de soporte y estado visible de carga del logo.
 - Se actualizaron dependencias Python vulnerables, se sustituyó `python-jose` por `PyJWT` y se consolidaron los tres archivos de instalación para evitar perfiles inconsistentes; MySQL sigue siendo la única base admitida.
 - La suite local, sin base MySQL de prueba configurada, fue **28 passed, 53 skipped**; no sustituye la ejecución MySQL de CI indicada arriba.
 - Se inspeccionó la pantalla de registro en Chrome con emulación iPhone SE a 375 × 667 px. Esto no equivale a una prueba automatizada de compatibilidad móvil de todas las pantallas.
@@ -87,4 +87,4 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 - Operación de notificaciones: [`docs/NOTIFICATIONS_SYSTEM.md`](docs/NOTIFICATIONS_SYSTEM.md).
 - Despliegue: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo, auditoría de onboarding, estado de carga y atomicidad del checkout quedaron validados en GitHub en el commit indicado; el resumen actualiza esos resultados. `main` permanece intacta.
+Los cambios de estabilización, gestión del equipo y los clientes, persistencia de soporte, actualización auditada del logo, auditoría de onboarding, estado de carga, atomicidad del checkout y reactivación segura de recordatorios están validados en GitHub en la rama indicada.

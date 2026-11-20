@@ -261,7 +261,7 @@ Authorization: Bearer <WHATSAPP_API_TOKEN>
 
 ## 🔗 Integración con FastAPI
 
-El backend usa `WHATSAPP_API_URL` y envía el secreto configurado en `WHATSAPP_API_TOKEN`. Los flujos activos intentan enviar WhatsApp al crear, cancelar o reprogramar una reserva pública y al registrar un pago. La entrega es de mejor esfuerzo: una caída del servicio no revierte la cita ni el pago y actualmente no hay cola ni reintentos. Los métodos SMTP de `notification_service.py` no se llaman automáticamente desde esos flujos.
+El backend usa `WHATSAPP_API_URL` y autentica las solicitudes con `WHATSAPP_API_TOKEN`. Las operaciones de negocio escriben las notificaciones en `notification_deliveries` dentro de la transacción MySQL correspondiente; el worker `python -m scripts.notification_worker` procesa WhatsApp y SMTP con leases e intentos automáticos. Una caída del proveedor no revierte una cita ni un pago: la entrega permanece registrada y se reintenta hasta el máximo configurado. La entrega puede ocurrir más de una vez si el proveedor acepta un mensaje justo antes de que el worker pierda su lease. Consulta [el sistema de notificaciones](../docs/NOTIFICATIONS_SYSTEM.md) para configuración y operación.
 
 ---
 
@@ -448,46 +448,9 @@ npm update @whiskeysockets/baileys
 
 ---
 
-## 💡 Tips Avanzados
+## 💡 Cola y recordatorios
 
-### 1. Enviar a Múltiples Números
-
-```javascript
-app.post('/send-bulk', async (req, res) => {
-    const { phones, message } = req.body;
-
-    const results = await Promise.all(
-        phones.map(phone => 
-            sock.sendMessage(formatPhoneNumber(phone), { text: message })
-        )
-    );
-
-    res.json({ success: true, sent: results.length });
-});
-```
-
-### 2. Programar Mensajes
-
-Usar `node-cron`:
-
-```javascript
-const cron = require('node-cron');
-
-// Enviar recordatorios diarios a las 9 AM
-cron.schedule('0 9 * * *', async () => {
-    // Llamar a FastAPI para obtener citas del día
-    // Enviar recordatorios
-});
-```
-
-### 3. Webhook para Respuestas
-
-```javascript
-sock.ev.on('messages.upsert', async ({ messages }) => {
-    // Procesar respuestas de clientes
-    // Enviar a FastAPI para actualizar estado
-});
-```
+No programes recordatorios dentro del proceso Node ni agregues rutas de envío masivo aquí. La programación, deduplicación y reintentos pertenecen a la outbox MySQL del backend; el worker materializa recordatorios al entrar una cita en las siguientes 24 horas. El servicio Baileys se limita a entregar los mensajes que recibe del backend.
 
 ---
 
