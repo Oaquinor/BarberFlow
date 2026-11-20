@@ -107,7 +107,7 @@ from app.schemas.platform import (
 )
 from app.services.affiliate_service import AffiliateService
 from app.services.audit_service import record_audit
-from app.utils.datetime import utc_now_naive
+from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.services.notification_service import NotificationService
 from app.services.notification_outbox import enqueue_delivery
 from app.services.auth_record_retention import prune_expired_auth_records
@@ -336,7 +336,7 @@ def _local_day_bounds(now_utc: datetime, shop: Barbershop):
     today = _utc_aware(now_utc).astimezone(tz).date()
 
     def midnight(day):
-        return _to_utc_naive(datetime.combine(day, time.min), shop)
+        return local_day_start_utc_naive(day, tz)
 
     return midnight(today), midnight(today + timedelta(days=1)), midnight(today - timedelta(days=1)), midnight(today - timedelta(days=6))
 
@@ -1215,9 +1215,9 @@ def public_slots(
 
     business_date = _utc_aware(now).astimezone(_get_timezone(shop)).date()
     business_date_key = datetime.combine(business_date, time.min)
-    next_business_date_key = datetime.combine(business_date + timedelta(days=1), time.min)
-    business_day_start = _to_utc_naive(business_date_key, shop)
-    business_day_end = _to_utc_naive(next_business_date_key, shop)
+    business_timezone = _get_timezone(shop)
+    business_day_start = local_day_start_utc_naive(business_date, business_timezone)
+    business_day_end = local_day_start_utc_naive(business_date + timedelta(days=1), business_timezone)
     closing_rows = db.query(CashRegisterClose.closed_by_user_id, User.role).join(
         User, User.id == CashRegisterClose.closed_by_user_id,
     ).filter(
@@ -3200,8 +3200,8 @@ def barber_close_cash_register(
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="La caja de esta fecha ya fue cerrada")
-    start = _to_utc_naive(date_key, shop)
-    end = _to_utc_naive(datetime.combine(business_date + timedelta(days=1), time.min), shop)
+    start = local_day_start_utc_naive(business_date, _get_timezone(shop))
+    end = local_day_start_utc_naive(business_date + timedelta(days=1), _get_timezone(shop))
     if business_date == local_today:
         open_services = db.query(Appointment.id).filter(
             Appointment.barbershop_id == shop.id,
@@ -3573,8 +3573,9 @@ def barber_appointments_for_date(
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
 
     business_date = target_date or _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
-    start = _to_utc_naive(datetime.combine(business_date, time.min), shop)
-    end = _to_utc_naive(datetime.combine(business_date + timedelta(days=1), time.min), shop)
+    business_timezone = _get_timezone(shop)
+    start = local_day_start_utc_naive(business_date, business_timezone)
+    end = local_day_start_utc_naive(business_date + timedelta(days=1), business_timezone)
     query = db.query(Appointment).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.scheduled_time >= start,
@@ -3639,8 +3640,9 @@ def barber_appointments_calendar(
         end_date = date(start_date.year + (start_date.month == 12),
                         1 if start_date.month == 12 else start_date.month + 1, 1)
 
-    start_utc = _to_utc_naive(datetime.combine(start_date, time.min), shop)
-    end_utc = _to_utc_naive(datetime.combine(end_date, time.min), shop)
+    business_timezone = _get_timezone(shop)
+    start_utc = local_day_start_utc_naive(start_date, business_timezone)
+    end_utc = local_day_start_utc_naive(end_date, business_timezone)
     query = db.query(Appointment).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.scheduled_time >= start_utc,

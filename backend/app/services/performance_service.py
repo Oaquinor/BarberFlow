@@ -4,7 +4,7 @@ Performance Service.
 Handles barber performance tracking, metrics, and analytics.
 """
 
-from datetime import date, datetime, timedelta, time, timezone
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from sqlalchemy import and_
 
 from app.models import BarberPerformance, Appointment, Payment, Barbershop
 from app.core.constants import AppointmentStatus
+from app.utils.datetime import local_day_start_utc_naive
 
 
 class PerformanceService:
@@ -53,10 +54,8 @@ class PerformanceService:
             business_timezone = ZoneInfo(shop.timezone)
         except (ZoneInfoNotFoundError, TypeError) as exc:
             raise ValueError("Barbershop timezone is invalid") from exc
-        start_local = datetime.combine(target_date, time.min, tzinfo=business_timezone)
-        end_local = datetime.combine(target_date + timedelta(days=1), time.min, tzinfo=business_timezone)
-        start_utc = start_local.astimezone(timezone.utc).replace(tzinfo=None)
-        end_utc = end_local.astimezone(timezone.utc).replace(tzinfo=None)
+        start_utc = local_day_start_utc_naive(target_date, business_timezone)
+        end_utc = local_day_start_utc_naive(target_date + timedelta(days=1), business_timezone)
 
         # Appointments use UTC-naive timestamps in MySQL; derive business-day bounds in tenant time.
         appointments = db.query(Appointment).filter(

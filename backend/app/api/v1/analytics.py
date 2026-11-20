@@ -1,7 +1,7 @@
 """Tenant-scoped, explainable analytics endpoints."""
 
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -16,6 +16,7 @@ from app.schemas.analytics import (
     FinancialReportResponse,
     FinancialReportRow,
 )
+from app.utils.datetime import local_day_start_utc_naive
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -58,8 +59,8 @@ def get_financial_report(
     except (ZoneInfoNotFoundError, TypeError) as exc:
         raise HTTPException(status_code=500, detail="La zona horaria del negocio no es válida") from exc
 
-    start_utc = datetime.combine(start_date, time.min, tzinfo=business_tz).astimezone(timezone.utc).replace(tzinfo=None)
-    end_utc = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=business_tz).astimezone(timezone.utc).replace(tzinfo=None)
+    start_utc = local_day_start_utc_naive(start_date, business_tz)
+    end_utc = local_day_start_utc_naive(end_date + timedelta(days=1), business_tz)
     payments = db.query(Payment, User.first_name, User.last_name).join(
         User, User.id == Payment.barber_id,
     ).filter(

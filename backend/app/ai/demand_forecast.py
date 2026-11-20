@@ -1,12 +1,13 @@
 """Explainable demand forecast from a tenant's completed service history."""
 
 from collections import Counter
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
 from app.models import Appointment, Barbershop
+from app.utils.datetime import local_day_start_utc_naive
 
 
 class DemandForecastService:
@@ -17,7 +18,7 @@ class DemandForecastService:
 
     @staticmethod
     def _utc_midnight(day: date, tz: ZoneInfo) -> datetime:
-        return datetime.combine(day, time.min, tzinfo=tz).astimezone(timezone.utc).replace(tzinfo=None)
+        return local_day_start_utc_naive(day, tz)
 
     @staticmethod
     def _confidence_from_weeks(active_weeks: int) -> str:
