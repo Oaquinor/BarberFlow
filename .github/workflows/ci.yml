@@ -23,6 +23,18 @@ jobs:
         run: docker build -t kingflow-whatsapp:ci ./whatsapp-service
       - name: Verify WhatsApp image defaults to an unprivileged user
         run: test "$(docker image inspect kingflow-whatsapp:ci --format '{{.Config.User}}')" = "node"
+      - name: Validate production Compose configuration
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_USER: kingflow
+          MYSQL_PASSWORD: ci-only-database-password
+          MYSQL_DATABASE: kingflow_barber
+          DATABASE_URL: mysql+pymysql://kingflow:ci-only-database-password@db:3306/kingflow_barber
+          SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
+          CORS_ORIGINS: '["https://app.example.com"]'
+          FRONTEND_BASE_URL: https://app.example.com
+          WHATSAPP_API_TOKEN: ci-only-whatsapp-token
+        run: docker compose -f docker-compose.prod.yml config --quiet
 
   backend:
     name: Backend (MySQL 8.4)
