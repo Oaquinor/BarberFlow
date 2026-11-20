@@ -26,6 +26,19 @@ settings = get_settings()
 logger = get_logger(__name__)
 
 
+def _is_unsafe_production_secret(secret: str) -> bool:
+    normalized = secret.strip().lower()
+    placeholders = (
+        "your-secret", "change-this", "replace-with", "random-bytes",
+        "placeholder", "changeme", "example-secret",
+    )
+    if len(secret) < 32 or any(marker in normalized for marker in placeholders):
+        return True
+    if len(set(secret)) < 12:
+        return True
+    return max(secret.count(character) for character in set(secret)) > len(secret) // 2
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
@@ -44,7 +57,7 @@ def create_application() -> FastAPI:
     if settings.ENVIRONMENT.lower() == "production":
         if settings.DEBUG:
             raise RuntimeError("DEBUG must be disabled in production")
-        if len(settings.SECRET_KEY) < 32 or settings.SECRET_KEY == "your-secret-key-change-this-in-production":
+        if _is_unsafe_production_secret(settings.SECRET_KEY):
             raise RuntimeError("Set a strong SECRET_KEY before starting in production")
         if not settings.DATABASE_URL.startswith("mysql+pymysql://"):
             raise RuntimeError("Production DATABASE_URL must use the MySQL PyMySQL driver")

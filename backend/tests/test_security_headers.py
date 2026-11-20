@@ -33,6 +33,25 @@ def test_production_responses_add_hsts(client: TestClient, monkeypatch):
     assert response.headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
 
 
+@pytest.mark.parametrize("secret", [
+    "your-secret-key-here-change-in-production-min-32-characters",
+    "replace-with-at-least-48-random-bytes",
+    "x" * 64,
+])
+def test_production_rejects_documented_or_low_entropy_secret_placeholders(monkeypatch, secret):
+    monkeypatch.setattr(main, "settings", SimpleNamespace(
+        ENVIRONMENT="production",
+        DEBUG=False,
+        SECRET_KEY=secret,
+        DATABASE_URL="mysql+pymysql://kingflow:secret@localhost/kingflow_barber",
+        CORS_ORIGINS=["https://kingflow.example"],
+        FRONTEND_BASE_URL="https://kingflow.example",
+    ))
+
+    with pytest.raises(RuntimeError, match="strong SECRET_KEY"):
+        main.create_application()
+
+
 @pytest.mark.parametrize("origins", [[], ["*"], ["http://kingflow.example"]])
 def test_production_rejects_wildcard_or_insecure_cors_origins(monkeypatch, origins):
     monkeypatch.setattr(main, "settings", SimpleNamespace(
