@@ -182,7 +182,11 @@ sudo systemctl enable certbot.timer
 
 #### Render preview configuration
 
-The repository's `render.yaml` is a **free preview for the API**, not a production deployment: it uses a free web service, an externally managed MySQL URL, and does not define the notification worker. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and deploy the notification worker with the same MySQL and provider configuration. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+The repository's `render.yaml` defines an API preview and a separate notification worker. The API uses a free web service and an externally managed MySQL URL; the worker uses paid compute because it must stay online to drain the outbox. Set the MySQL URL and notification provider credentials for both services. `WHATSAPP_API_URL` must point to a reachable WhatsApp gateway; the manifest does not host that gateway. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid API compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and configure an SMTP provider reachable from the paid worker. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+
+#### Railway notification worker
+
+Railway's `railway.json` starts the API and runs migrations. Create a second Railway service from the same repository for notifications, set its start command to `cd backend && python -m scripts.notification_worker`, and provide the same MySQL `DATABASE_URL` plus SMTP and WhatsApp gateway variables. Run Alembic migrations only from the API service.
 
 #### AWS Deployment
 
