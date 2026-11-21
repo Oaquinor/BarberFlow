@@ -64,6 +64,8 @@ def test_historical_cash_close_requires_resolving_scheduled_appointments(
         headers=barber_headers, json={"status": "cancelled"},
     )
     assert cancelled.status_code == 200
+    test_db.refresh(appointment)
+    assert appointment.cancelled_by == barber.id
     closed = client.post("/api/v1/barber/cash/close", headers=owner_headers, json=payload)
     assert closed.status_code == 201
 

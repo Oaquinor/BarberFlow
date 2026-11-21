@@ -387,6 +387,9 @@ def test_public_booking_tracking_and_cancel_are_connected(
     assert preferred_slot.is_booked is False
     assert replacement_slot.is_booked is False
     assert cancelled.json()["status"] == "cancelled"
+    cancelled_appointment = test_db.get(Appointment, booking["appointment_id"])
+    assert cancelled_appointment.cancelled_by == public_client.id
+    assert cancelled_appointment.cancellation_reason == "Cambio de horario"
 
     public_client.is_active = False
     test_db.commit()

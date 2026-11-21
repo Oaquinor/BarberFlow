@@ -2088,6 +2088,7 @@ def public_cancel_appointment(
         raise HTTPException(status_code=409, detail="No se puede cancelar una cita que ya comenzó")
 
     appointment.status = "cancelled"
+    appointment.cancelled_by = appointment.client_id
     appointment.cancellation_reason = data.reason
     _notify_appointment_staff(
         db, appointment, "appointment_cancelled", "Cita cancelada por el cliente",
@@ -3013,6 +3014,7 @@ def barber_update_appointment_status(
     previous_status = appointment.status
     appointment.status = status
     if status == "cancelled":
+        appointment.cancelled_by = user.id
         appointment.cancellation_reason = data.reason
     if status == "in_progress" and not appointment.actual_start_time:
         appointment.actual_start_time = now
