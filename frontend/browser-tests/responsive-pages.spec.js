@@ -146,3 +146,16 @@ test("registro y recuperación comparten la identidad visual de KingFlow", async
     expect(design.buttonBackground).toContain("linear-gradient");
   }
 });
+
+test("registro muestra el periodo gratuito configurado, en singular y plural", async ({ page }) => {
+  let configuredDays = 1;
+  await page.route("**/api/v1/saas/registration-status", (route) =>
+    route.fulfill({ json: { registrations_enabled: true, free_period_days: configuredDays } }),
+  );
+  for (const [days, expected] of [[1, "plan gratuito por 1 día"], [45, "plan gratuito por 45 días"]]) {
+    configuredDays = days;
+    await page.goto("/signup.html", { waitUntil: "networkidle" });
+    await expect(page.locator("#registrationOffer")).toContainText(expected);
+    await expect(page.locator("#submitButton")).toBeEnabled();
+  }
+});
