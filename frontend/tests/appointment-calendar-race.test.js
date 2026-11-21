@@ -120,4 +120,3 @@ test("a stale cash summary cannot overwrite the latest reconciliation", async ()
 
   assert.deepEqual(updates, []);
 });
-
