@@ -9,6 +9,7 @@ let serviceCache = [];
 let editingServiceId = null;
 let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
+let appointmentsRequestSequence = 0;
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 let serviceTimerInterval = null;
@@ -687,6 +688,7 @@ function populateWalkInServices(services) {
 
 async function loadAppointmentsForDate(businessDate = selectedAppointmentsDate) {
     if (!accessToken || !businessDate) return;
+    const requestSequence = ++appointmentsRequestSequence;
     selectedAppointmentsDate = businessDate;
     const dateInput = document.getElementById('appointmentsAnchorDate');
     if (dateInput) dateInput.value = businessDate;
@@ -701,9 +703,11 @@ async function loadAppointmentsForDate(businessDate = selectedAppointmentsDate) 
         );
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || 'No se pudo cargar la agenda');
+        if (requestSequence !== appointmentsRequestSequence) return;
         if (selectedAppointmentsView === 'day') renderAppointmentDay(data.business_date, data.appointments);
         else renderAppointmentCalendar(data);
     } catch (error) {
+        if (requestSequence !== appointmentsRequestSequence) return;
         setText('appointmentsDateHeader', 'No se pudo cargar la agenda');
         const list = document.getElementById('appointmentsList');
         if (list) list.textContent = error.message;
