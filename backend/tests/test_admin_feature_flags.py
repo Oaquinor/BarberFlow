@@ -130,3 +130,52 @@ def test_super_admin_user_list_supports_tenant_scoped_search_and_pagination(
     beyond = client.get(f"{url}&offset=2", headers=_headers(admin))
     assert beyond.json()["items"] == []
     assert beyond.json()["total"] == 2
+
+
+def test_super_admin_tenant_list_includes_owner_and_subscription_without_dropping_empty_tenants(
+    client: TestClient, test_db: Session,
+):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="professional", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=10,
+        max_appointments_per_month=1000, max_clients=2000,
+    )
+    test_db.add(subscription)
+    test_db.flush()
+    subscribed_shop = Barbershop(
+        name="Subscribed tenant", slug="admin-subscribed-tenant",
+        email="admin-subscribed@example.com", phone="8095556103", address_line1="Calle 24",
+        city="Santo Domingo", state="DN", postal_code="10109", country="DO",
+        timezone="America/Santo_Domingo", subscription_id=subscription.id,
+    )
+    empty_shop = Barbershop(
+        name="Tenant without owner or subscription", slug="admin-empty-tenant",
+        email="admin-empty@example.com", phone="8095556104", address_line1="Calle 25",
+        city="Santo Domingo", state="DN", postal_code="10110", country="DO",
+        timezone="America/Santo_Domingo",
+    )
+    admin = User(
+        email="tenant-list-admin@example.com", password_hash="unused", first_name="Admin",
+        last_name="Tenants", role="super_admin", is_active=True,
+    )
+    owner = User(
+        email="tenant-list-owner@example.com", password_hash="unused", first_name="Tenant",
+        last_name="Owner", role="barbershop_owner", is_active=True,
+        barbershop_id=subscribed_shop.id,
+    )
+    test_db.add_all([subscribed_shop, empty_shop, admin])
+    test_db.flush()
+    owner.barbershop_id = subscribed_shop.id
+    test_db.add(owner)
+    test_db.commit()
+
+    response = client.get("/api/v1/admin/tenants", headers=_headers(admin))
+    assert response.status_code == 200
+    tenants = {row["barbershop_id"]: row for row in response.json()["items"]}
+    assert tenants[subscribed_shop.id]["owner_email"] == owner.email
+    assert tenants[subscribed_shop.id]["plan"] == "professional"
+    assert tenants[subscribed_shop.id]["subscription_status"] == "active"
+    assert tenants[empty_shop.id]["owner_email"] is None
+    assert tenants[empty_shop.id]["plan"] is None
+    assert tenants[empty_shop.id]["subscription_status"] is None

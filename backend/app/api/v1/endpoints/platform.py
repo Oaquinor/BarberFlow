@@ -3943,39 +3943,31 @@ def admin_tenants(
     if user.role != "super_admin":
         raise HTTPException(status_code=403, detail="Solo super admin")
 
-    shops = db.query(Barbershop).filter(Barbershop.is_deleted == False).order_by(Barbershop.id.asc()).all()
-    items = []
+    owner_email = db.query(User.email).filter(
+        User.barbershop_id == Barbershop.id,
+        User.role == "barbershop_owner",
+        User.is_deleted == False,
+    ).order_by(User.id.asc()).limit(1).correlate(Barbershop).scalar_subquery()
+    tenant_rows = db.query(
+        Barbershop, owner_email, Subscription.plan, Subscription.status,
+    ).outerjoin(
+        Subscription, Subscription.id == Barbershop.subscription_id,
+    ).filter(
+        Barbershop.is_deleted == False,
+    ).order_by(Barbershop.id.asc()).all()
 
-    for shop in shops:
-        owner = (
-            db.query(User)
-            .filter(
-                User.barbershop_id == shop.id,
-                User.role == "barbershop_owner",
-                User.is_deleted == False,
-            )
-            .first()
+    items = [
+        AdminTenantItem(
+            barbershop_id=shop.id,
+            barbershop_name=shop.name,
+            slug=shop.slug,
+            owner_email=owner_email,
+            plan=plan,
+            subscription_status=subscription_status,
+            active=shop.is_active,
         )
-
-        plan = None
-        sub_status = None
-        if shop.subscription_id:
-            sub = db.query(Subscription).filter(Subscription.id == shop.subscription_id).first()
-            if sub:
-                plan = sub.plan
-                sub_status = sub.status
-
-        items.append(
-            AdminTenantItem(
-                barbershop_id=shop.id,
-                barbershop_name=shop.name,
-                slug=shop.slug,
-                owner_email=owner.email if owner else None,
-                plan=plan,
-                subscription_status=sub_status,
-                active=shop.is_active,
-            )
-        )
+        for shop, owner_email, plan, subscription_status in tenant_rows
+    ]
 
     return AdminTenantsResponse(items=items)
 
