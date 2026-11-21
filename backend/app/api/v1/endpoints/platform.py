@@ -532,6 +532,8 @@ SUPPORT_MESSAGE_LIMIT = 5
 PUBLIC_BOOKING_WINDOW = timedelta(hours=1)
 PUBLIC_BOOKING_TENANT_IP_LIMIT = 10
 PUBLIC_BOOKING_IP_LIMIT = 60
+PUBLIC_TRACK_IP_LIMIT = 120
+PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT = 20
 
 
 def _login_bucket_hash(kind: str, value: str) -> str:
@@ -708,6 +710,36 @@ def _consume_public_booking_quota(
             attempt = attempts_by_hash[key_hash]
             attempt.failed_count += 1
             attempt.last_attempt_at = now
+        db.commit()
+
+    _retry_login_deadlock(db, consume)
+
+
+def _consume_public_token_quota(
+    db: Session, action: str, ip_address: str, now: datetime, limit: int,
+) -> None:
+    """Bound anonymous token lookups and mutations without retaining raw IPs."""
+    prune_expired_auth_records(db, now)
+    key_hash = _login_bucket_hash(f"public-{action}-ip", ip_address)
+
+    def consume():
+        attempt = _lock_or_create_login_attempt(db, key_hash, now)
+        if now - attempt.window_started_at >= PUBLIC_BOOKING_WINDOW:
+            attempt.failed_count = 0
+            attempt.window_started_at = now
+            attempt.locked_until = None
+        if attempt.locked_until and attempt.locked_until > now:
+            retry_after = max(1, int((attempt.locked_until - now).total_seconds()))
+            db.commit()
+            raise HTTPException(
+                status_code=429,
+                detail="Se alcanzó el límite temporal de solicitudes. Intenta más tarde.",
+                headers={"Retry-After": str(retry_after)},
+            )
+        attempt.failed_count += 1
+        attempt.last_attempt_at = now
+        if attempt.failed_count >= limit:
+            attempt.locked_until = attempt.window_started_at + PUBLIC_BOOKING_WINDOW
         db.commit()
 
     _retry_login_deadlock(db, consume)
@@ -1984,10 +2016,18 @@ def barber_cancel_absence(
 
 
 @router.post("/public/{slug}/track", response_model=PublicTrackAppointmentResponse)
-def public_track_appointments(slug: str, data: PublicTrackAppointmentRequest, db: Session = Depends(get_db)):
+def public_track_appointments(
+    slug: str,
+    data: PublicTrackAppointmentRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     shop = _get_public_shop(db, slug)
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _consume_public_token_quota(
+        db, "track", _public_booking_client_ip(request), utc_now_naive(), PUBLIC_TRACK_IP_LIMIT,
+    )
 
     token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
     appointment = (
@@ -2018,6 +2058,7 @@ def public_track_appointments(slug: str, data: PublicTrackAppointmentRequest, db
 def public_cancel_appointment(
     slug: str,
     data: PublicCancelAppointmentRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Cancel a future booking by its private tracking token and release its slot."""
@@ -2028,6 +2069,10 @@ def public_cancel_appointment(
     ).first()
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _consume_public_token_quota(
+        db, "appointment-change", _public_booking_client_ip(request),
+        utc_now_naive(), PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT,
+    )
 
     token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
     appointment = db.query(Appointment).filter(
@@ -2072,12 +2117,17 @@ def public_cancel_appointment(
 def public_reschedule_appointment(
     slug: str,
     data: PublicRescheduleAppointmentRequest,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     """Move a private booking to a free slot without exposing client identity."""
     shop = _get_public_shop(db, slug)
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _consume_public_token_quota(
+        db, "appointment-change", _public_booking_client_ip(request),
+        utc_now_naive(), PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT,
+    )
     _require_active_subscription(db, shop, lock=True)
 
     token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()

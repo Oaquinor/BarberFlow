@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     Appointment, AuditLog, BarberAvailability, BarberAvailabilityBlock, InAppNotification,
-    Barbershop, CashRegisterClose, NotificationDelivery, Service, Subscription, User,
+    Barbershop, CashRegisterClose, LoginAttempt, NotificationDelivery, Service, Subscription, User,
 )
 from app.api.v1.endpoints.platform import _slot_available_for_duration
 from app.core.security import create_access_token
@@ -33,6 +33,36 @@ def test_public_slot_filter_uses_service_duration_for_conflicts_and_absences():
     assert not _slot_available_for_duration(available, [], [appointment_overlap], 30)
     assert _slot_available_for_duration(available, [block_at_slot_tail], [], 30)
     assert not _slot_available_for_duration(available, [block_at_slot_tail], [], 60)
+
+
+def test_public_tracking_is_rate_limited_and_only_stores_hashed_ip(
+    client: TestClient, test_db: Session, monkeypatch,
+):
+    import app.api.v1.endpoints.platform as platform
+
+    monkeypatch.setattr(platform, "PUBLIC_TRACK_IP_LIMIT", 2)
+    shop = Barbershop(
+        name="Portal público limitado", slug="public-track-throttle",
+        email="public-track-throttle@example.com", phone="8095550110",
+        address_line1="Calle 10", city="Santo Domingo", state="DN",
+        postal_code="10110", country="DO", timezone="America/Santo_Domingo",
+    )
+    test_db.add(shop)
+    test_db.commit()
+
+    url = f"/api/v1/public/{shop.slug}/track"
+    payload = {"token": "t" * 43}
+    assert client.post(url, json=payload).status_code == 200
+    assert client.post(url, json=payload).status_code == 200
+    limited = client.post(url, json=payload)
+    assert limited.status_code == 429
+    assert limited.headers["Retry-After"]
+
+    bucket_hash = platform._login_bucket_hash("public-track-ip", "testclient")
+    attempt = test_db.query(LoginAttempt).filter_by(key_hash=bucket_hash).one()
+    assert attempt.failed_count == 2
+    assert attempt.locked_until is not None
+    assert "testclient" not in attempt.key_hash
 
 
 def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
