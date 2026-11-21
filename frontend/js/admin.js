@@ -9,6 +9,7 @@ const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/
 
 let accessToken = sessionStorage.getItem('token');
 let currentTenants = [];
+let tenantsRequestSequence = 0;
 let supportTicketsOffset = 0;
 const SUPPORT_TICKETS_PAGE_SIZE = 50;
 let usersOffset = 0;
@@ -119,8 +120,10 @@ document.getElementById('platformSettingsForm')?.addEventListener('submit', asyn
 });
 
 async function loadTenants() {
+    const requestSequence = ++tenantsRequestSequence;
     try {
         const data = await fetchJson('/api/v1/admin/tenants');
+        if (requestSequence !== tenantsRequestSequence) return;
         currentTenants = data.items || [];
 
         const body = document.getElementById('tenantsBody');
@@ -146,41 +149,21 @@ async function loadTenants() {
             `).join('');
         }
 
-        const existingValues = new Set(Array.from(filter.options).map((o) => o.value));
-        currentTenants.forEach((t) => {
-            const value = String(t.barbershop_id);
-            if (!existingValues.has(value)) {
-                const opt = document.createElement('option');
-                opt.value = value;
-                opt.textContent = t.barbershop_name;
-                filter.appendChild(opt);
+        const syncTenantOptions = (select, placeholder) => {
+            const selected = select.value;
+            select.replaceChildren(new Option(placeholder, ''));
+            currentTenants.forEach((tenant) => {
+                select.add(new Option(tenant.barbershop_name, String(tenant.barbershop_id)));
+            });
+            if (currentTenants.some((tenant) => String(tenant.barbershop_id) === selected)) {
+                select.value = selected;
             }
-        });
-
-        const subSelect = document.getElementById('subscriptionTenantSelect');
-        const existingSubValues = new Set(Array.from(subSelect.options).map((o) => o.value));
-        currentTenants.forEach((t) => {
-            const value = String(t.barbershop_id);
-            if (!existingSubValues.has(value)) {
-                const opt = document.createElement('option');
-                opt.value = value;
-                opt.textContent = t.barbershop_name;
-                subSelect.appendChild(opt);
-            }
-        });
-
-        const auditSelect = document.getElementById('auditTenantFilter');
-        const existingAuditValues = new Set(Array.from(auditSelect.options).map((o) => o.value));
-        currentTenants.forEach((t) => {
-            const value = String(t.barbershop_id);
-            if (!existingAuditValues.has(value)) {
-                const opt = document.createElement('option');
-                opt.value = value;
-                opt.textContent = t.barbershop_name;
-                auditSelect.appendChild(opt);
-            }
-        });
+        };
+        syncTenantOptions(filter, 'Todas las barberías');
+        syncTenantOptions(document.getElementById('subscriptionTenantSelect'), 'Selecciona una barbería...');
+        syncTenantOptions(document.getElementById('auditTenantFilter'), 'Todas las barberías');
     } catch (error) {
+        if (requestSequence !== tenantsRequestSequence) return;
         console.error('Error cargando tenants:', error);
     }
 }
