@@ -100,6 +100,44 @@ def test_owner_logo_replacement_is_tenant_scoped_and_audited(
     assert foreign.status_code == 403
 
 
+def test_logo_replacement_succeeds_when_old_file_cleanup_fails(
+    client: TestClient, test_db: Session, monkeypatch, tmp_path,
+):
+    from pathlib import Path
+
+    import app.api.v1.endpoints.onboarding as onboarding
+
+    shop, owner = _create_owner(test_db)
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    upload_root = tmp_path / "barbershops"
+    monkeypatch.setattr(onboarding, "UPLOAD_ROOT", upload_root)
+    tenant_dir = upload_root / str(shop.id)
+    tenant_dir.mkdir(parents=True)
+    previous_file = tenant_dir / "old.png"
+    previous_file.write_bytes(_image_bytes())
+    shop.logo_url = f"/uploads/barbershops/{shop.id}/old.png"
+    test_db.commit()
+
+    original_unlink = Path.unlink
+
+    def unlink_with_old_file_error(path, *args, **kwargs):
+        if path == previous_file:
+            raise PermissionError("old logo is temporarily locked")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", unlink_with_old_file_error)
+    response = client.post(
+        "/api/v1/onboarding/upload-logo", headers=headers,
+        files={"file": ("replacement.png", _image_bytes(), "image/png")},
+    )
+
+    assert response.status_code == 200
+    test_db.refresh(shop)
+    assert shop.logo_url == response.json()["logo_url"]
+    assert (tenant_dir / response.json()["logo_url"].rsplit("/", 1)[1]).is_file()
+    assert previous_file.is_file()
+
+
 def test_logo_upload_rejects_wrong_content_type_and_oversized_payload(
     client: TestClient, test_db: Session, monkeypatch, tmp_path,
 ):

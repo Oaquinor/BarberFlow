@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import CurrentUser
 from app.core import get_db
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.models.barbershop import Barbershop
 from app.schemas.onboarding import (
     BarbershopProfile,
@@ -41,6 +42,19 @@ ALLOWED_LOGO_TYPES = {"image/png": ".png", "image/jpeg": ".jpg"}
 LOGO_IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG"}
 MAX_LOGO_PIXELS = 16_000_000
 UPLOAD_ROOT = Path(get_settings().UPLOAD_DIR) / "barbershops"
+logger = get_logger(__name__)
+
+
+def _remove_logo_file(path: Path, *, tenant_id: int, purpose: str) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.warning(
+            "Could not remove logo file after %s",
+            purpose,
+            extra={"tenant_id": tenant_id, "path": str(path)},
+            exc_info=True,
+        )
 
 
 def _sanitize_logo(contents: bytes, expected_format: str) -> bytes:
@@ -235,10 +249,7 @@ async def upload_logo(
         directory.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(contents)
     except OSError as exc:
-        try:
-            destination.unlink(missing_ok=True)
-        except OSError:
-            pass
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="write failure")
         raise HTTPException(status_code=500, detail="No se pudo guardar el logo") from exc
 
     logo_url = f"/uploads/barbershops/{tenant_id}/{filename}"
@@ -256,7 +267,7 @@ async def upload_logo(
         db.commit()
     except SQLAlchemyError as exc:
         db.rollback()
-        destination.unlink(missing_ok=True)
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="database rollback")
         raise HTTPException(status_code=503, detail="No se pudo actualizar el logo") from exc
 
     # Remove only an older file managed under this tenant's upload directory.
@@ -265,7 +276,7 @@ async def upload_logo(
         previous_name = previous_logo_url[len(tenant_prefix):]
         previous_path = (directory / previous_name).resolve()
         if previous_path.parent == directory.resolve() and previous_path != destination.resolve():
-            previous_path.unlink(missing_ok=True)
+            _remove_logo_file(previous_path, tenant_id=tenant_id, purpose="logo replacement")
     return {"success": True, "logo_url": logo_url, "message": "Logo subido correctamente"}
 
 

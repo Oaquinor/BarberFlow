@@ -1,6 +1,7 @@
 """Image decoding and normalization checks independent of the MySQL integration DB."""
 
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -64,3 +65,17 @@ def test_logo_sanitization_rejects_animated_png():
     with pytest.raises(HTTPException) as animated:
         onboarding._sanitize_logo(output.getvalue(), "PNG")
     assert animated.value.status_code == 400
+
+
+def test_logo_cleanup_failure_is_logged_without_failing_the_saved_update(
+    monkeypatch, caplog, tmp_path,
+):
+    def fail_unlink(self, *args, **kwargs):
+        raise PermissionError("file is temporarily locked")
+
+    monkeypatch.setattr(Path, "unlink", fail_unlink)
+    onboarding._remove_logo_file(
+        tmp_path / "old-logo.png", tenant_id=17, purpose="logo replacement",
+    )
+
+    assert "Could not remove logo file after logo replacement" in caplog.text
