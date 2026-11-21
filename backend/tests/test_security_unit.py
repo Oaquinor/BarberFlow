@@ -17,7 +17,10 @@ from app.api.v1.endpoints.platform import (
     _utc_aware,
 )
 from app.core.exceptions import InvalidTokenError
-from app.core.security import create_access_token, create_refresh_token, get_user_id_from_token, verify_token
+from app.core.security import (
+    create_access_token, create_refresh_token, get_user_id_from_token,
+    hash_password, verify_token,
+)
 from app.services.affiliate_service import AffiliateService
 from app.services.notification_service import NotificationService
 from app.services.onboarding_service import OnboardingService
@@ -31,6 +34,10 @@ from app.schemas.platform import BarberCreateSlotsRequest, PublicCreateAppointme
 def test_onboarding_requires_authentication():
     response = TestClient(app).get("/api/v1/onboarding/profile")
     assert response.status_code == 401
+
+
+def test_password_hash_uses_explicit_twelve_round_bcrypt_cost():
+    assert hash_password("StrongPassword123").split("$")[2] == "12"
 
 
 def test_transactional_email_lines_escape_untrusted_content():

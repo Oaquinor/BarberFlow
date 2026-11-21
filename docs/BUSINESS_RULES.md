@@ -343,7 +343,7 @@ Al alcanzar el límite, el backend rechaza con `402` la operación que crearía 
 ### Autenticación
 - Tokens JWT con expiración de 30 minutos
 - Refresh tokens válidos por 7 días
-- Passwords hasheados con Bcrypt (10 rounds)
+- Contraseñas hasheadas con bcrypt a costo 12
 
 ### Permisos
 - Multi-tenant: cada barbería es aislada
