@@ -136,8 +136,8 @@ ENVIRONMENT=production
 DEBUG=False
 DATABASE_URL=mysql+pymysql://kingflow:URL_ENCODED_PASSWORD@localhost:3306/kingflow_barber
 SECRET_KEY=GENERATE_A_RANDOM_SECRET_OF_AT_LEAST_48_BYTES
-FRONTEND_BASE_URL=https://api.kingflow.com
-CORS_ORIGINS=["https://api.kingflow.com"]
+FRONTEND_BASE_URL=https://app.example.com
+CORS_ORIGINS=["https://app.example.com"]
 CLIENT_IP_HEADER=X-Real-IP
 UPLOAD_DIR=/var/www/kingflow/frontend/uploads
 LOG_FILE=/var/www/kingflow/backend/logs/app.log
@@ -149,6 +149,8 @@ SMTP_USER=
 SMTP_PASSWORD=
 EMAIL_FROM=noreply@example.com
 ```
+
+Use el origen HTTPS público de la aplicación web para `FRONTEND_BASE_URL` y cada elemento de `CORS_ORIGINS`. Si el API vive en otro dominio, no pongas el dominio del API en esas variables.
 
 Create `/etc/kingflow-whatsapp.env` with the same URL-safe `WHATSAPP_API_TOKEN`, owned by `root:kingflow` with mode `0640`:
 
