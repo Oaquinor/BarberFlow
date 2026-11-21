@@ -56,7 +56,9 @@ def test_super_admin_settings_control_registration_and_initial_period(
         json={"registrations_enabled": False, "free_period_days": 45},
     )
     assert disabled.status_code == 200
-    assert client.get("/api/v1/saas/registration-status").json() == {"registrations_enabled": False}
+    assert client.get("/api/v1/saas/registration-status").json() == {
+        "registrations_enabled": False, "free_period_days": 45,
+    }
     blocked_registration = client.post(
         "/api/v1/saas/register", json=_registration_payload("blocked-register@example.com"),
     )
@@ -68,6 +70,9 @@ def test_super_admin_settings_control_registration_and_initial_period(
         json={"registrations_enabled": True, "free_period_days": 45},
     )
     assert enabled.status_code == 200
+    assert client.get("/api/v1/saas/registration-status").json() == {
+        "registrations_enabled": True, "free_period_days": 45,
+    }
     registered = client.post(
         "/api/v1/saas/register", json=_registration_payload("enabled-register@example.com"),
     )

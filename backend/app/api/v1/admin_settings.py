@@ -56,7 +56,10 @@ def update_platform_settings(
     return PlatformSettingsResponse(**data.model_dump())
 
 
-@router.get("/saas/registration-status")
+@router.get("/saas/registration-status", response_model=PlatformSettingsResponse)
 def get_registration_status(db: Session = Depends(get_db)):
     settings = db.get(PlatformSettings, 1)
-    return {"registrations_enabled": settings.registrations_enabled if settings else True}
+    return PlatformSettingsResponse(
+        registrations_enabled=settings.registrations_enabled if settings else True,
+        free_period_days=settings.free_period_days if settings else 30,
+    )

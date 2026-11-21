@@ -8,7 +8,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 |---|---|---|
 | `POST` | `/auth/login` | Público; aplica límite de intentos |
 | `POST` | `/saas/register` | Público; crea owner, barbería y periodo gratuito |
-| `GET` | `/saas/registration-status` | Público; indica si el formulario de registro está habilitado |
+| `GET` | `/saas/registration-status` | Público; indica si el registro está habilitado y los días del periodo gratuito configurado |
 | `POST` | `/auth/refresh` | Token refresh vigente |
 | `POST` | `/auth/logout` | Token refresh |
 | `POST` | `/auth/change-password` | Usuario autenticado |
@@ -238,7 +238,7 @@ Todas las rutas `/admin/*` requieren rol `super_admin`.
 
 Al cambiar el estado de una barbería, se revocan sus sesiones de renovación y se invalida la versión de sesión de sus usuarios; al reactivarla todos deben iniciar sesión de nuevo. Suspender o reactivar un usuario individual también invalida sus tokens y sesiones de renovación. El último superadministrador no se puede desactivar. El historial guarda eventos sensibles junto con la operación y omite tokens y contraseñas. El resumen global cuenta cobros de citas por separado para cada moneda; no suma monedas distintas. El registro SaaS de cobro requiere importe positivo, periodo vigente y confirmación administrativa de un pago ya recibido; no se conecta a una pasarela ni procesa tarjetas. Las comisiones guardan la moneda de origen. El pago de afiliados requiere aprobar la comisión y registrar método y referencia externa.
 
-`GET /saas/registration-status` expone solo si el registro está habilitado. Si se desactiva, el formulario de alta se bloquea y el endpoint de registro lo rechaza de nuevo en servidor. Los cambios de estos parámetros se guardan en MySQL y generan auditoría; los secretos siguen en variables de entorno.
+`GET /saas/registration-status` expone si el registro está habilitado y `free_period_days`, que el formulario de alta muestra según la configuración vigente. Si se desactiva, el formulario de alta se bloquea y el endpoint de registro lo rechaza de nuevo en servidor. Los cambios de estos parámetros se guardan en MySQL y generan auditoría; los secretos siguen en variables de entorno.
 
 La bandera disponible `branding_auto` controla si el portal autenticado aplica los colores de marca de la barbería. Solo se activa para un usuario owner/barbero con onboarding completado; su estado forma parte de `/auth/me` y del listado de usuarios. Los cambios se reflejan al volver a iniciar sesión.
 

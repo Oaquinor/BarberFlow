@@ -12,6 +12,11 @@ async function loadRegistrationStatus() {
     const response = await fetch(`${apiRoot}/api/v1/saas/registration-status`);
     if (!response.ok) throw new Error("No se pudo consultar el estado del registro.");
     const status = await response.json();
+    if (Number.isInteger(status.free_period_days) && status.free_period_days > 0) {
+      const days = status.free_period_days;
+      document.getElementById("registrationOffer").textContent =
+        `El registro activa el plan gratuito por ${days} ${days === 1 ? "día" : "días"}. Configurarás el negocio en el siguiente paso.`;
+    }
     if (!status.registrations_enabled) {
       document.getElementById("registrationStatus").textContent = "El registro de nuevas barberías está temporalmente cerrado.";
       form.querySelectorAll("input, select, button").forEach((control) => { control.disabled = true; });

@@ -345,6 +345,11 @@ test("platform registration settings are administered and enforced by signup flo
   assert.ok(adminScript.includes("/api/v1/admin/settings"));
   assert.ok(signupScript.includes("/api/v1/saas/registration-status"));
   assert.ok(signupScript.includes("/api/v1/saas/register"));
+  const signupPage = fs.readFileSync(path.join(__dirname, "..", "signup.html"), "utf8");
+  assert.match(signupPage, /id="registrationOffer"/);
+  assert.match(signupScript, /status\.free_period_days/);
+  assert.match(signupScript, /days === 1 \? "día" : "días"/);
+  assert.doesNotMatch(signupPage, /plan gratuito por 30 días/);
 });
 
 test("owner client actions are wired to scoped edit and status endpoints", () => {
