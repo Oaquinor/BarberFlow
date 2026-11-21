@@ -159,7 +159,7 @@ Appointment bookings between clients and barbers.
 | estimated_duration | INTEGER | Estimated duration in minutes |
 | actual_start_time | TIMESTAMP | Actual start time |
 | actual_end_time | TIMESTAMP | Actual end time |
-| service_type | VARCHAR(50) | Service type (haircut, beard_trim, etc.) |
+| service_type | VARCHAR(100) | Service name snapshot captured when the appointment is created |
 | service_price | INTEGER | Price in cents |
 | status | VARCHAR(50) | Status (pending, confirmed, in_progress, completed, cancelled, no_show) |
 | client_notes | TEXT | Notes from client |
@@ -179,6 +179,7 @@ Appointment bookings between clients and barbers.
 - INDEX (barber_id)
 - INDEX (scheduled_time)
 - INDEX (status)
+- INDEX (barbershop_id, created_at) for tenant-scoped monthly appointment usage
 - FOREIGN KEY (barbershop_id) REFERENCES barbershops(id)
 - FOREIGN KEY (client_id) REFERENCES users(id)
 - FOREIGN KEY (barber_id) REFERENCES users(id)
@@ -253,6 +254,8 @@ La cadena vigente termina en `025_perf_day_unique` y todas las conexiones de la 
 | `023_persist_support_tickets` | Bandeja MySQL de solicitudes de soporte, estado y vínculo opcional a barbería; downgrade protegido si existen tickets |
 | `024_service_name_100` | Amplía a 100 caracteres el snapshot del servicio de una cita; el downgrade rechaza snapshots más largos |
 | `025_perf_day_unique` | Garantiza una fila diaria por barbería/barbero/fecha; aborta sin borrar ni fusionar datos si detecta duplicados existentes |
+| `026_users_client_listing` | Índice compuesto para listados y conteos de usuarios por barbería, rol y estado de eliminación |
+| `027_appointment_monthly_usage` | Índice compuesto de barbería y fecha de creación para aplicar y mostrar los límites mensuales de citas |
 
 `support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 
