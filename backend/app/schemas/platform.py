@@ -503,6 +503,9 @@ class AdminUserItem(BaseModel):
 
 class AdminUsersResponse(BaseModel):
     items: List[AdminUserItem]
+    total: int
+    offset: int
+    limit: int
 
 
 class BarberAppointmentStatusUpdateRequest(BaseModel):

@@ -78,3 +78,55 @@ def test_branding_feature_state_is_returned_and_consumed_by_user_session(
         json={"feature_key": "imaginary_feature", "enabled": True},
     )
     assert unsupported.status_code == 422
+
+
+def test_super_admin_user_list_supports_tenant_scoped_search_and_pagination(
+    client: TestClient, test_db: Session,
+):
+    shop = Barbershop(
+        name="User paging", slug="admin-user-paging", email="paging-shop@example.com",
+        phone="8095556101", address_line1="Calle 22", city="Santo Domingo",
+        state="DN", postal_code="10107", country="DO", timezone="America/Santo_Domingo",
+    )
+    test_db.add(shop)
+    test_db.flush()
+    other_shop = Barbershop(
+        name="Other tenant", slug="admin-user-paging-other", email="paging-other-shop@example.com",
+        phone="8095556102", address_line1="Calle 23", city="Santo Domingo",
+        state="DN", postal_code="10108", country="DO", timezone="America/Santo_Domingo",
+    )
+    test_db.add(other_shop)
+    test_db.flush()
+    admin = User(
+        email="paging-admin@example.com", password_hash="unused", first_name="Admin",
+        last_name="Paging", role="super_admin", is_active=True,
+    )
+    matches = [
+        User(email=f"paging-match-{index}@example.com", password_hash="unused",
+             first_name=name, last_name="Needle", role="barber", is_active=True,
+             barbershop_id=shop.id)
+        for index, name in enumerate(("Ada", "Grace"), start=1)
+    ]
+    other = User(
+        email="paging-other@example.com", password_hash="unused", first_name="Linus",
+        last_name="Other", role="barber", is_active=True, barbershop_id=shop.id,
+    )
+    cross_tenant_match = User(
+        email="paging-cross-tenant@example.com", password_hash="unused", first_name="Margaret",
+        last_name="Needle", role="barber", is_active=True, barbershop_id=other_shop.id,
+    )
+    test_db.add_all([admin, *matches, other, cross_tenant_match])
+    test_db.commit()
+
+    url = f"/api/v1/admin/users?barbershop_id={shop.id}&search=Needle&limit=1"
+    first = client.get(url, headers=_headers(admin))
+    second = client.get(f"{url}&offset=1", headers=_headers(admin))
+    assert first.status_code == second.status_code == 200
+    assert first.json()["total"] == second.json()["total"] == 2
+    assert first.json()["offset"] == 0 and first.json()["limit"] == 1
+    assert second.json()["offset"] == 1 and second.json()["limit"] == 1
+    assert first.json()["items"][0]["id"] != second.json()["items"][0]["id"]
+
+    beyond = client.get(f"{url}&offset=2", headers=_headers(admin))
+    assert beyond.json()["items"] == []
+    assert beyond.json()["total"] == 2

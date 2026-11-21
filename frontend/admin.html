@@ -231,8 +231,12 @@
                 <select id="tenantFilter" aria-label="Filtrar usuarios por barbería">
                     <option value="">Todas las barberías</option>
                 </select>
+                <input id="userSearch" type="search" aria-label="Buscar usuario por nombre o correo" placeholder="Nombre o correo">
+                <button id="userSearchBtn" type="button">Buscar</button>
                 <button id="refreshUsersBtn">🔄 Actualizar</button>
                 <span id="usersCount" style="color: var(--text-secondary); font-weight: 600;"></span>
+                <button id="previousUsersBtn" type="button" disabled>← Anterior</button>
+                <button id="nextUsersBtn" type="button" disabled>Siguiente →</button>
             </div>
             <div id="usersTableWrap">
                 <table>

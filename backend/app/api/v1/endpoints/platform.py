@@ -4473,6 +4473,9 @@ def admin_record_subscription_payment(
 @router.get("/admin/users", response_model=AdminUsersResponse)
 def admin_users(
     barbershop_id: Optional[int] = None,
+    search: Optional[str] = Query(None, min_length=1, max_length=120),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     authorization: Optional[str] = Header(default=None),
 ):
@@ -4483,8 +4486,17 @@ def admin_users(
     query = db.query(User).filter(User.is_deleted == False)
     if barbershop_id is not None:
         query = query.filter(User.barbershop_id == barbershop_id)
+    search_term = search.strip() if search else ""
+    if search_term:
+        term = f"%{search_term}%"
+        query = query.filter(or_(
+            User.email.ilike(term),
+            User.first_name.ilike(term),
+            User.last_name.ilike(term),
+        ))
 
-    users = query.order_by(User.id.asc()).all()
+    total = query.count()
+    users = query.order_by(User.id.asc()).offset(offset).limit(limit).all()
     feature_rows = db.query(UserFeatureFlag).filter(
         UserFeatureFlag.user_id.in_([user.id for user in users]),
         UserFeatureFlag.is_deleted == False,
@@ -4505,7 +4517,7 @@ def admin_users(
         )
         for u in users
     ]
-    return AdminUsersResponse(items=items)
+    return AdminUsersResponse(items=items, total=total, offset=offset, limit=limit)
 
 
 @router.put("/admin/users/{user_id}/support")

@@ -224,7 +224,7 @@ Todas las rutas `/admin/*` requieren rol `super_admin`.
 | `GET` | `/admin/tenants/{barbershop_id}/subscription` | Consultar suscripción |
 | `PUT` | `/admin/tenants/{barbershop_id}/subscription` | Administrar plan y periodo |
 | `POST` | `/admin/tenants/{barbershop_id}/subscription/payments` | Registrar pago SaaS externo ya recibido |
-| `GET` | `/admin/users` | Buscar usuarios |
+| `GET` | `/admin/users?barbershop_id=1&search=ana&limit=50&offset=0` | Buscar usuarios con filtro tenant y paginación |
 | `PUT` | `/admin/users/{user_id}/status` | Activar o suspender usuario |
 | `PUT` | `/admin/users/{user_id}/support` | Configurar contacto de soporte |
 | `PUT` | `/admin/users/{user_id}/features` | Cambiar feature flag |
@@ -237,6 +237,8 @@ Todas las rutas `/admin/*` requieren rol `super_admin`.
 | `POST` | `/admin/commissions/{commission_id}/pay` | Registrar el pago externo de una comisión aprobada |
 
 Al cambiar el estado de una barbería, se revocan sus sesiones de renovación y se invalida la versión de sesión de sus usuarios; al reactivarla todos deben iniciar sesión de nuevo. Suspender o reactivar un usuario individual también invalida sus tokens y sesiones de renovación. El último superadministrador no se puede desactivar. El historial guarda eventos sensibles junto con la operación y omite tokens y contraseñas. El resumen global cuenta cobros de citas por separado para cada moneda; no suma monedas distintas. El registro SaaS de cobro requiere importe positivo, periodo vigente y confirmación administrativa de un pago ya recibido; no se conecta a una pasarela ni procesa tarjetas. Las comisiones guardan la moneda de origen. El pago de afiliados requiere aprobar la comisión y registrar método y referencia externa.
+
+El listado de usuarios acepta `barbershop_id`, `search` (nombre o correo), `limit` (1–100, por defecto 50) y `offset` (por defecto 0); la respuesta incluye `total`, `offset` y `limit` para recorrer resultados sin cargar todos los usuarios en el navegador.
 
 `GET /saas/registration-status` expone si el registro está habilitado y `free_period_days`, que el formulario de alta muestra según la configuración vigente. Si se desactiva, el formulario de alta se bloquea y el endpoint de registro lo rechaza de nuevo en servidor. Los cambios de estos parámetros se guardan en MySQL y generan auditoría; los secretos siguen en variables de entorno.
 

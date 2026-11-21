@@ -11,6 +11,9 @@ let accessToken = sessionStorage.getItem('token');
 let currentTenants = [];
 let supportTicketsOffset = 0;
 const SUPPORT_TICKETS_PAGE_SIZE = 50;
+let usersOffset = 0;
+let usersRequestSequence = 0;
+const USERS_PAGE_SIZE = 50;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -406,16 +409,25 @@ document.getElementById('affiliateCommissionsBody')?.addEventListener('click', a
 document.getElementById('loadAffiliateCommissionsBtn')?.addEventListener('click', loadAffiliateCommissions);
 
 async function loadUsers() {
+    const requestSequence = ++usersRequestSequence;
     const tenantId = document.getElementById('tenantFilter').value;
-    const query = tenantId ? `?barbershop_id=${encodeURIComponent(tenantId)}` : '';
+    const search = document.getElementById('userSearch').value.trim();
+    const params = new URLSearchParams({ limit: String(USERS_PAGE_SIZE), offset: String(usersOffset) });
+    if (tenantId) params.set('barbershop_id', tenantId);
+    if (search) params.set('search', search);
 
     try {
-        const data = await fetchJson(`/api/v1/admin/users${query}`);
+        const data = await fetchJson(`/api/v1/admin/users?${params.toString()}`);
+        if (requestSequence !== usersRequestSequence) return;
         const users = data.items || [];
 
         const body = document.getElementById('usersBody');
         const empty = document.getElementById('usersEmpty');
-        document.getElementById('usersCount').textContent = `${users.length} usuario(s)`;
+        const start = data.total ? data.offset + 1 : 0;
+        const end = Math.min(data.offset + users.length, data.total);
+        document.getElementById('usersCount').textContent = `${start}–${end} de ${data.total} usuario(s)`;
+        document.getElementById('previousUsersBtn').disabled = data.offset <= 0;
+        document.getElementById('nextUsersBtn').disabled = data.offset + users.length >= data.total;
 
         if (!users.length) {
             body.innerHTML = '';
@@ -442,7 +454,9 @@ async function loadUsers() {
             `;
         }).join('');
     } catch (error) {
+        if (requestSequence !== usersRequestSequence) return;
         console.error('Error cargando usuarios:', error);
+        document.getElementById('usersCount').textContent = `Error: ${error.message}`;
     }
 }
 
@@ -627,7 +641,29 @@ document.getElementById('refreshTenantsBtn')?.addEventListener('click', loadTena
 document.getElementById('refreshOverviewBtn')?.addEventListener('click', loadOverview);
 document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
 document.getElementById('loadAuditBtn')?.addEventListener('click', loadAuditLogs);
-document.getElementById('tenantFilter')?.addEventListener('change', loadUsers);
+document.getElementById('tenantFilter')?.addEventListener('change', () => {
+    usersOffset = 0;
+    loadUsers();
+});
+document.getElementById('userSearchBtn')?.addEventListener('click', () => {
+    usersOffset = 0;
+    loadUsers();
+});
+document.getElementById('userSearch')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        usersOffset = 0;
+        loadUsers();
+    }
+});
+document.getElementById('previousUsersBtn')?.addEventListener('click', () => {
+    usersOffset = Math.max(0, usersOffset - USERS_PAGE_SIZE);
+    loadUsers();
+});
+document.getElementById('nextUsersBtn')?.addEventListener('click', () => {
+    usersOffset += USERS_PAGE_SIZE;
+    loadUsers();
+});
 document.getElementById('refreshSupportTicketsBtn')?.addEventListener('click', loadSupportTickets);
 document.getElementById('previousSupportTicketsBtn')?.addEventListener('click', () => {
     supportTicketsOffset = Math.max(0, supportTicketsOffset - SUPPORT_TICKETS_PAGE_SIZE);
