@@ -119,7 +119,7 @@ El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y r
 
 Las rutas de escritura requieren rol owner; las que admiten `super_admin` exigen además `barbershop_id`. Para owner/barbero, el tenant se deriva de la identidad autenticada. Las rutas de perfil y contenido del panel permiten owner o barbero. Los pasos 1 y 3–9 guardan el progreso en MySQL y permiten reanudar el onboarding. El paso 2 carga el logo por `/upload-logo` y el último paso aplica los datos por `/complete`. La actualización de configuración valida horas y zona horaria IANA.
 
-`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
+`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Las citas consumidas se cuentan por mes calendario en la zona horaria del negocio, igual que el límite mensual aplicado al reservar o crear turnos presenciales. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
 
 ## Analítica de demanda
 

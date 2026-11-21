@@ -321,29 +321,20 @@ Ayudamos a:
 
 ## 💰 Planes de Suscripción
 
-### Plan Básico - RD$300/mes
-- Max 3 barberos
-- Max 200 citas/mes
-- Max 500 clientes
-- Métricas básicas
-- Soporte por email
+Los planes disponibles en el código son `free`, `basic`, `professional` y `enterprise`:
 
-### Plan Pro - RD$500/mes
-- Max 10 barberos
-- Max 1000 citas/mes
-- Max 2000 clientes
-- Métricas avanzadas
-- Gamificación
-- Insights automáticos
-- Soporte prioritario
+| Plan | Barberos activos | Citas creadas por mes | Clientes |
+|---|---:|---:|---:|
+| `free` | 1 | 50 | 100 |
+| `basic` | 3 | 200 | 500 |
+| `professional` | 10 | 1,000 | 2,000 |
+| `enterprise` | Sin límite | Sin límite | Sin límite |
+
+Los precios y prestaciones comerciales no están configurados como catálogo en la aplicación. La pasarela y los precios permanecen pendientes de definición; la plataforma solo registra manualmente pagos externos ya recibidos.
 
 ### Límites
 
-**Al exceder límites:**
-1. Se notifica al owner
-2. Se sugiere upgrade
-3. No se bloquea inmediatamente (período de gracia de 7 días)
-4. Después de 7 días, no se pueden crear nuevas citas
+Al alcanzar el límite, el backend rechaza con `402` la operación que crearía otra cita, cliente o barbero según corresponda. La interfaz no implementa un periodo de gracia de siete días ni una compra o mejora automática. La consulta de uso de citas se calcula por mes calendario en la zona horaria del negocio.
 
 ---
 

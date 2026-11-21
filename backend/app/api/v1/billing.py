@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models import Appointment, Barbershop, Subscription, User
+from app.models import Barbershop, Subscription, User
 from app.schemas.billing import OwnerSubscriptionResponse, SubscriptionUsage
+from app.services.subscription_service import count_monthly_appointments
 from app.utils.datetime import utc_now_naive
+from zoneinfo import ZoneInfoNotFoundError
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
@@ -47,12 +49,10 @@ def get_owner_subscription(
     client_count = db.query(func.count(User.id)).filter(
         User.barbershop_id == shop.id, User.role == "client", User.is_deleted == False,
     ).scalar() or 0
-    appointment_count = db.query(func.count(Appointment.id)).filter(
-        Appointment.barbershop_id == shop.id,
-        Appointment.created_at >= subscription.current_period_start,
-        Appointment.created_at < subscription.current_period_end,
-        Appointment.is_deleted == False,
-    ).scalar() or 0
+    try:
+        appointment_count = count_monthly_appointments(db, shop, now)
+    except (ZoneInfoNotFoundError, TypeError, ValueError):
+        raise HTTPException(status_code=500, detail="La zona horaria de la barbería no es válida")
 
     return OwnerSubscriptionResponse(
         plan=subscription.plan,

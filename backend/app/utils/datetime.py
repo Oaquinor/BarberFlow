@@ -39,6 +39,20 @@ def local_day_start_utc_naive(day: date, business_timezone: tzinfo) -> datetime:
     raise ValueError(f"No valid local instant exists at or after midnight for {day}")
 
 
+def local_month_window_utc_naive(now_utc_naive: datetime, business_timezone: tzinfo) -> tuple[datetime, datetime]:
+    """Return the current business-calendar month as a half-open UTC-naive interval."""
+    local_now = now_utc_naive.replace(tzinfo=timezone.utc).astimezone(business_timezone)
+    month_start = date(local_now.year, local_now.month, 1)
+    if local_now.month == 12:
+        next_month_start = date(local_now.year + 1, 1, 1)
+    else:
+        next_month_start = date(local_now.year, local_now.month + 1, 1)
+    return (
+        local_day_start_utc_naive(month_start, business_timezone),
+        local_day_start_utc_naive(next_month_start, business_timezone),
+    )
+
+
 def format_datetime(dt: datetime, format: str = "%Y-%m-%d %H:%M:%S") -> str:
     """
     Format datetime to string.

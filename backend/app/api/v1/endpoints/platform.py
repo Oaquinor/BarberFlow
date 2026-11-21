@@ -60,6 +60,7 @@ from app.models.support_ticket import SupportTicket
 from app.core.constants import CommissionStatus
 from app.models.achievement import Achievement, UserAchievement
 from app.models.barber_performance import BarberPerformance
+from app.services.subscription_service import count_monthly_appointments
 from app.schemas.auth import PasswordChangeRequest, RefreshTokenRequest, RefreshTokenResponse
 from app.schemas.platform import (
     AuthLoginRequest,
@@ -1311,12 +1312,7 @@ def public_create_appointment(
     _consume_public_booking_quota(db, shop.id, source_ip, utc_now_naive())
     subscription = _require_active_subscription(db, shop, lock=True)
     if subscription.max_appointments_per_month is not None:
-        used = db.query(Appointment.id).filter(
-            Appointment.barbershop_id == shop.id,
-            Appointment.created_at >= subscription.current_period_start,
-            Appointment.created_at < subscription.current_period_end,
-            Appointment.is_deleted == False,
-        ).count()
+        used = count_monthly_appointments(db, shop)
         if used >= subscription.max_appointments_per_month:
             raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de citas de su plan")
 
@@ -1546,12 +1542,7 @@ def create_walk_in_appointment(
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
     subscription = _require_active_subscription(db, shop, lock=True)
     if subscription.max_appointments_per_month is not None:
-        used = db.query(Appointment.id).filter(
-            Appointment.barbershop_id == shop.id,
-            Appointment.created_at >= subscription.current_period_start,
-            Appointment.created_at < subscription.current_period_end,
-            Appointment.is_deleted == False,
-        ).count()
+        used = count_monthly_appointments(db, shop)
         if used >= subscription.max_appointments_per_month:
             raise HTTPException(status_code=402, detail="La barbería alcanzó el límite mensual de citas")
 

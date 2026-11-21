@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.models import Appointment, Barbershop, Subscription, User
-from app.utils.datetime import utc_now_naive
+from app.utils.datetime import local_month_window_utc_naive, utc_now_naive
+from zoneinfo import ZoneInfo
 
 
 def _headers(user: User) -> dict[str, str]:
@@ -90,9 +91,15 @@ def test_owner_reads_subscription_period_and_real_limits(client: TestClient, tes
     appointment = Appointment(
         barbershop_id=shop.id, client_id=customers[0].id, barber_id=barber.id,
         scheduled_time=now + timedelta(days=1), estimated_duration=30, service_type="Corte",
-        service_price=1500, status="confirmed",
+        service_price=1500, status="confirmed", created_at=now,
     )
-    test_db.add(appointment)
+    month_start, _ = local_month_window_utc_naive(now, ZoneInfo(shop.timezone))
+    previous_month_appointment = Appointment(
+        barbershop_id=shop.id, client_id=customers[1].id, barber_id=barber.id,
+        scheduled_time=now - timedelta(days=2), estimated_duration=30, service_type="Corte",
+        service_price=1500, status="completed", created_at=month_start - timedelta(seconds=1),
+    )
+    test_db.add_all([appointment, previous_month_appointment])
     test_db.commit()
 
     result = client.get("/api/v1/billing/subscription", headers=_headers(owner))
