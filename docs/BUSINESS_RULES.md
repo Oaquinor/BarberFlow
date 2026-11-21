@@ -79,14 +79,13 @@ Ayudamos a:
 1. El servicio debe estar en estado `in_progress`
 2. El barbero debe ser el asignado
 3. Debe haber transcurrido al menos 5 minutos
+4. Debe registrarse el cobro con un método de pago válido
 
-**Al finalizar servicio:**
-1. Estado cambia a `completed`
-2. Se registra `actual_end_time`
-3. Se calcula duración real
-4. Se compara con duración estimada
-5. Se actualiza performance diaria
-6. Se verifican logros automáticamente
+**Al registrar el cobro:**
+1. Se crea un pago inmutable con el precio del servicio, propina, método y moneda del negocio.
+2. En la misma transacción, la cita cambia a `completed` y se registra `actual_end_time`.
+3. Se actualizan comisión, rendimiento, logros y notificaciones.
+4. Si no se pueden persistir las consecuencias operativas, se revierte el cobro y la finalización.
 
 ### Alertas de Tiempo
 
@@ -313,38 +312,29 @@ Ayudamos a:
 
 ### No Show
 
-**Detección:**
-- Si pasan 15 minutos después de la hora programada
-- Y el estado sigue en `confirmed`
-- El sistema puede marcar automáticamente como `no_show`
+**Registro:**
+- Un propietario o el barbero asignado puede marcar manualmente una cita `pending` o `confirmed` como `no_show` cuando haya pasado la hora programada más la duración estimada del servicio.
+- La agenda habilita la acción al cumplirse ese plazo; el backend vuelve a validar el tiempo y el estado antes de guardar.
+- El cambio actualiza las métricas de rendimiento y queda registrado en auditoría. No hay detección automática.
 
 ---
 
 ## 💰 Planes de Suscripción
 
-### Plan Básico - RD$300/mes
-- Max 3 barberos
-- Max 200 citas/mes
-- Max 500 clientes
-- Métricas básicas
-- Soporte por email
+Los planes disponibles en el código son `free`, `basic`, `professional` y `enterprise`:
 
-### Plan Pro - RD$500/mes
-- Max 10 barberos
-- Max 1000 citas/mes
-- Max 2000 clientes
-- Métricas avanzadas
-- Gamificación
-- Insights automáticos
-- Soporte prioritario
+| Plan | Barberos activos | Citas creadas por mes | Clientes |
+|---|---:|---:|---:|
+| `free` | 1 | 50 | 100 |
+| `basic` | 3 | 200 | 500 |
+| `professional` | 10 | 1,000 | 2,000 |
+| `enterprise` | Sin límite | Sin límite | Sin límite |
+
+Los precios y prestaciones comerciales no están configurados como catálogo en la aplicación. La pasarela y los precios permanecen pendientes de definición; la plataforma solo registra manualmente pagos externos ya recibidos.
 
 ### Límites
 
-**Al exceder límites:**
-1. Se notifica al owner
-2. Se sugiere upgrade
-3. No se bloquea inmediatamente (período de gracia de 7 días)
-4. Después de 7 días, no se pueden crear nuevas citas
+Al alcanzar el límite, el backend rechaza con `402` la operación que crearía otra cita, cliente o barbero según corresponda. La interfaz no implementa un periodo de gracia de siete días ni una compra o mejora automática. La consulta de uso de citas se calcula por mes calendario en la zona horaria del negocio.
 
 ---
 
@@ -353,7 +343,7 @@ Ayudamos a:
 ### Autenticación
 - Tokens JWT con expiración de 30 minutos
 - Refresh tokens válidos por 7 días
-- Passwords hasheados con Bcrypt (10 rounds)
+- Contraseñas hasheadas con bcrypt a costo 12
 
 ### Permisos
 - Multi-tenant: cada barbería es aislada

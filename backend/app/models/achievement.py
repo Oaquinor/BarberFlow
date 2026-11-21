@@ -16,7 +16,7 @@ class Achievement(BaseModel):
     __tablename__ = "achievements"
 
     # Achievement Info
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), unique=True, nullable=False)
     name = Column(String(100), nullable=False)
     description = Column(String(500), nullable=True)
     icon = Column(String(50), nullable=False)  # emoji or icon identifier

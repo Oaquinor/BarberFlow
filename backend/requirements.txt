@@ -1,42 +1,37 @@
-# Python dependencies for KingFlow Barber
+# Python 3.12+ dependencies for KingFlow Barber (MySQL production database)
 
-# FastAPI
-fastapi==0.109.0
+# Application server and API
+fastapi==0.165.0
 uvicorn[standard]==0.27.0
-gunicorn==21.2.0
-python-multipart==0.0.6
+gunicorn==27.0.1
+python-multipart==0.0.34
+Pillow==13.0.0
 
-# Database
-sqlalchemy==2.0.25
-asyncpg==0.29.0
+# MySQL and migrations
+sqlalchemy==2.0.58
+PyMySQL>=1.1.1,<2
 alembic==1.13.1
 
-# Authentication & Security
-python-jose[cryptography]==3.3.0
+# Authentication and validation
+PyJWT==2.15.1
 passlib[bcrypt]==1.7.4
-pydantic[email]==2.5.3
-pydantic-settings==2.1.0
+pydantic[email]==2.14.4
+pydantic-settings==2.16.3
 
-# Environment
-python-dotenv==1.0.0
+# Environment and timezone data
+python-dotenv==1.2.4
+tzdata>=2024.1,<2028
 
-# Background Tasks (Optional)
-celery==5.3.6
-redis==5.0.1
+# Tests
+pytest==9.2.0
+pytest-asyncio==1.5.0
+httpx2==2.16.2
 
-# Email (Optional)
-python-multipart==0.0.6
-
-# Testing
-pytest==7.4.4
-pytest-asyncio==0.23.3
-httpx==0.26.0
-
-# Code Quality
-black==23.12.1
+# Code quality
+black==26.10.1
 isort==5.13.2
-flake8==7.0.0
-mypy==1.8.0
+flake8==7.5.0
+mypy==2.4.1
 
 # Utilities
 python-dateutil==2.8.2

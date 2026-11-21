@@ -1,0 +1,91 @@
+:root {
+  --brand-primary: #667eea;
+  --brand-secondary: #764ba2;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --control-border: #d4d4d8;
+  --focus-ring: rgba(102, 126, 234, 0.2);
+}
+
+body {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 35%),
+    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.15) 0%, transparent 30%),
+    linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: var(--text-primary);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 20px;
+  box-shadow: 0 16px 42px rgba(24, 24, 27, 0.18);
+  backdrop-filter: blur(10px);
+}
+
+h1 {
+  color: var(--brand-primary);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+input,
+select,
+textarea {
+  color: var(--text-primary);
+  background: #fff;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  font: inherit;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+  border-color: var(--brand-primary);
+}
+
+button {
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+  font-family: inherit;
+  transition: transform 150ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.32);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--brand-secondary);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+a,
+.foot a {
+  color: var(--brand-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

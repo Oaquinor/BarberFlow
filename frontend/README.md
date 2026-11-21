@@ -1,206 +1,44 @@
-# 🌐 KingFlow Barber - Frontend
+# KingFlow Barber frontend
 
-**Interfaz web para el sistema operativo de barberías**
+Frontend responsive basado en HTML, CSS y JavaScript sin framework. Los portales de barbero, cliente, propietario, onboarding y administración general consumen la API del backend.
 
----
+## Desarrollo local
 
-## 🚀 Inicio Rápido
+Inicia primero MySQL y el backend desde `backend`:
 
-### **Opción 1: Servidor Python (Recomendado)**
+```powershell
+alembic upgrade head
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-```bash
+En otra terminal inicia el servidor estático desde el repositorio:
+
+```powershell
 cd backend
 python scripts/serve_frontend.py
 ```
 
-Luego abre: **http://localhost:3000**
+Abre `http://localhost:3000`. `js/config.js` dirige las llamadas de API al backend `http://localhost:8000`; en producción, las páginas usan el mismo origen. Abrir HTML mediante `file://` no es compatible con el service worker, el routing de API ni las reglas CORS.
 
-### **Opción 2: Abrir directamente**
+Para instalar el esquema en una base local, configura antes `DATABASE_URL=mysql+pymysql://...` y ejecuta `alembic upgrade head`. Desde `backend`, crea la cuenta inicial con `python -m scripts.create_admin`; el comando solicita credenciales y el repositorio no incluye cuentas de demostración.
 
-Abre el archivo `index.html` en tu navegador:
-```
-file:///C:/Users/Laptop%20(Martinez)/source/repos/BarberFlow/frontend/index.html
-```
+## Portales y flujos
 
----
+- `index.html`: acceso del equipo y operación del barbero.
+- `client.html`: búsqueda de barberías, reserva y seguimiento público.
+- `signup.html` y `onboarding.html`: alta de barbería y configuración inicial.
+- `admin.html`: administración general de la plataforma.
+- `js/auth.js`: manejo de sesión y llamadas autenticadas.
+- `js/pwa.js`, `sw.js`, `manifest.webmanifest`: instalación y shell offline.
 
-## 🔐 Credenciales de Prueba
+El service worker solo guarda recursos de la app. No almacena respuestas API autenticadas ni páginas cuya query contenga tokens, datos de contacto o credenciales. Sin conexión, no se pueden consultar ni modificar citas o datos operativos; la app muestra el aviso offline.
 
-**Email:** `admin@test.com`  
-**Contraseña:** `admin123`
+## Pruebas
 
-> Estas credenciales están pre-cargadas en el formulario de login
+Ejecuta las pruebas del service worker, manifiesto y rutas de entrada desde `frontend`:
 
----
-
-## 📋 Funcionalidades
-
-### ✅ Implementadas
-
-1. **🔐 Autenticación**
-   - Login con JWT
-   - Almacenamiento de token
-   - Logout
-
-2. **🔥 Modo Servicio**
-   - Test de conexión con API
-   - Vista de servicio activo (próximamente)
-
-3. **📅 Citas**
-   - Lista de citas del día (próximamente)
-   - Inicio de servicio desde cita
-
-4. **📊 Rendimiento**
-   - Dashboard con métricas diarias
-   - Citas completadas
-   - Ingresos del día
-   - Eficiencia de tiempo
-   - Racha de días trabajados
-
-5. **🎮 Logros**
-   - Grid de logros disponibles
-   - Progreso y puntos
-   - Logros desbloqueados
-
----
-
-## 🏗️ Estructura de Archivos
-
-```
-frontend/
-├── index.html          # Página principal
-├── css/
-│   └── styles.css      # Estilos completos
-└── js/
-    └── main.js         # Lógica de la aplicación
+```powershell
+npm test
 ```
 
----
-
-## 🔌 Conectividad con API
-
-El frontend se conecta a la API en:
-- **Base URL:** `http://127.0.0.1:8000`
-- **Endpoints usados:**
-  - `POST /api/v1/auth/login` - Autenticación
-  - `GET /health` - Verificar servidor
-  - `GET /api/v1/achievements/` - Obtener logros
-  - `GET /api/v1/service-mode/active` - Servicio activo
-  - `GET /api/v1/performance/daily/{barber_id}` - Métricas
-
----
-
-## 🎨 Diseño
-
-### Paleta de Colores
-- **Primario:** `#667eea` → `#764ba2` (Gradient)
-- **Éxito:** `#4ade80`
-- **Error:** `#ef4444`
-- **Advertencia:** `#f59e0b`
-- **Neutral:** `#6c757d`
-
-### Componentes
-- ✅ Cards responsivos
-- ✅ Formularios con validación
-- ✅ Tabs de navegación
-- ✅ Stats grid (métricas)
-- ✅ Achievement cards
-- ✅ Notificaciones toast
-
----
-
-## 🔧 Desarrollo
-
-### Requisitos
-- Python 3.8+ (para servidor)
-- Navegador moderno (Chrome, Firefox, Edge)
-- Backend corriendo en puerto 8000
-
-### Scripts Útiles
-
-**Iniciar backend:**
-```bash
-cd backend
-uvicorn app.main:app --reload
-```
-
-**Iniciar frontend:**
-```bash
-cd backend
-python scripts/serve_frontend.py
-```
-
-**Abrir en navegador:**
-```bash
-start http://localhost:3000
-```
-
----
-
-## 📱 Responsive Design
-
-El frontend es completamente responsive:
-- ✅ Desktop (1400px+)
-- ✅ Tablet (768px - 1399px)
-- ✅ Mobile (< 768px)
-
----
-
-## 🐛 Troubleshooting
-
-### ❌ No se conecta a la API
-
-1. Verifica que el backend esté corriendo:
-   ```bash
-   curl http://127.0.0.1:8000/health
-   ```
-
-2. Revisa la consola del navegador (F12)
-
-3. Verifica que MySQL esté corriendo en Laragon
-
-### ❌ Login no funciona
-
-1. Verifica credenciales: `admin@test.com` / `admin123`
-2. Revisa que el usuario exista en la base de datos
-3. Verifica logs del backend
-
-### ❌ CORS errors
-
-Usa el servidor Python en lugar de abrir el HTML directamente:
-```bash
-python scripts/serve_frontend.py
-```
-
----
-
-## 🚧 Próximas Funcionalidades
-
-- [ ] Timer en vivo para servicio activo
-- [ ] Notificaciones push
-- [ ] Gráficos de rendimiento (Chart.js)
-- [ ] Calendario interactivo
-- [ ] Chat interno
-- [ ] Modo oscuro
-- [ ] PWA (Progressive Web App)
-- [ ] Notificaciones de navegador
-
----
-
-## 📚 Tecnologías Usadas
-
-- **HTML5** - Estructura
-- **CSS3** - Estilos (Flexbox, Grid, Animations)
-- **JavaScript ES6+** - Lógica
-- **Fetch API** - Comunicación con backend
-- **LocalStorage** - Almacenamiento de token
-
----
-
-## 📄 Licencia
-
-Parte del proyecto KingFlow Barber - Sistema Operativo para Barberías
-
----
-
-**Última actualización:** 2024-05-30
+Las pruebas verifican que los recursos precargados existan, que las pantallas registren la PWA, que las claves de seguimiento no se almacenen en caché y que la limpieza de cachés no afecte a otras aplicaciones del mismo origen.

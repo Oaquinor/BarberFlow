@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.services import AchievementService
-from app.core.security import get_current_user
+from app.api.deps import get_current_user
 from app.models import User, Achievement
 
 router = APIRouter(prefix="/achievements", tags=["Achievements"])
@@ -30,6 +30,8 @@ def get_user_achievements(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User is not associated with a barbershop"
         )
+    if current_user.role != "barber":
+        raise HTTPException(status_code=403, detail="Los logros son personales de cada barbero")
 
     try:
         achievements = AchievementService.get_user_achievements(
@@ -38,10 +40,10 @@ def get_user_achievements(
             barbershop_id=current_user.barbershop_id
         )
         return achievements
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudieron cargar los logros"
         )
 
 
@@ -60,6 +62,8 @@ def check_achievements(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User is not associated with a barbershop"
         )
+    if current_user.role != "barber":
+        raise HTTPException(status_code=403, detail="Solo un barbero puede consultar sus logros")
 
     try:
         newly_earned = AchievementService.check_and_award_achievements(
@@ -80,10 +84,10 @@ def check_achievements(
                 for ua in newly_earned
             ]
         }
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudieron actualizar los logros"
         )
 
 
@@ -97,10 +101,15 @@ def mark_achievement_viewed(
     from app.models import UserAchievement
     from sqlalchemy import and_
 
+    if current_user.role != "barber" or not current_user.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo un barbero puede consultar sus logros")
+
     user_achievement = db.query(UserAchievement).filter(
         and_(
             UserAchievement.user_id == current_user.id,
-            UserAchievement.achievement_id == achievement_id
+            UserAchievement.achievement_id == achievement_id,
+            UserAchievement.barbershop_id == current_user.barbershop_id,
+            UserAchievement.is_deleted == False,
         )
     ).first()
 

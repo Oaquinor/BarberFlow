@@ -16,6 +16,9 @@
   let deferredPrompt = null;
 
   window.addEventListener('beforeinstallprompt', (event) => {
+    // Keep the browser's native install UI on pages without a custom install control.
+    if (!installButton && !installBannerButton) return;
+
     event.preventDefault();
     deferredPrompt = event;
     if (installButton) {

@@ -5,8 +5,9 @@ Revises: 004_add_barber_availability
 Create Date: 2026-06-06
 """
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
+from migration_safety import require_empty_tables, require_no_matching_rows
 
 
 revision = "005_user_support_flags"
@@ -16,6 +17,26 @@ depends_on = None
 
 
 def upgrade():
+    if context.is_offline_mode():
+        # Offline scripts run from the migration base, where these objects do not exist yet.
+        op.add_column("users", sa.Column("support_contact_enabled", sa.Boolean(), nullable=False, server_default=sa.text("0")))
+        op.create_table(
+            "user_feature_flags",
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column("user_id", sa.Integer(), nullable=False),
+            sa.Column("feature_key", sa.String(length=100), nullable=False),
+            sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+            sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+            sa.Column("is_deleted", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+            sa.Column("deleted_at", sa.DateTime(), nullable=True),
+            sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+            sa.PrimaryKeyConstraint("id"),
+        )
+        op.create_index("ix_user_feature_flags_user_id", "user_feature_flags", ["user_id"])
+        op.create_index("ix_user_feature_flags_feature_key", "user_feature_flags", ["feature_key"])
+        return
+
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
@@ -47,7 +68,10 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_user_feature_flags_feature_key", table_name="user_feature_flags")
-    op.drop_index("ix_user_feature_flags_user_id", table_name="user_feature_flags")
+    connection = op.get_bind()
+    require_empty_tables(connection, 'user_feature_flags')
+    require_no_matching_rows(
+        connection, 'users', 'support_contact_enabled <> 0', 'custom support-contact settings',
+    )
     op.drop_table("user_feature_flags")
     op.drop_column("users", "support_contact_enabled")

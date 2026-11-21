@@ -1,5 +1,7 @@
 # 🎨 KingFlow Barber - Tour Visual de Páginas
 
+> **Guía conceptual heredada:** los mockups y textos de ejemplo no son capturas ni garantía de que coincidan con la interfaz actual. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) para el estado vigente y valida cada pantalla en el frontend y las pruebas Chromium.
+
 **Guía visual completa de todas las pantallas del sistema**
 
 ---
@@ -19,7 +21,7 @@
 ║       Accede a tu cuenta de KingFlow Barber          ║
 ║                                                        ║
 ║   📧 Email                                            ║
-║   [admin@test.com                          ]          ║
+║   [<YOUR_SUPER_ADMIN_EMAIL>                          ]          ║
 ║                                                        ║
 ║   🔒 Contraseña                                       ║
 ║   [••••••••                                ]          ║
@@ -28,8 +30,8 @@
 ║                                                        ║
 ║   ┌──────────────────────────────────────┐           ║
 ║   │ 💡 Credenciales de prueba:           │           ║
-║   │ Email: admin@test.com                │           ║
-║   │ Contraseña: admin123                 │           ║
+║   │ Email: <YOUR_SUPER_ADMIN_EMAIL>                │           ║
+║   │ Contraseña: <YOUR_SUPER_ADMIN_PASSWORD>                 │           ║
 ║   └──────────────────────────────────────┘           ║
 ║                                                        ║
 ║   ¿Problemas para acceder? Contacta soporte          ║

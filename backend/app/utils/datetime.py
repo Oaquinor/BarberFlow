@@ -4,8 +4,53 @@ Utility helpers.
 Common utility functions used across the application.
 """
 
-from datetime import datetime, date
+from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from typing import Optional
+
+
+def utc_now_naive() -> datetime:
+    """Return current UTC for MySQL DATETIME columns stored without tzinfo."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def local_day_start_utc_naive(day: date, business_timezone: tzinfo) -> datetime:
+    """Return the first valid instant of a local calendar day as UTC-naive."""
+    local_midnight = datetime.combine(day, time.min)
+    valid_instants = []
+    forward_instants = []
+
+    for fold in (0, 1):
+        candidate = local_midnight.replace(tzinfo=business_timezone, fold=fold)
+        utc_instant = candidate.astimezone(timezone.utc)
+        round_trip = utc_instant.astimezone(business_timezone)
+        round_trip_local = round_trip.replace(tzinfo=None)
+        if round_trip_local == local_midnight:
+            valid_instants.append(utc_instant)
+        elif round_trip_local > local_midnight:
+            forward_instants.append((round_trip_local, utc_instant))
+
+    if valid_instants:
+        # An ambiguous midnight begins at its first occurrence.
+        return min(valid_instants).replace(tzinfo=None)
+    if forward_instants:
+        # If clocks skip midnight, the day begins at the first valid local instant.
+        first_valid = min(forward_instants, key=lambda item: (item[0], item[1]))[1]
+        return first_valid.replace(tzinfo=None)
+    raise ValueError(f"No valid local instant exists at or after midnight for {day}")
+
+
+def local_month_window_utc_naive(now_utc_naive: datetime, business_timezone: tzinfo) -> tuple[datetime, datetime]:
+    """Return the current business-calendar month as a half-open UTC-naive interval."""
+    local_now = now_utc_naive.replace(tzinfo=timezone.utc).astimezone(business_timezone)
+    month_start = date(local_now.year, local_now.month, 1)
+    if local_now.month == 12:
+        next_month_start = date(local_now.year + 1, 1, 1)
+    else:
+        next_month_start = date(local_now.year, local_now.month + 1, 1)
+    return (
+        local_day_start_utc_naive(month_start, business_timezone),
+        local_day_start_utc_naive(next_month_start, business_timezone),
+    )
 
 
 def format_datetime(dt: datetime, format: str = "%Y-%m-%d %H:%M:%S") -> str:
@@ -89,6 +134,3 @@ def calculate_duration_minutes(start: datetime, end: datetime) -> int:
     """
     delta = end - start
     return int(delta.total_seconds() / 60)
-
-
-from datetime import timedelta

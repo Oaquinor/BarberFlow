@@ -32,8 +32,7 @@ def main():
         print("  💯 Club de los 100")
         print("  🌟 Quinientos")
         print("  🏆 Leyenda")
-        print("  ⚡ Demonio de la Velocidad")
-        print("  ✨ Semana Perfecta")
+        print("  ✅ Catálogo compatible con requisitos actualmente calculados")
     except Exception as e:
         print(f"❌ Error: {e}")
     finally:

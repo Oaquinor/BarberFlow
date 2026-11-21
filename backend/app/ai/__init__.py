@@ -1,17 +1,10 @@
-"""
-AI Module (Future Implementation).
+"""Explainable predictive services built from tenant-owned operating data.
 
-Modular AI features:
-- Smart scheduling recommendations
-- Barber recommendations for clients
-- Optimal time slot suggestions
-- Demand prediction
-- Client preference learning
-- Automated reminders timing
+The first production feature is the seven-day demand forecast. It uses a
+weekday/hour historical baseline and known bookings; it does not call an
+external model or invent data where a tenant lacks history.
 """
 
-# TODO: Implement AI features
-# - Recommendation engine
-# - Predictive analytics
-# - Machine learning models
-# - Integration with appointment system
+from app.ai.demand_forecast import DemandForecastService
+
+__all__ = ["DemandForecastService"]

@@ -4,9 +4,11 @@
  */
 
 const APP_CONFIG = window.KINGFLOW_CONFIG || {};
-const API_ROOT = (APP_CONFIG.apiBaseUrl || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/, '');
 const API_BASE = `${API_ROOT}/api/v1`;
+const accessToken = sessionStorage.getItem('token');
 let currentStep = 1;
+let logoUploadPending = false;
 let onboardingData = {
     barbershopName: '',
     logoFile: null,
@@ -24,6 +26,12 @@ let onboardingData = {
 
 // Step navigation
 function nextStep(stepNumber) {
+    if (currentStep === 2 && logoUploadPending) {
+        const status = document.getElementById('logoUploadStatus');
+        status.textContent = 'Espera a que termine la subida del logo antes de continuar.';
+        return;
+    }
+
     // Validate current step
     if (!validateStep(currentStep)) {
         return;
@@ -68,25 +76,25 @@ function validateStep(step) {
         case 1:
             const name = document.getElementById('barbershopName').value.trim();
             if (!name || name.length < 2) {
-                alert('Por favor ingresa el nombre de tu barbería');
+                showToast('Por favor ingresa el nombre de tu barbería');
                 return false;
             }
             return true;
         case 4:
             if (!onboardingData.style) {
-                alert('Por favor selecciona el estilo de tu barbería');
+                showToast('Por favor selecciona el estilo de tu barbería');
                 return false;
             }
             return true;
         case 5:
             if (!onboardingData.primaryGoal) {
-                alert('Por favor selecciona tu objetivo principal');
+                showToast('Por favor selecciona tu objetivo principal');
                 return false;
             }
             return true;
         case 9:
             if (!onboardingData.personality) {
-                alert('Por favor selecciona la personalidad de tu negocio');
+                showToast('Por favor selecciona la personalidad de tu negocio');
                 return false;
             }
             return true;
@@ -140,11 +148,11 @@ async function sendStepToBackend(step) {
     if (!data) return;
 
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}${endpoint}`, {
             method: 'POST',
-            headers: {
+            headers: authHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(data)
         });
 
@@ -233,16 +241,25 @@ function applyPreset(primary, secondary) {
 function previewLogo(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
+        const status = document.getElementById('logoUploadStatus');
+
+        if (logoUploadPending) {
+            status.textContent = 'Espera a que termine la subida actual antes de seleccionar otro logo.';
+            input.value = '';
+            return;
+        }
 
         // Validate file size (5MB max)
         if (file.size > 5 * 1024 * 1024) {
-            alert('El archivo es muy grande. Máximo 5MB.');
+            status.textContent = 'El archivo es muy grande. Máximo 5 MB.';
+            input.value = '';
             return;
         }
 
         // Validate file type
         if (!file.type.match('image/(png|jpeg|jpg)')) {
-            alert('Solo se aceptan archivos PNG o JPG.');
+            status.textContent = 'Solo se aceptan archivos PNG o JPG.';
+            input.value = '';
             return;
         }
 
@@ -266,27 +283,44 @@ function previewLogo(input) {
 async function uploadLogo(file) {
     const formData = new FormData();
     formData.append('file', file);
+    const status = document.getElementById('logoUploadStatus');
+    logoUploadPending = true;
+    status.textContent = 'Subiendo logo…';
 
     try {
-        const response = await fetch(`${API_BASE}/onboarding/upload-logo`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}/onboarding/upload-logo`, {
             method: 'POST',
+            headers: authHeaders(),
             body: formData
         });
 
         if (response.ok) {
             const result = await response.json();
             onboardingData.logoUrl = result.logo_url;
+            status.textContent = 'Logo subido correctamente.';
             console.log('✅ Logo uploaded:', result.logo_url);
         } else {
+            const result = await response.json().catch(() => ({}));
+            status.textContent = result.detail || 'No se pudo subir el logo. Puedes intentarlo otra vez o continuar sin logo.';
             console.error('❌ Failed to upload logo');
         }
     } catch (error) {
+        status.textContent = 'No se pudo conectar para subir el logo. Puedes intentarlo otra vez o continuar sin logo.';
         console.error('Error uploading logo:', error);
+    } finally {
+        logoUploadPending = false;
     }
 }
 
 // Drag and drop for logo
 const uploadArea = document.getElementById('uploadArea');
+
+uploadArea.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        document.getElementById('logoFile').click();
+    }
+});
 
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -338,11 +372,11 @@ async function completeOnboarding() {
 
     try {
         // Send complete onboarding data
-        const response = await fetch(`${API_BASE}/onboarding/complete`, {
+        const response = await KingFlowAuth.fetch(`${API_BASE}/onboarding/complete`, {
             method: 'POST',
-            headers: {
+            headers: authHeaders({
                 'Content-Type': 'application/json'
-            },
+            }),
             body: JSON.stringify(completeData)
         });
 
@@ -359,11 +393,11 @@ async function completeOnboarding() {
             document.getElementById('step10').classList.remove('hidden');
             document.getElementById('progressBar').style.width = '100%';
         } else {
-            alert('Error al completar el onboarding. Por favor intenta de nuevo.');
+            showToast('Error al completar el onboarding. Por favor intenta de nuevo.');
         }
     } catch (error) {
         console.error('Error completing onboarding:', error);
-        alert('Error de conexión. Por favor intenta de nuevo.');
+        showToast('Error de conexión. Por favor intenta de nuevo.');
     }
 }
 
@@ -372,5 +406,50 @@ function goToDashboard() {
     window.location.href = '/';
 }
 
+document.addEventListener('click', (event) => {
+    const target = event.target.closest('[data-next-step], [data-prev-step], [data-preset-primary], [data-open-logo], [data-onboarding-action]');
+    if (!target) return;
+
+    if (target.hasAttribute('data-next-step')) nextStep(Number(target.dataset.nextStep));
+    else if (target.hasAttribute('data-prev-step')) prevStep(Number(target.dataset.prevStep));
+    else if (target.hasAttribute('data-preset-primary')) {
+        applyPreset(target.dataset.presetPrimary, target.dataset.presetSecondary);
+    } else if (target.hasAttribute('data-open-logo')) {
+        document.getElementById('logoFile')?.click();
+    } else if (target.dataset.onboardingAction === 'complete') {
+        void completeOnboarding();
+    } else if (target.dataset.onboardingAction === 'dashboard') {
+        goToDashboard();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.closest('[data-open-logo]')) {
+        event.preventDefault();
+        document.getElementById('logoFile')?.click();
+    }
+});
+
+document.getElementById('logoFile')?.addEventListener('change', (event) => previewLogo(event.currentTarget));
+document.getElementById('primaryColor')?.addEventListener('input', updateColorPreview);
+document.getElementById('secondaryColor')?.addEventListener('input', updateColorPreview);
+document.querySelectorAll('input[type="radio"][name="style"], input[type="radio"][name="goal"], input[type="radio"][name="personality"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+        if (radio.checked) selectRadio(radio.name, radio.value);
+    });
+});
+
 // Initialize
+window.addEventListener('kingflow:auth-expired', () => {
+    window.location.replace('/index.html');
+});
+
+if (!accessToken) {
+    window.location.replace('/');
+}
+
+function authHeaders(extra = {}) {
+    return { ...extra, Authorization: `Bearer ${accessToken}` };
+}
+
 console.log('🚀 Onboarding initialized');

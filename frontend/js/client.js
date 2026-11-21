@@ -1,15 +1,37 @@
 const APP_CONFIG = window.KINGFLOW_CONFIG || {};
-const API_ROOT = (APP_CONFIG.apiBaseUrl || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const API_ROOT = (APP_CONFIG.apiBaseUrl || window.location.origin).replace(/\/$/, '');
 const API_BASE = `${API_ROOT}/api/v1`;
+let shopCurrency = 'USD';
+let shopTimezone = 'UTC';
+let availableSlots = [];
+let serviceCatalog = [];
+let slotsRequestSequence = 0;
 
 function q(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-const shopSlug = q('shop') || 'kingflow-barber';
+const shopSlug = q('shop');
+
+function trustedTrackingUrl(value) {
+  try {
+    const url = new URL(value, window.location.origin);
+    const allowedOrigins = new Set([window.location.origin, new URL(API_ROOT).origin]);
+    if (!allowedOrigins.has(url.origin) || !['http:', 'https:'].includes(url.protocol) ||
+        url.username || url.password || url.pathname !== '/client.html' ||
+        url.searchParams.get('shop') !== shopSlug || !url.searchParams.get('track_token') ||
+        url.hash) {
+      return null;
+    }
+    return url;
+  } catch (_) {
+    return null;
+  }
+}
 
 const shopNameEl = document.getElementById('shopName');
 const serviceSelect = document.getElementById('serviceSelect');
+const barberSelect = document.getElementById('barberSelect');
 const scheduledTimeSelect = document.getElementById('scheduledTime');
 const bookBtn = document.getElementById('bookBtn');
 const bookResult = document.getElementById('bookResult');
@@ -45,37 +67,129 @@ function showPanel(panel) {
   }
 }
 
-async function loadShop() {
-  const res = await fetch(`${API_BASE}/public/${shopSlug}`);
-  if (!res.ok) {
-    shopNameEl.textContent = '❌ Barbería no disponible';
-    return;
-  }
-
-  const shop = await res.json();
-  shopNameEl.textContent = `💈 ${shop.name}`;
-  document.title = `${shop.name} - Cliente`;
-
-  if (shop.primary_color) {
-    document.documentElement.style.setProperty('--brand-primary', shop.primary_color);
-  }
-  if (shop.secondary_color) {
-    document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
-  }
-
-  const sres = await fetch(`${API_BASE}/public/${shopSlug}/services`);
-  const services = sres.ok ? await sres.json() : [];
-
-  serviceSelect.innerHTML = services
-    .map(s => `<option value="${s.id}">${s.name} - $${(s.price_cents / 100).toFixed(2)} (${s.duration_minutes} min)</option>`)
-    .join('');
-
-  await loadSlots();
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[char]);
 }
 
-async function loadSlots() {
-  const res = await fetch(`${API_BASE}/public/${shopSlug}/slots`);
-  const slots = res.ok ? await res.json() : [];
+function formatMoney(cents) {
+  try {
+    return new Intl.NumberFormat('es-DO', { style: 'currency', currency: shopCurrency }).format((Number(cents) || 0) / 100);
+  } catch (_) {
+    return `${shopCurrency} ${((Number(cents) || 0) / 100).toFixed(2)}`;
+  }
+}
+
+async function loadShop() {
+  if (!shopSlug) {
+    shopNameEl.textContent = '❌ Falta identificar la barbería';
+    return;
+  }
+  const retryButton = document.getElementById('retryShopBtn');
+  if (retryButton) retryButton.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}`);
+    if (!res.ok) {
+      shopNameEl.textContent = '❌ Barbería no disponible';
+      if (retryButton) retryButton.hidden = false;
+      return;
+    }
+
+    const shop = await res.json();
+    shopCurrency = shop.currency || 'USD';
+    shopTimezone = shop.timezone || 'UTC';
+    shopNameEl.textContent = `💈 ${shop.name}`;
+    document.title = `${shop.name} - Cliente`;
+    if (retryButton) retryButton.hidden = true;
+
+    const brandColorPattern = /^#[0-9a-f]{6}$/i;
+    if (brandColorPattern.test(shop.primary_color || '')) {
+      document.documentElement.style.setProperty('--brand-primary', shop.primary_color);
+    }
+    if (brandColorPattern.test(shop.secondary_color || '')) {
+      document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
+    }
+    if (shop.logo_url) {
+      try {
+        const logoUrl = new URL(shop.logo_url, API_ROOT);
+        if (logoUrl.origin === new URL(API_ROOT).origin && ['http:', 'https:'].includes(logoUrl.protocol)) {
+          const logo = document.getElementById('shopLogo');
+          logo.src = logoUrl.href;
+          logo.alt = `Logo de ${shop.name}`;
+          logo.referrerPolicy = 'no-referrer';
+          logo.hidden = false;
+        }
+      } catch (_) {
+        // Ignore an invalid legacy logo URL and keep the booking page usable.
+      }
+    }
+
+    const sres = await fetch(`${API_BASE}/public/${shopSlug}/services`);
+    if (!sres.ok) throw new Error('No se pudieron cargar los servicios.');
+    serviceCatalog = await sres.json();
+    if (!Array.isArray(serviceCatalog)) throw new Error('Respuesta de servicios inválida.');
+
+    serviceSelect.innerHTML = serviceCatalog
+      .map(s => `<option value="${Number(s.id)}">${escapeHtml(s.name)} - ${formatMoney(s.price_cents)} (${Number(s.duration_minutes)} min)</option>`)
+      .join('');
+
+    await loadSlots(selectedServiceDuration());
+  } catch (_) {
+    shopNameEl.textContent = 'No se pudo cargar la barbería. Comprueba tu conexión e inténtalo de nuevo.';
+    if (retryButton) retryButton.hidden = false;
+  } finally {
+    if (retryButton) retryButton.disabled = false;
+  }
+}
+
+function selectedServiceDuration() {
+  const service = serviceCatalog.find(item => Number(item.id) === Number(serviceSelect.value));
+  const duration = Number(service?.duration_minutes);
+  return Number.isInteger(duration) && duration > 0 ? duration : null;
+}
+
+async function fetchSlots(durationMinutes) {
+  const url = new URL(`${API_BASE}/public/${shopSlug}/slots`);
+  if (Number.isInteger(Number(durationMinutes)) && Number(durationMinutes) > 0) {
+    url.searchParams.set('duration_minutes', String(Number(durationMinutes)));
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const slots = await res.json();
+    return Array.isArray(slots) ? slots : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function loadSlots(durationMinutes = selectedServiceDuration()) {
+  const requestSequence = ++slotsRequestSequence;
+  const slots = await fetchSlots(durationMinutes);
+  if (requestSequence !== slotsRequestSequence) return;
+  if (!Array.isArray(slots)) {
+    availableSlots = [];
+    if (barberSelect) barberSelect.innerHTML = '<option value="">Cualquier barbero</option>';
+    scheduledTimeSelect.innerHTML = '<option value="">No se pudo consultar la disponibilidad</option>';
+    return;
+  }
+  availableSlots = slots;
+
+  const selectedBarberId = barberSelect?.value || '';
+  const barbers = new Map(availableSlots.map(slot => [Number(slot.barber_id), slot.barber_name]));
+  if (barberSelect) {
+    barberSelect.innerHTML = '<option value="">Cualquier barbero</option>' +
+      [...barbers.entries()].map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('');
+    if (barbers.has(Number(selectedBarberId))) barberSelect.value = selectedBarberId;
+  }
+
+  renderAvailableSlots();
+}
+
+function renderAvailableSlots() {
+  const barberId = barberSelect?.value || '';
+  const slots = availableSlots.filter(slot => !barberId || Number(slot.barber_id) === Number(barberId));
 
   if (!slots.length) {
     scheduledTimeSelect.innerHTML = '<option value="">Sin turnos disponibles</option>';
@@ -83,16 +197,30 @@ async function loadSlots() {
   }
 
   scheduledTimeSelect.innerHTML = slots.map(s => {
-    const label = `${new Date(s.slot_start).toLocaleString()} · ${s.barber_name}`;
-    return `<option value="${s.slot_start}">${label}</option>`;
+    const label = `${new Date(s.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(s.barber_name)}`;
+    return `<option value="${Number(s.availability_id)}">${label}</option>`;
   }).join('');
 }
+
+serviceSelect.addEventListener('change', () => loadSlots(selectedServiceDuration()));
+barberSelect?.addEventListener('change', renderAvailableSlots);
+document.getElementById('refreshSlotsBtn')?.addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await loadSlots(selectedServiceDuration());
+  } finally {
+    button.disabled = false;
+  }
+});
+document.getElementById('retryShopBtn')?.addEventListener('click', loadShop);
 
 async function bookAppointment() {
   const client_name = document.getElementById('clientName').value.trim();
   const phone = document.getElementById('clientPhone').value.trim();
   const service_id = Number(serviceSelect.value);
-  const dt = scheduledTimeSelect.value;
+  const slot = availableSlots.find(item => Number(item.availability_id) === Number(scheduledTimeSelect.value));
+  const dt = slot?.slot_start;
   const notes = document.getElementById('clientNotes').value.trim();
 
   if (!client_name || !phone || !service_id || !dt) {
@@ -106,26 +234,44 @@ async function bookAppointment() {
     client_name,
     phone,
     service_id,
+    barber_id: slot.barber_id,
     scheduled_time: dt,
     notes: notes || null,
   };
 
-  const res = await fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  bookBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    bookResult.textContent = data.detail || 'No fue posible agendar la cita.';
-    return;
+    const data = await res.json();
+    if (!res.ok) {
+      bookResult.textContent = data.detail || 'No fue posible agendar la cita.';
+      return;
+    }
+
+    bookResult.replaceChildren();
+    bookResult.append(document.createTextNode(`✅ Cita creada (ID ${Number(data.appointment_id)}). `));
+    const link = document.createElement('a');
+    const trackingUrl = trustedTrackingUrl(data.tracking_link);
+    if (!trackingUrl) {
+      bookResult.textContent = '✅ Cita creada. No fue posible abrir el enlace de seguimiento.';
+      return;
+    }
+    link.href = trackingUrl.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'Abrir seguimiento privado';
+    bookResult.append(link);
+    await loadSlots();
+  } catch (_) {
+    bookResult.textContent = 'No pudimos confirmar la respuesta. Revisa tus citas con el código de seguimiento antes de volver a reservar.';
+  } finally {
+    bookBtn.disabled = false;
   }
-
-  bookResult.innerHTML = `✅ Cita creada (ID ${data.appointment_id}). <br>🔗 Seguimiento: <a href="${data.tracking_link}" target="_blank">Abrir</a>`;
-  document.getElementById('trackPhone').value = phone;
-  document.getElementById('trackId').value = data.appointment_id;
-  await loadSlots();
 }
 
 function statusLabel(status) {
@@ -141,39 +287,115 @@ function statusLabel(status) {
 }
 
 async function trackAppointments() {
-  const phone = document.getElementById('trackPhone').value.trim();
-  const idValue = document.getElementById('trackId').value.trim();
-  const appointment_id = idValue ? Number(idValue) : null;
+  const token = document.getElementById('trackToken').value.trim();
 
-  if (!phone) {
-    trackList.innerHTML = '<div class="item">Ingresa tu teléfono.</div>';
+  if (!token) {
+    trackList.textContent = 'Ingresa el código privado que recibiste al reservar.';
     return;
   }
 
-  trackList.innerHTML = '<div class="item">Consultando...</div>';
+  trackList.textContent = 'Consultando...';
+  trackBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/public/${shopSlug}/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
 
-  const res = await fetch(`${API_BASE}/public/${shopSlug}/track`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, appointment_id }),
-  });
+    const data = await res.json();
+    if (!res.ok) {
+      trackList.textContent = data.detail || 'Error de consulta.';
+      return;
+    }
 
-  const data = await res.json();
-  if (!res.ok) {
-    trackList.innerHTML = `<div class="item">${data.detail || 'Error de consulta.'}</div>`;
-    return;
+    if (!data.items || data.items.length === 0) {
+      trackList.textContent = 'No se encontró una cita con ese código de seguimiento.';
+      return;
+    }
+
+    const slotResults = new Map();
+    const cards = await Promise.all(data.items.map(async (item) => {
+      const d = new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: shopTimezone });
+      const cancelButton = ['pending', 'confirmed'].includes(item.status)
+        ? `<button class="secondary cancel-booking" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
+        : '';
+      const canReschedule = ['pending', 'confirmed'].includes(item.status);
+      const duration = Number(item.estimated_duration);
+      let availableForService = [];
+      if (canReschedule) {
+        if (!slotResults.has(duration)) slotResults.set(duration, fetchSlots(duration));
+        availableForService = await slotResults.get(duration) || [];
+      }
+      const rescheduleControls = ['pending', 'confirmed'].includes(item.status) && availableForService.length
+        ? `<label class="field">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {
+            const label = `${new Date(slot.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(slot.barber_name)}`;
+            return `<option value="${Number(slot.availability_id)}">${label}</option>`;
+          }).join('')}</select></label><button class="secondary reschedule-booking" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
+        : '';
+      return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}<br>${rescheduleControls}<br>${cancelButton}</div>`;
+    }));
+    trackList.innerHTML = cards.join('');
+  } catch (_) {
+    trackList.textContent = 'No se pudieron consultar tus citas. Comprueba tu conexión e inténtalo de nuevo.';
+  } finally {
+    trackBtn.disabled = false;
   }
-
-  if (!data.items || data.items.length === 0) {
-    trackList.innerHTML = '<div class="item">No hay citas registradas para ese teléfono.</div>';
-    return;
-  }
-
-  trackList.innerHTML = data.items.map(item => {
-    const d = new Date(item.scheduled_time).toLocaleString();
-    return `<div class="item"><strong>ID ${item.appointment_id}</strong> • ${statusLabel(item.status)}<br>${item.service_type}<br>${d}${item.barber_name ? `<br>Barbero: ${item.barber_name}` : ''}</div>`;
-  }).join('');
 }
+
+trackList.addEventListener('click', async (event) => {
+  const rescheduleButton = event.target.closest('.reschedule-booking');
+  if (rescheduleButton) {
+    const card = rescheduleButton.closest('.item');
+    const availabilityId = Number(card?.querySelector('.reschedule-slot')?.value);
+    if (!availabilityId) return;
+    rescheduleButton.disabled = true;
+    try {
+      const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/reschedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: rescheduleButton.dataset.token, availability_id: availabilityId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        rescheduleButton.disabled = false;
+        showToast(data.detail || 'No se pudo reprogramar la cita.');
+        return;
+      }
+    } catch (_) {
+      rescheduleButton.disabled = false;
+      showToast('No pudimos confirmar el cambio. Actualiza el seguimiento antes de intentarlo otra vez.');
+      return;
+    }
+    await loadSlots();
+    await trackAppointments();
+    return;
+  }
+  const button = event.target.closest('.cancel-booking');
+  if (!button || !await showConfirmation('¿Quieres cancelar esta cita?', {
+    title: 'Cancelar cita', confirmLabel: 'Cancelar cita', danger: true,
+  })) return;
+  button.disabled = true;
+  try {
+    const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: button.dataset.token }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      button.disabled = false;
+      showToast(data.detail || 'No se pudo cancelar la cita.');
+      return;
+    }
+  } catch (_) {
+    button.disabled = false;
+    showToast('No pudimos confirmar la cancelación. Actualiza el seguimiento antes de intentarlo otra vez.');
+    return;
+  }
+  await loadSlots();
+  await trackAppointments();
+});
 
 async function sendSupport() {
   const name = document.getElementById('supportName').value.trim();
@@ -188,19 +410,28 @@ async function sendSupport() {
   }
 
   result.textContent = 'Enviando...';
-  const res = await fetch(`${API_BASE}/support/contact`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email: email || null, phone: phone || null, message }),
-  });
+  supportBtn.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/support/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email: email || null, phone: phone || null, message, barbershop_slug: shopSlug }),
+    });
 
-  const data = await res.json();
-  if (!res.ok) {
-    result.textContent = data.detail || 'No se pudo enviar soporte.';
-    return;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      result.textContent = data.detail || 'No se pudo enviar soporte.';
+      return;
+    }
+
+    result.textContent = data.notification_sent
+      ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+      : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
+  } catch (_) {
+    result.textContent = 'No pudimos confirmar el envío. Espera un momento y consulta con soporte antes de enviar otra solicitud.';
+  } finally {
+    supportBtn.disabled = false;
   }
-
-  result.textContent = `✅ Soporte enviado a ${data.sent_to} usuario(s).`;
 }
 
 bookBtn.addEventListener('click', bookAppointment);
@@ -215,13 +446,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   showPanel('book');
   await loadShop();
 
-  const phoneQuery = q('phone');
-  const trackId = q('track');
-  if (phoneQuery) document.getElementById('trackPhone').value = phoneQuery;
-  if (trackId) document.getElementById('trackId').value = trackId;
+  const trackingToken = q('track_token');
+  if (trackingToken) document.getElementById('trackToken').value = trackingToken;
 
-  if (phoneQuery || trackId) {
+  if (trackingToken) {
     showPanel('track');
-    trackAppointments();
+    await trackAppointments();
   }
 });

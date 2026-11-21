@@ -1,5 +1,7 @@
 # 🚀 SISTEMA LISTO PARA USAR
 
+> **Nota de vigencia:** este documento es un reporte histórico de la fase inicial (migración 003, 2024). No demuestra que la instalación local o producción actual esté desplegada ni que el sistema esté completo. Consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) y la documentación vigente antes de operar.
+
 ## ✅ TODO COMPLETADO Y CONFIGURADO
 
 ### 📊 Estado del Sistema:
@@ -40,7 +42,7 @@
 
 ### **Opción 2: Login Directo**
 1. Abre: http://localhost:3000
-2. Credenciales: `admin@test.com` / `admin123`
+2. Credenciales: `<YOUR_SUPER_ADMIN_EMAIL>` / `<YOUR_SUPER_ADMIN_PASSWORD>`
 3. Si no has completado onboarding → Redirección automática
 4. Si ya completaste → Dashboard personalizado
 
@@ -180,7 +182,7 @@ Busca sección **"onboarding"** y verifica:
 
 ---
 
-## 🎊 **¡EL SISTEMA ESTÁ 100% LISTO!**
+## 🎊 **Cierre de la fase inicial (reporte histórico)**
 
 ### **Lo que se logró:**
 - ✅ Backend completo (6 archivos nuevos)

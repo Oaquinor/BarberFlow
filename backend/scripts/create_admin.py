@@ -1,102 +1,67 @@
-"""
-Create super admin user script.
+"""Interactively create a super administrator in the configured MySQL database."""
 
-Run this script to create a super admin user.
-"""
-
-import asyncio
+import getpass
 import sys
-from getpass import getpass
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
-from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.core.security import hash_password
 from app.models import User
-from app.core.constants import UserRole
-
-settings = get_settings()
 
 
-async def create_super_admin():
-    """Create super admin user interactively."""
-
-    print("=" * 50)
-    print("CREATE SUPER ADMIN USER")
-    print("=" * 50)
-
-    # Get user input
-    email = input("Email: ").strip()
-    if not email:
-        print("❌ Email is required")
-        sys.exit(1)
-
-    first_name = input("First Name: ").strip()
-    if not first_name:
-        print("❌ First name is required")
-        sys.exit(1)
-
-    last_name = input("Last Name: ").strip()
-    if not last_name:
-        print("❌ Last name is required")
-        sys.exit(1)
-
+def create_super_admin() -> int:
+    email = input("Email: ").strip().lower()
+    first_name = input("First name: ").strip()
+    last_name = input("Last name: ").strip()
     phone = input("Phone (optional): ").strip() or None
-
-    password = getpass("Password: ")
-    if len(password) < 8:
-        print("❌ Password must be at least 8 characters")
-        sys.exit(1)
-
-    password_confirm = getpass("Confirm Password: ")
+    password = getpass.getpass("Password (12+ characters, uppercase and number): ")
+    password_confirm = getpass.getpass("Confirm password: ")
+    if not email or len(first_name) < 2 or len(last_name) < 2:
+        print("Email, first name and last name are required.")
+        return 1
+    if (
+        len(password) < 12
+        or len(password.encode("utf-8")) > 72
+        or not any(char.isupper() for char in password)
+        or not any(char.isdigit() for char in password)
+    ):
+        print("Use a password of 12–72 characters with an uppercase letter and a number.")
+        return 1
     if password != password_confirm:
-        print("❌ Passwords don't match")
-        sys.exit(1)
+        print("Passwords do not match.")
+        return 1
 
-    # Create engine and session
-    engine = create_async_engine(settings.DATABASE_URL)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-    async with async_session() as session:
-        try:
-            # Check if user already exists
-            from sqlalchemy import select
-            result = await session.execute(
-                select(User).where(User.email == email)
-            )
-            existing_user = result.scalar_one_or_none()
-
-            if existing_user:
-                print(f"❌ User with email {email} already exists")
-                sys.exit(1)
-
-            # Create super admin
-            admin = User(
-                email=email,
-                password_hash=hash_password(password),
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-                role=UserRole.SUPER_ADMIN,
-                is_active=True,
-                is_verified=True
-            )
-
-            session.add(admin)
-            await session.commit()
-
-            print("\n✅ Super admin created successfully!")
-            print(f"Email: {email}")
-            print(f"Role: {UserRole.SUPER_ADMIN}")
-
-        except Exception as e:
-            print(f"\n❌ Error creating super admin: {e}")
-            await session.rollback()
-            raise
-        finally:
-            await engine.dispose()
+    db = SessionLocal()
+    try:
+        if db.query(User.id).filter(User.email == email, User.is_deleted == False).first():
+            print("A user with that email already exists.")
+            return 1
+        admin = User(
+            email=email,
+            password_hash=hash_password(password),
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            role="super_admin",
+            is_active=True,
+            is_verified=True,
+        )
+        db.add(admin)
+        db.commit()
+        print(f"Super administrator created: {email}")
+        return 0
+    except IntegrityError:
+        db.rollback()
+        print("A user with that email already exists.")
+        return 1
+    except Exception as exc:
+        db.rollback()
+        print(f"Could not create the administrator ({type(exc).__name__}). Check MySQL connectivity.")
+        return 1
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(create_super_admin())
+    sys.exit(create_super_admin())

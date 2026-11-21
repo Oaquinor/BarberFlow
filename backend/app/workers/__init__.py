@@ -1,16 +1,5 @@
-"""
-Background workers (Celery).
+"""Background worker entry points live in ``scripts/notification_worker.py``.
 
-Handles asynchronous tasks:
-- Email sending
-- Notification delivery
-- Report generation
-- Data cleanup
-- Scheduled tasks
+The worker polls a MySQL outbox and schedules appointment reminders. Celery is
+not configured or required by the current deployment.
 """
-
-# TODO: Implement Celery workers
-# - Celery app configuration
-# - Task definitions
-# - Scheduled tasks (beat)
-# - Task monitoring

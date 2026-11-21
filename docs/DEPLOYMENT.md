@@ -1,4 +1,4 @@
-# KingFlow Barber - Deployment Guidemn 
+# KingFlow Barber — Deployment Guide
 
 **Production Deployment Documentation**
 
@@ -6,7 +6,7 @@
 
 ## 🚀 Deployment Options
 
-### Option 1: Docker Compose (Recommended for Small/Medium Scale)
+### Option 1: Docker Compose for Production
 
 The easiest way to deploy the entire stack.
 
@@ -23,39 +23,45 @@ git clone <repository-url>
 cd kingflow-barber
 ```
 
-2. **Configure environment**
+2. **Configure production environment**
 ```bash
-cp backend/.env.example backend/.env
-# Edit backend/.env with production values
+cp .env.production.example .env
+# Edit .env and replace every placeholder with a strong production value.
+# URL-encode reserved characters in MYSQL_PASSWORD inside DATABASE_URL.
 ```
 
-3. **Update docker-compose.yml for production**
-```yaml
-# Set DEBUG=False
-# Use production database credentials
-# Configure proper volumes for persistence
+Generate a strong application secret, for example:
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-4. **Start services**
+3. **Validate and start the production stack**
 ```bash
-docker-compose up -d
+docker compose -f docker-compose.prod.yml config --quiet
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-5. **Run migrations**
+Alembic migrations run as part of backend startup. The production Compose file rejects missing database credentials, JWT secret, HTTPS origins and WhatsApp token. It defaults `CLIENT_IP_HEADER` to `X-Real-IP` for the trusted same-host reverse proxy shown below; that proxy must overwrite the header before forwarding. If another trusted proxy is used, set the corresponding supported header explicitly. Never expose the API port directly to untrusted networks when using a proxy header. Put secrets in the root `.env` file consumed by Compose; never put production credentials in `backend/.env` or an image build context. `.dockerignore` excludes environment files, local uploads, logs, dependency folders and Git metadata from builds. The development `docker-compose.yml` contains local defaults and `DEBUG=True`; do not use it for production.
+
+4. **Create the first platform admin**
 ```bash
-docker-compose exec backend alembic upgrade head
+docker compose -f docker-compose.prod.yml exec backend python -m scripts.create_admin
 ```
 
-6. **Create admin user**
+The backend port is bound to `127.0.0.1:8000`; terminate TLS at a trusted reverse proxy on the same host and configure backups for the MySQL volume and `frontend/uploads`. The Compose stack does not configure a TLS proxy or automated backups by itself.
+
+The production API and notification worker run as UID/GID `10001`, and the WhatsApp service runs as the image's unprivileged `node` user. Before starting Compose, create writable host directories for the API's bind mounts:
+
 ```bash
-docker-compose exec backend python scripts/create_admin.py
+sudo mkdir -p backend/logs frontend/uploads
+sudo chown -R 10001:10001 backend/logs frontend/uploads
 ```
 
 ---
 
 ### Option 2: VPS Deployment (Manual)
 
-Deploy on a Linux VPS (Ubuntu/Debian recommended).
+Deploy on Ubuntu 24.04 LTS or another supported Linux release that provides Python 3.12 from its configured repositories.
 
 #### 1. Server Setup
 
@@ -64,76 +70,180 @@ Deploy on a Linux VPS (Ubuntu/Debian recommended).
 sudo apt update && sudo apt upgrade -y
 
 # Install dependencies
-sudo apt install -y python3.12 python3.12-venv python3-pip postgresql nginx certbot
+sudo apt install -y python3.12 python3.12-venv python3-pip nginx certbot curl ca-certificates xz-utils git
+```
 
-# Install Node.js (for frontend)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
+Install a maintained Node.js 24 LTS release for WhatsApp. Use the current 24.x security patch listed on the [official Node.js downloads page](https://nodejs.org/en/download/) and verify it against the published checksum file. For an x86-64 server:
+
+```bash
+NODE_VERSION=24.22.3 # Replace with the latest maintained Node.js 24.x patch before installing.
+cd /tmp
+curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"
+grep "node-v${NODE_VERSION}-linux-x64.tar.xz$" SHASUMS256.txt | sha256sum --check
+sudo tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz" -C /usr/local --strip-components=1
+node --version
+```
+
+Install the same MySQL 8.4 LTS series used by CI and Docker Compose through [Oracle's MySQL APT repository](https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/):
+
+```bash
+curl -fsSLO https://dev.mysql.com/get/mysql-apt-config_0.8.40-1_all.deb
+sudo dpkg -i mysql-apt-config_0.8.40-1_all.deb
+# In the configuration dialog, select MySQL 8.4 LTS for MySQL Server & Cluster.
+sudo apt update
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
 ```
 
 #### 2. Database Setup
 
 ```bash
-# Create database and user
-sudo -u postgres psql
-CREATE DATABASE kingflow_barber;
-CREATE USER kingflow WITH PASSWORD 'secure_password_here';
-GRANT ALL PRIVILEGES ON DATABASE kingflow_barber TO kingflow;
-\q
+# Create database and restricted application user
+sudo mysql
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER 'kingflow'@'localhost' IDENTIFIED BY 'use-a-generated-secret';
+GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 #### 3. Backend Deployment
 
 ```bash
-# Create app directory
-sudo mkdir -p /var/www/kingflow
-cd /var/www/kingflow
+sudo useradd --system --user-group --home-dir /var/lib/kingflow --create-home --shell /usr/sbin/nologin kingflow
+sudo git clone <repository-url> /var/www/kingflow
+sudo chown -R root:root /var/www/kingflow
+sudo install -d -o kingflow -g kingflow -m 0750 \
+  /var/www/kingflow/backend/logs \
+  /var/www/kingflow/frontend/uploads \
+  /var/www/kingflow/whatsapp-service/auth_info_baileys
 
-# Clone repository
-git clone <repository-url> .
+# Install immutable application dependencies as root; services run as kingflow.
+sudo python3.12 -m venv /var/www/kingflow/venv
+sudo /var/www/kingflow/venv/bin/pip install -r /var/www/kingflow/backend/requirements.txt
+sudo npm ci --omit=dev --prefix /var/www/kingflow/whatsapp-service
 
-# Setup virtual environment
-python3.12 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-cd backend
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-nano .env  # Edit with production values
-
-# Run migrations
-alembic upgrade head
-
-# Create systemd service
-sudo nano /etc/systemd/system/kingflow.service
+# Create a production-only settings file; replace every sample value.
+sudo install -o kingflow -g kingflow -m 0600 /dev/null /var/www/kingflow/backend/.env
+sudoedit /var/www/kingflow/backend/.env
 ```
+
+Set at least these values in `backend/.env`. URL-encode reserved characters in the MySQL password inside `DATABASE_URL`.
+
+```dotenv
+ENVIRONMENT=production
+DEBUG=False
+DATABASE_URL=mysql+pymysql://kingflow:URL_ENCODED_PASSWORD@localhost:3306/kingflow_barber
+SECRET_KEY=GENERATE_A_RANDOM_SECRET_OF_AT_LEAST_48_BYTES
+FRONTEND_BASE_URL=https://api.kingflow.com
+CORS_ORIGINS=["https://api.kingflow.com"]
+CLIENT_IP_HEADER=X-Real-IP
+UPLOAD_DIR=/var/www/kingflow/frontend/uploads
+LOG_FILE=/var/www/kingflow/backend/logs/app.log
+WHATSAPP_API_URL=http://127.0.0.1:3001/send
+WHATSAPP_API_TOKEN=GENERATE_A_RANDOM_URL_SAFE_TOKEN
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+EMAIL_FROM=noreply@example.com
+```
+
+Create `/etc/kingflow-whatsapp.env` with the same URL-safe `WHATSAPP_API_TOKEN`, owned by `root:kingflow` with mode `0640`:
+
+```dotenv
+WHATSAPP_BIND_HOST=127.0.0.1
+WHATSAPP_API_TOKEN=THE_SAME_RANDOM_URL_SAFE_TOKEN
+```
+
+```bash
+sudo install -o root -g kingflow -m 0640 /dev/null /etc/kingflow-whatsapp.env
+sudoedit /etc/kingflow-whatsapp.env
+```
+
+Run migrations as the service account so Alembic reads the production `.env` from its working directory:
+
+```bash
+sudo -u kingflow sh -c 'cd /var/www/kingflow/backend && /var/www/kingflow/venv/bin/alembic upgrade head'
+```
+
+Create `/etc/systemd/system/kingflow.service`:
 
 **kingflow.service:**
 ```ini
 [Unit]
 Description=KingFlow Barber API
-After=network.target
+Wants=network-online.target
+After=network-online.target mysql.service
 
 [Service]
-Type=notify
-User=www-data
-Group=www-data
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0027
 WorkingDirectory=/var/www/kingflow/backend
-Environment="PATH=/var/www/kingflow/venv/bin"
-ExecStart=/var/www/kingflow/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+ExecStart=/var/www/kingflow/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create `/etc/systemd/system/kingflow-worker.service` for the durable email/WhatsApp outbox:
+
+```ini
+[Unit]
+Description=KingFlow notification outbox worker
+After=network-online.target mysql.service kingflow.service
+
+[Service]
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0027
+WorkingDirectory=/var/www/kingflow/backend
+ExecStart=/var/www/kingflow/venv/bin/python -m scripts.notification_worker
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create `/etc/systemd/system/kingflow-whatsapp.service`:
+
+```ini
+[Unit]
+Description=KingFlow WhatsApp gateway
+After=network-online.target
+
+[Service]
+Type=simple
+User=kingflow
+Group=kingflow
+UMask=0077
+WorkingDirectory=/var/www/kingflow/whatsapp-service
+EnvironmentFile=/etc/kingflow-whatsapp.env
+ExecStart=/usr/local/bin/node server.js
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```bash
-# Start service
+# Start all services
 sudo systemctl daemon-reload
-sudo systemctl start kingflow
-sudo systemctl enable kingflow
+sudo systemctl enable --now kingflow-whatsapp kingflow kingflow-worker
+
+# Create the first platform administrator interactively.
+sudo -u kingflow sh -c 'cd /var/www/kingflow/backend && /var/www/kingflow/venv/bin/python -m scripts.create_admin'
+
+# Pair WhatsApp once and confirm its session is saved under auth_info_baileys.
+sudo journalctl -u kingflow-whatsapp -f
 ```
 
 #### 4. Nginx Configuration
@@ -147,21 +257,14 @@ sudo nano /etc/nginx/sites-available/kingflow
 server {
     listen 80;
     server_name api.kingflow.com;
+    client_max_body_size 6m;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # WebSocket support
-    location /ws {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
     }
 }
 ```
@@ -183,15 +286,25 @@ sudo certbot --nginx -d api.kingflow.com
 sudo systemctl enable certbot.timer
 ```
 
+Only expose SSH, HTTP and HTTPS at the host firewall. The API and WhatsApp gateway bind to loopback; do not expose ports `8000` or `3001` publicly. Keep `kingflow` as the owner of `backend/logs`, `frontend/uploads` and `whatsapp-service/auth_info_baileys`; keep application source and `node_modules` owned by root and read-only to the service account.
+
 ---
 
 ### Option 3: Cloud Platforms
+
+#### Render preview configuration
+
+The repository's `render.yaml` defines an API preview and a separate notification worker. The API uses a free web service and an externally managed MySQL URL; the worker uses paid compute because it must stay online to drain the outbox. Set the MySQL URL and notification provider credentials for both services. `WHATSAPP_API_URL` must point to a reachable WhatsApp gateway; the manifest does not host that gateway. The API uses `CF-Connecting-IP` for per-IP limits on login, password recovery, support requests and public booking. Render routes inbound web requests through Cloudflare; do not expose the app through an alternate path that bypasses that proxy. Free Render services use an ephemeral filesystem, so uploaded barbershop logos are lost on redeploy or restart; free web services also cannot use persistent disks or send outbound SMTP on ports 465/587. The application stores uploads under `UPLOAD_DIR` (by default, `frontend/uploads`). Before production on Render, use paid API compute with a persistent disk mounted at the configured upload path or integrate durable object storage, and configure an SMTP provider reachable from the paid worker. See [Render persistent disks](https://render.com/docs/disks) and [free service limitations](https://render.com/docs/free).
+
+#### Railway notification worker
+
+Railway's `railway.json` starts the API and runs migrations. Set `CLIENT_IP_HEADER=X-Real-IP` so login, recovery, support and booking quotas use Railway's client IP header. Create a second Railway service from the same repository for notifications, set its start command to `cd backend && python -m scripts.notification_worker`, and provide the same MySQL `DATABASE_URL` plus SMTP and WhatsApp gateway variables. Run Alembic migrations only from the API service.
 
 #### AWS Deployment
 
 **Services:**
 - **EC2**: Application server
-- **RDS**: PostgreSQL database
+- **RDS**: MySQL database
 - **S3**: File storage
 - **CloudFront**: CDN
 - **Route 53**: DNS
@@ -210,15 +323,15 @@ services:
     run_command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     envs:
       - key: DATABASE_URL
-        value: ${db.DATABASE_URL}
+        value: mysql+pymysql://USER:PASSWORD@MYSQL_HOST:3306/kingflow_barber
+        type: SECRET
       - key: SECRET_KEY
         scope: RUN_TIME
         type: SECRET
 
-databases:
-  - name: db
-    engine: PG
-    version: "15"
+# Provide a managed MySQL 8 database and store its URL as a secret.
+# Set FRONTEND_BASE_URL to the public HTTPS origin (for example, https://kingflow.example)
+# so password recovery links use the deployed site rather than localhost.
 ```
 
 #### Heroku Deployment
@@ -233,8 +346,7 @@ heroku login
 # Create app
 heroku create kingflow-barber
 
-# Add PostgreSQL
-heroku addons:create heroku-postgresql:hobby-dev
+# Configure DATABASE_URL with a managed MySQL 8 service before deploying.
 
 # Deploy
 git push heroku main
@@ -253,9 +365,11 @@ Before going to production:
 - [ ] Set `DEBUG=False`
 - [ ] Use strong database passwords
 - [ ] Configure CORS properly (not `*`)
+- [ ] Set `SECRET_KEY` to a generated value of at least 32 characters.
+- [ ] Set `CORS_ORIGINS` to a JSON list containing only the public HTTPS app origins, such as `["https://app.example.com"]`.
 - [ ] Enable HTTPS/SSL
 - [ ] Setup firewall rules
-- [ ] Enable rate limiting
+- [ ] Verify MySQL-backed rate limits and configure only the trusted proxy IP header for the selected deployment
 - [ ] Configure backup strategy
 - [ ] Setup monitoring/logging
 - [ ] Use environment variables (never hardcode secrets)
@@ -332,13 +446,40 @@ jobs:
 ```bash
 # Daily backup script
 #!/bin/bash
+set -euo pipefail
 BACKUP_DIR="/backups/kingflow"
-DATE=$(date +%Y%m%d_%H%M%S)
+MYSQL_CNF="/etc/kingflow/backup.cnf"
+DATE="$(date +%Y%m%d_%H%M%S)"
+umask 077
+mkdir -p "$BACKUP_DIR"
+TEMP_BACKUP="$BACKUP_DIR/db_$DATE.sql.gz.tmp"
+trap 'rm -f "$TEMP_BACKUP"' EXIT
 
-pg_dump -U kingflow kingflow_barber | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+# backup.cnf must be readable only by the backup account (chmod 600).
+# Store its MySQL host, user, password, and port in a [client] section.
+mysqldump --defaults-extra-file="$MYSQL_CNF" \
+  --single-transaction --routines --triggers --events \
+  --databases kingflow_barber | gzip -c > "$TEMP_BACKUP"
+gzip -t "$TEMP_BACKUP"
+mv "$TEMP_BACKUP" "$BACKUP_DIR/db_$DATE.sql.gz"
+trap - EXIT
 
 # Keep only last 30 days
-find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
+find "$BACKUP_DIR" -type f -name "db_*.sql.gz" -mtime +30 -delete
+```
+
+Configure the MySQL backup account with only the privileges required by `mysqldump`; do not put its password on the command line. Back up uploaded logos under `frontend/uploads` as a separate persistent asset set. Periodically restore a backup to an isolated MySQL server and verify application reads before relying on the backup procedure. Never test a restore against the live production database.
+
+### Restore rehearsal
+
+Point the protected client file at a disposable recovery server first. The dump includes `CREATE DATABASE` and `USE` statements for `kingflow_barber`.
+
+```bash
+set -euo pipefail
+BACKUP_FILE="/backups/kingflow/db_YYYYMMDD_HHMMSS.sql.gz"
+MYSQL_CNF="/etc/kingflow/recovery.cnf"
+gzip -t "$BACKUP_FILE"
+gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$MYSQL_CNF"
 ```
 
 ### Automated Backups
@@ -356,7 +497,7 @@ find $BACKUP_DIR -name "db_*.sql.gz" -mtime +30 -delete
 
 1. **Add more API servers** behind load balancer
 2. **Database read replicas** for read-heavy operations
-3. **Redis cache** for session and frequently accessed data
+3. **Notification worker** polls the durable MySQL outbox; the application does not currently use Redis caching.
 4. **CDN** for static assets
 
 ### Load Balancer (Nginx)
@@ -383,11 +524,11 @@ server {
 
 **1. Database connection errors**
 ```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
+# Check MySQL is running
+sudo systemctl status mysql
 
 # Check connection
-psql -U kingflow -d kingflow_barber -h localhost
+mysql -u kingflow -p -h localhost kingflow_barber
 ```
 
 **2. Application won't start**

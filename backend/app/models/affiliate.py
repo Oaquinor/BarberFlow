@@ -18,11 +18,11 @@ class Affiliate(BaseModel):
     # Personal Info
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False)
     phone = Column(String(20), nullable=True)
 
     # Affiliate Info
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), unique=True, nullable=False)
     commission_rate = Column(Float, nullable=False, default=0.15)  # 15%
 
     # Bank Info

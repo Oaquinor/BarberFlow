@@ -1,5 +1,7 @@
 # ✅ KingFlow Barber - Verification & Testing Guide
 
+> **Checklist histórica, no apta para validar la versión actual:** contiene ejemplos de endpoints, IDs, migraciones y comandos de base de datos que pueden ser obsoletos o destructivos. No la uses para operar ni para restablecer datos. Consulta [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md), [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) y la suite CI vigente. Las pruebas requieren una base MySQL dedicada terminada en `_test`.
+
 **How to verify everything is working correctly**
 
 ---
@@ -64,36 +66,37 @@ pip list | grep alembic
 
 ## 🗄️ Database Verification
 
-### Step 1: Check PostgreSQL
+### Step 1: Check MySQL
 
 ```bash
-# Check if PostgreSQL is running
+# Check if MySQL is running
 # Windows:
-Get-Service -Name postgresql*
+Get-Service -Name '*mysql*'
 
 # Linux:
-sudo systemctl status postgresql
+sudo systemctl status mysql
 
 # Mac:
-brew services list
+brew services list | grep mysql
 ```
 
 ### Step 2: Create Database
 
 ```bash
-# Using psql
-psql -U postgres
+# Open a MySQL shell as an administrator
+mysql -u root -p
 
-CREATE DATABASE kingflow_barber;
-CREATE USER kingflow WITH PASSWORD 'kingflow123';
-GRANT ALL PRIVILEGES ON DATABASE kingflow_barber TO kingflow;
-\q
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'kingflow'@'%' IDENTIFIED BY 'REPLACE_WITH_A_STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'%';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 ### Step 3: Test Connection
 
 ```bash
-psql -U kingflow -d kingflow_barber -h localhost
+mysql -h localhost -u kingflow -p kingflow_barber
 
 # Should connect successfully
 ```
@@ -144,15 +147,15 @@ alembic upgrade head
 ### Step 3: Verify Tables
 
 ```bash
-psql -U kingflow -d kingflow_barber
+mysql -h localhost -u kingflow -p kingflow_barber
 
-\dt
+SHOW TABLES;
 # Should show tables: users, barbershops, appointments, subscriptions
 
-\d users
+DESCRIBE users;
 # Should show user table structure
 
-\q
+EXIT;
 ```
 
 ---
@@ -162,27 +165,24 @@ psql -U kingflow -d kingflow_barber
 ### Step 1: Seed Database
 
 ```bash
-python scripts/seed_db.py
+python -m scripts.seed_db --allow-demo-data
 
-# Should see:
-# 🌱 Starting database seeding...
-# ✅ Database seeded successfully!
-# 📋 Test Accounts:
-# (account list)
+# The script requires ENVIRONMENT=development, asks for confirmation,
+# and prints only whether disposable demo records were created.
 ```
 
 ### Step 2: Verify Data
 
 ```bash
-psql -U kingflow -d kingflow_barber
+mysql -h localhost -u kingflow -p kingflow_barber
 
 SELECT email, role FROM users;
 # Should show test users
 
-SELECT name FROM barbershops;
-# Should show King's Barbershop
+SELECT name FROM barbershops WHERE slug = 'kings-barbershop-demo';
+# Shows the disposable demo tenant only when seeding was explicitly run.
 
-\q
+EXIT;
 ```
 
 ---
@@ -245,8 +245,8 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@kingflow.com",
-    "password": "Admin123!"
+    "email": "<YOUR_SUPER_ADMIN_EMAIL>",
+    "password": "<YOUR_SUPER_ADMIN_PASSWORD>"
   }'
 
 # Should return: {"access_token":"...", "refresh_token":"...", ...}
@@ -260,7 +260,7 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 curl -X GET http://localhost:8000/api/v1/auth/me \
   -H "Authorization: Bearer <TOKEN>"
 
-# Should return: {"success":true,"data":{"id":1,"email":"admin@kingflow.com",...}}
+# Should return the authenticated administrator profile
 ```
 
 ### Test 4: Create Appointment
@@ -324,10 +324,11 @@ pytest --cov=app
 ```bash
 docker-compose up -d
 
-# Should start:
-# - kingflow_db (PostgreSQL)
-# - kingflow_redis (Redis)
-# - kingflow_backend (FastAPI)
+# Expected services:
+# - db (MySQL 8.4)
+# - backend (FastAPI)
+# - notification-worker (MySQL outbox worker)
+# - whatsapp (Baileys gateway)
 ```
 
 ### Check Containers
@@ -335,14 +336,14 @@ docker-compose up -d
 ```bash
 docker ps
 
-# Should show 3 running containers
+# Should show four application services
 ```
 
 ### Test Backend Container
 
 ```bash
 docker-compose exec backend alembic upgrade head
-docker-compose exec backend python scripts/seed_db.py
+docker-compose exec backend python -m scripts.seed_db --allow-demo-data
 
 # Then test API at http://localhost:8000
 ```
@@ -396,7 +397,7 @@ Run through this checklist:
 - [ ] Python 3.12+ installed
 - [ ] Virtual environment created and activated
 - [ ] All dependencies installed (`pip list` shows packages)
-- [ ] PostgreSQL running
+- [ ] MySQL running
 - [ ] Database created (`kingflow_barber`)
 - [ ] .env file configured
 - [ ] Migrations run successfully
@@ -418,11 +419,11 @@ Run through this checklist:
 
 **Solution:**
 ```bash
-# Check PostgreSQL is running
-sudo systemctl start postgresql
+# Check MySQL is running
+sudo systemctl start mysql
 
 # Verify credentials in .env
-DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@localhost:5432/kingflow_barber
+DATABASE_URL=mysql+pymysql://USER:PASSWORD@localhost:3307/kingflow_barber
 ```
 
 ### Issue: Module not found

@@ -1,17 +1,6 @@
-"""
-Analytics engine.
+"""Public analytics services used by the mounted API and business workflows."""
 
-Calculates business metrics and generates reports:
-- Performance metrics
-- Revenue tracking
-- Appointment statistics
-- Barber performance
-- Client retention
-- Peak hours analysis
-"""
+from app.ai.demand_forecast import DemandForecastService
+from app.services.performance_service import PerformanceService
 
-# TODO: Implement analytics engine
-# - Metric calculators
-# - Report generators
-# - Data aggregation
-# - Visualization data preparation
+__all__ = ["DemandForecastService", "PerformanceService"]

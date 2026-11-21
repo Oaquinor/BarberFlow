@@ -17,6 +17,6 @@ echo    KINGFLOW BARBER - INICIANDO SISTEMA
 echo ==============================================
 echo.
 
-python scripts\start_all.py
+python -m scripts.start_all
 
 pause

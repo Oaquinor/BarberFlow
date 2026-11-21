@@ -7,6 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    <link rel="stylesheet" href="/css/account-security.css">
+    <link rel="stylesheet" href="/css/ui-feedback.css">
     <title>Admin - KingFlow Barber</title>
     <style>
         :root {
@@ -72,6 +74,10 @@
         .toggle-btn.on { background: #dcfce7; color: #166534; }
         .toggle-btn.off { background: #f4f4f5; color: #52525b; }
         .empty-state { text-align: center; padding: 30px; color: var(--text-secondary); }
+        .overview-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+        .overview-stat { border:1px solid #e4e4e7; border-radius:14px; padding:16px; background:rgba(255,255,255,.65); }
+        .overview-value { display:block; font-size:1.7em; font-weight:800; color:var(--brand-primary); margin-top:5px; }
+        .overview-label { color:var(--text-secondary); font-weight:600; font-size:.9em; }
         .login-gate { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
         .login-card { max-width: 420px; width: 100%; text-align: center; }
         .login-card h2 { margin-bottom: 10px; color: var(--brand-primary); }
@@ -105,9 +111,35 @@
             </div>
             <div class="header-actions">
                 <span class="badge" id="adminEmail">-</span>
+                <button class="logout" type="button" id="changePasswordBtn" aria-haspopup="dialog">🔒 Contraseña</button>
                 <button class="logout" id="logoutBtn">Cerrar sesión</button>
             </div>
         </div>
+
+        <div class="card">
+            <div class="title">📈 Métricas globales</div>
+            <div class="toolbar"><span id="overviewPeriod" style="color:var(--text-secondary);"></span><button id="refreshOverviewBtn" type="button">🔄 Actualizar</button></div>
+            <div class="overview-grid">
+                <div class="overview-stat"><span class="overview-label">Barberías activas</span><strong class="overview-value" id="overviewTenants">—</strong></div>
+                <div class="overview-stat"><span class="overview-label">Suscripciones vigentes</span><strong class="overview-value" id="overviewSubscriptions">—</strong></div>
+                <div class="overview-stat"><span class="overview-label">Usuarios activos</span><strong class="overview-value" id="overviewUsers">—</strong></div>
+                <div class="overview-stat"><span class="overview-label">Citas creadas / completadas</span><strong class="overview-value" id="overviewAppointments">—</strong></div>
+            </div>
+            <p id="overviewRevenue" role="status" style="margin-top:14px;"></p>
+            <p id="overviewResult" role="status" aria-live="polite"></p>
+        </div>
+
+        <section class="card">
+            <div class="title">⚙️ Configuración general de plataforma</div>
+            <form id="platformSettingsForm" class="toolbar" style="align-items:flex-end;">
+                <label><input id="registrationsEnabled" type="checkbox"> Permitir nuevos registros de barberías</label>
+                <label for="freePeriodDays">Duración inicial del periodo gratuito (días)
+                    <input id="freePeriodDays" type="number" min="1" max="365" required>
+                </label>
+                <button type="submit">Guardar configuración</button>
+            </form>
+            <p id="platformSettingsResult" role="status" aria-live="polite"></p>
+        </section>
 
         <div class="card">
             <div class="title">🏢 Barberías afiliadas</div>
@@ -124,6 +156,7 @@
                             <th>Plan</th>
                             <th>Estado suscripción</th>
                             <th>Estado tenant</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tenantsBody"></tbody>
@@ -135,7 +168,7 @@
         <div class="card">
             <div class="title">💳 Cobros y suscripción</div>
             <div class="toolbar">
-                <select id="subscriptionTenantSelect">
+                <select id="subscriptionTenantSelect" aria-label="Barbería para consultar la suscripción">
                     <option value="">Selecciona una barbería...</option>
                 </select>
                 <button id="loadSubscriptionBtn">🔍 Cargar</button>
@@ -143,7 +176,7 @@
             <div id="subscriptionPanel" style="display:none;">
                 <div class="toolbar" style="align-items:flex-end;">
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
+                        <label for="subPlan" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
                         <select id="subPlan">
                             <option value="free">Free</option>
                             <option value="basic">Basic</option>
@@ -152,7 +185,7 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de pago</label>
+                        <label for="subStatus" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de suscripción</label>
                         <select id="subStatus">
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
@@ -162,26 +195,40 @@
                         </select>
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Próximo cobro</label>
+                        <label for="subPeriodEnd" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
                         <input type="date" id="subPeriodEnd" />
                     </div>
                     <div>
-                        <label style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Auto-renovación</label>
+                        <label for="subAutoRenew" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Indicador de auto-renovación</label>
                         <select id="subAutoRenew">
-                            <option value="true">Sí</option>
+                            <option value="true">Marcada</option>
                             <option value="false">No</option>
                         </select>
                     </div>
                     <button id="saveSubscriptionBtn">💾 Guardar</button>
                 </div>
                 <p id="subscriptionResult" style="margin-top:10px;color:var(--text-secondary);"></p>
+                <p style="color:var(--text-secondary);">Este indicador es administrativo; no procesa ni programa cargos. Cada periodo requiere registrar manualmente el pago recibido.</p>
+                <hr>
+                <h3>Registrar cobro recibido</h3>
+                <p>Este registro confirma un cobro externo recibido. No procesa tarjetas ni crea un cobro ficticio.</p>
+                <form id="subscriptionPaymentForm" class="toolbar" style="align-items:flex-end;">
+                    <div><label for="subscriptionPaymentAmount">Importe recibido (moneda del negocio)</label><input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" required></div>
+                    <div><label for="subscriptionPaymentMethod">Método</label><select id="subscriptionPaymentMethod"><option value="card">Tarjeta externa</option><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="other">Otro</option></select></div>
+                    <div><label for="subscriptionPaymentReference">Referencia</label><input id="subscriptionPaymentReference" maxlength="120"></div>
+                    <div><label for="subscriptionPaymentStart">Inicio del periodo</label><input id="subscriptionPaymentStart" type="date" required></div>
+                    <div><label for="subscriptionPaymentEnd">Fin del periodo</label><input id="subscriptionPaymentEnd" type="date" required></div>
+                    <label><input id="subscriptionPaymentConfirmed" type="checkbox" required> Confirmo que recibí el pago</label>
+                    <button id="recordSubscriptionPaymentBtn" type="submit">Registrar cobro recibido</button>
+                </form>
+                <p id="subscriptionPaymentResult" role="status" aria-live="polite"></p>
             </div>
         </div>
 
         <div class="card">
             <div class="title">👥 Usuarios y permisos</div>
             <div class="toolbar">
-                <select id="tenantFilter">
+                <select id="tenantFilter" aria-label="Filtrar usuarios por barbería">
                     <option value="">Todas las barberías</option>
                 </select>
                 <button id="refreshUsersBtn">🔄 Actualizar</button>
@@ -195,6 +242,7 @@
                             <th>Rol</th>
                             <th>Barbería</th>
                             <th>Estado</th>
+                            <th>Acceso</th>
                             <th>Soporte por correo</th>
                             <th>Branding automático</th>
                         </tr>
@@ -204,8 +252,92 @@
                 <div id="usersEmpty" class="empty-state" style="display:none;">No hay usuarios para mostrar.</div>
             </div>
         </div>
+        <div class="card">
+            <div class="title">🎧 Bandeja de soporte</div>
+            <div class="toolbar">
+                <label for="supportTicketFilter">Estado</label>
+                <select id="supportTicketFilter">
+                    <option value="">Todos</option>
+                    <option value="open">Abiertos</option>
+                    <option value="in_progress">En curso</option>
+                    <option value="resolved">Resueltos</option>
+                    <option value="closed">Cerrados</option>
+                </select>
+                <button id="refreshSupportTicketsBtn" type="button">🔄 Actualizar</button>
+                <span id="supportTicketsResult" role="status" style="color:var(--text-secondary);"></span>
+                <button id="previousSupportTicketsBtn" type="button" disabled>← Anterior</button>
+                <button id="nextSupportTicketsBtn" type="button" disabled>Siguiente →</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Fecha</th><th>Barbería</th><th>Contacto</th><th>Mensaje</th><th>Aviso por correo</th><th>Estado</th><th>Acción</th></tr></thead>
+                    <tbody id="supportTicketsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="title">🧾 Auditoría de operaciones</div>
+            <div class="toolbar">
+                <select id="auditTenantFilter" aria-label="Filtrar auditoría por barbería"><option value="">Todas las barberías</option></select>
+                <button id="loadAuditBtn" type="button">🔄 Cargar historial</button>
+                <span id="auditResult" role="status" style="color:var(--text-secondary);"></span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Fecha</th><th>Barbería</th><th>Usuario</th><th>Acción</th><th>Elemento</th><th>Datos</th></tr></thead>
+                    <tbody id="auditBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="title">🤝 Programa de afiliados</div>
+            <form id="affiliateForm" class="toolbar">
+                <input id="affiliateFirstName" aria-label="Nombre del afiliado" required minlength="2" maxlength="100" placeholder="Nombre">
+                <input id="affiliateLastName" aria-label="Apellido del afiliado" required minlength="2" maxlength="100" placeholder="Apellido">
+                <input id="affiliateEmail" aria-label="Correo del afiliado" type="email" required placeholder="Correo">
+                <input id="affiliatePhone" aria-label="Teléfono del afiliado" maxlength="20" placeholder="Teléfono">
+                <label>Comisión % <input id="affiliateRate" type="number" min="0.01" max="100" step="0.01" value="15" required></label>
+                <button type="submit">Crear afiliado</button>
+            </form>
+            <p id="affiliateFormResult" role="status"></p>
+            <div class="table-wrap">
+                <table><thead><tr><th>Afiliado</th><th>Código</th><th>Estado</th><th>Referidos</th><th>Comisiones por moneda</th><th>Acciones</th></tr></thead><tbody id="affiliatesBody"></tbody></table>
+            </div>
+            <div class="toolbar" style="margin-top:18px;">
+                <select id="affiliateCommissionSelect" aria-label="Afiliado para consultar comisiones"><option value="">Selecciona afiliado para ver comisiones</option></select>
+                <button id="loadAffiliateCommissionsBtn" type="button">Ver comisiones</button>
+            </div>
+            <div class="table-wrap">
+                <table><thead><tr><th>Barbería</th><th>Importe</th><th>Periodo</th><th>Estado</th><th>Referencia de pago</th><th>Acciones</th></tr></thead><tbody id="affiliateCommissionsBody"></tbody></table>
+            </div>
+            <p id="affiliateCommissionResult" role="status"></p>
+        </div>
     </div>
 
+    <dialog id="passwordChangeDialog" class="password-dialog" aria-labelledby="passwordChangeTitle">
+        <h2 id="passwordChangeTitle">Cambiar contraseña</h2>
+        <p>El cambio cerrará tus sesiones activas en todos los dispositivos.</p>
+        <form id="passwordChangeForm">
+            <label for="passwordCurrent">Contraseña actual</label>
+            <input id="passwordCurrent" type="password" autocomplete="current-password" required maxlength="72">
+            <label for="passwordNew">Nueva contraseña</label>
+            <input id="passwordNew" type="password" autocomplete="new-password" required minlength="12" maxlength="72" aria-describedby="passwordChangeHint">
+            <small id="passwordChangeHint">Usa al menos 12 caracteres, una mayúscula y un número.</small>
+            <label for="passwordConfirm">Confirmar contraseña nueva</label>
+            <input id="passwordConfirm" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
+            <p id="passwordChangeResult" role="status" aria-live="polite"></p>
+            <div class="password-dialog-actions">
+                <button id="closePasswordChange" type="button" class="logout">Cancelar</button>
+                <button type="submit" class="logout">Actualizar contraseña</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/account-security.js"></script>
+    <script src="js/ui-feedback.js"></script>
+    <script src="js/pwa.js"></script>
     <script src="js/admin.js"></script>
 </body>
 </html>

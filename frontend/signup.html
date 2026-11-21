@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#667eea">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <title>Crear barbería | KingFlow Barber</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111827;font:16px/1.5 system-ui,sans-serif}.wrap{max-width:920px;margin:32px auto;padding:20px}.card{background:white;border-radius:16px;padding:28px;box-shadow:0 12px 40px #11182714}h1{margin:0 0 6px}p{color:#4b5563}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.wide{grid-column:1/-1}label{display:block;font-weight:600;margin-bottom:5px}input,select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:8px;font:inherit}fieldset{border:0;padding:0;margin:24px 0}legend{font-size:1.1rem;font-weight:700;margin-bottom:12px}button{width:100%;border:0;border-radius:9px;background:#111827;color:white;padding:13px;font:700 1rem system-ui;cursor:pointer}button:disabled{opacity:.6;cursor:wait}#result{min-height:24px;color:#b91c1c}.foot{text-align:center}.foot a{color:#1d4ed8}@media(max-width:600px){.wrap{margin:8px auto;padding:10px}.card{padding:20px}}
+  </style>
+  <link rel="stylesheet" href="/css/auth-pages.css">
+</head>
+<body><main class="wrap"><section class="card">
+  <h1>Abre tu barbería en KingFlow</h1><p id="registrationOffer">El registro crea tu espacio de trabajo y activa el periodo gratuito configurado por la plataforma. Configurarás el negocio en el siguiente paso.</p>
+  <p id="registrationStatus" role="status" aria-live="polite"></p>
+  <form id="signupForm" autocomplete="on">
+    <fieldset><legend>Tu cuenta de propietario</legend><div class="grid">
+      <div><label for="owner_first_name">Nombre</label><input id="owner_first_name" required minlength="2" maxlength="100" autocomplete="given-name"></div>
+      <div><label for="owner_last_name">Apellido</label><input id="owner_last_name" required minlength="2" maxlength="100" autocomplete="family-name"></div>
+      <div><label for="owner_email">Correo de acceso</label><input id="owner_email" type="email" required autocomplete="email"></div>
+      <div><label for="owner_phone">Teléfono</label><input id="owner_phone" type="tel" required minlength="6" maxlength="30" autocomplete="tel"></div>
+      <div class="wide"><label for="owner_password">Contraseña (12 caracteres, una mayúscula y un número)</label><input id="owner_password" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></div>
+    </div></fieldset>
+    <fieldset><legend>Datos de la barbería</legend><div class="grid">
+      <div><label for="barbershop_name">Nombre comercial</label><input id="barbershop_name" required minlength="2" maxlength="200" autocomplete="organization"></div>
+      <div><label for="barbershop_email">Correo del negocio</label><input id="barbershop_email" type="email" required autocomplete="email"></div>
+      <div><label for="barbershop_phone">Teléfono del negocio</label><input id="barbershop_phone" type="tel" required minlength="6" maxlength="20"></div>
+      <div><label for="address_line1">Dirección</label><input id="address_line1" required minlength="3" maxlength="255" autocomplete="street-address"></div>
+      <div><label for="city">Ciudad</label><input id="city" required minlength="2" maxlength="100" autocomplete="address-level2"></div>
+      <div><label for="state">Provincia / Estado</label><input id="state" required minlength="2" maxlength="100" autocomplete="address-level1"></div>
+      <div><label for="postal_code">Código postal</label><input id="postal_code" required minlength="2" maxlength="20" autocomplete="postal-code"></div>
+      <div><label for="country">País</label><input id="country" required minlength="2" maxlength="100" value="República Dominicana" autocomplete="country-name"></div>
+      <div><label for="timezone">Zona horaria (IANA)</label><input id="timezone" required value="America/Santo_Domingo" placeholder="America/Santo_Domingo"></div>
+      <div><label for="currency">Moneda</label><select id="currency"><option value="DOP">DOP — Peso dominicano</option><option value="USD">USD — Dólar estadounidense</option><option value="EUR">EUR — Euro</option></select></div>
+      <div class="wide"><label for="affiliate_code">Código de afiliado (opcional)</label><input id="affiliate_code" maxlength="50" autocomplete="off"></div>
+    </div></fieldset>
+    <p id="result" role="alert" aria-live="polite"></p><button id="submitButton" type="submit">Crear cuenta y barbería</button>
+  </form>
+  <p class="foot">¿Ya tienes cuenta? <a href="/">Iniciar sesión</a></p>
+</section></main><script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/signup.js"></script></body></html>

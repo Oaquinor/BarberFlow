@@ -1,5 +1,7 @@
 # Changelog
 
+> **Estado:** este archivo contiene notas históricas de 2024 y descripciones iniciales que no representan el estado actual. Para la arquitectura y el estado verificados, consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). La base de datos vigente es MySQL; los cobros de suscripción no tienen una pasarela Stripe conectada.
+
 All notable changes to KingFlow Barber will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -50,10 +52,10 @@ Complete enterprise-grade SaaS platform for modern barbershops.
 - Plan limits (barbers, appointments, clients)
 - Subscription status tracking
 - Billing period management
-- Stripe integration ready
+- Subscription billing tracked in the application; Stripe was not connected in this release snapshot.
 
-#### Database
-- PostgreSQL with async support
+#### Database (historical release snapshot)
+- Initial implementation description listed PostgreSQL; the current application uses MySQL 8.
 - SQLAlchemy ORM
 - Alembic migrations
 - Soft delete pattern
@@ -120,7 +122,7 @@ Complete enterprise-grade SaaS platform for modern barbershops.
 ### 🏗️ Technical Stack
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy
-- **Database**: PostgreSQL 15
+- **Database at the time of this snapshot**: PostgreSQL 15 (current project uses MySQL 8; see [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md))
 - **Authentication**: JWT (python-jose)
 - **Password**: bcrypt (passlib)
 - **Validation**: Pydantic v2
