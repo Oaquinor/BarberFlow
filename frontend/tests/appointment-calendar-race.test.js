@@ -74,3 +74,50 @@ test("a stale agenda request failure does not replace the current view with an e
   assert.deepEqual(loader.errors, []);
   assert.deepEqual(loader.rendered, [{ date: "2026-11-21", appointments: [] }]);
 });
+
+test("a stale dashboard response cannot overwrite current appointment statistics", async () => {
+  const pending = [];
+  const updates = [];
+  const sandbox = {
+    accessToken: "test-token",
+    API_ROOT: "https://api.kingflow.test",
+    dashboardRequestSequence: 0,
+    KingFlowAuth: { fetch: () => new Promise((resolve) => pending.push(resolve)) },
+    setText: (...args) => updates.push(args),
+    console: { error() {} },
+  };
+  const start = source.indexOf("async function loadBarberDashboardData()");
+  const end = source.indexOf("\nasync function ownerFetch(", start);
+  vm.runInNewContext(`${source.slice(start, end)}\nthis.loadBarberDashboardData = loadBarberDashboardData;`, sandbox);
+
+  const staleRequest = sandbox.loadBarberDashboardData();
+  sandbox.loadBarberDashboardData();
+  pending[0]({ ok: true, async json() { return { summary: { total: 1 } }; } });
+  await staleRequest;
+
+  assert.deepEqual(updates, []);
+});
+
+test("a stale cash summary cannot overwrite the latest reconciliation", async () => {
+  const pending = [];
+  const updates = [];
+  const sandbox = {
+    accessToken: "test-token",
+    API_ROOT: "https://api.kingflow.test",
+    cashSummaryRequestSequence: 0,
+    KingFlowAuth: { fetch: () => new Promise((resolve) => pending.push(resolve)) },
+    setText: (...args) => updates.push(args),
+    console: { error() {} },
+  };
+  const start = source.indexOf("async function loadCashSummary()");
+  const end = source.indexOf("\ndocument.getElementById('cashCloseForm')", start);
+  vm.runInNewContext(`${source.slice(start, end)}\nthis.loadCashSummary = loadCashSummary;`, sandbox);
+
+  const staleRequest = sandbox.loadCashSummary();
+  sandbox.loadCashSummary();
+  pending[0]({ ok: true, async json() { return { total_cents: 12500 }; } });
+  await staleRequest;
+
+  assert.deepEqual(updates, []);
+});
+

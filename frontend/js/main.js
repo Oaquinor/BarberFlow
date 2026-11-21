@@ -10,6 +10,8 @@ let editingServiceId = null;
 let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
 let appointmentsRequestSequence = 0;
+let dashboardRequestSequence = 0;
+let cashSummaryRequestSequence = 0;
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 let serviceTimerInterval = null;
@@ -748,6 +750,7 @@ document.getElementById('appointmentsCalendarGrid')?.addEventListener('click', e
 
 async function loadBarberDashboardData() {
     if (!accessToken) return;
+    const requestSequence = ++dashboardRequestSequence;
 
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/dashboard`, {
@@ -757,6 +760,7 @@ async function loadBarberDashboardData() {
         if (!response.ok) return;
 
         const data = await response.json();
+        if (requestSequence !== dashboardRequestSequence) return;
         const summary = data.summary || {};
         const total = Number(summary.total || 0);
         const completed = Number(summary.completed || 0);
@@ -809,6 +813,7 @@ async function loadBarberDashboardData() {
         } else {
             await loadAppointmentsForDate(selectedAppointmentsDate);
         }
+        if (requestSequence !== dashboardRequestSequence) return;
 
         const servicesList = document.getElementById('servicesList');
         if (servicesList) {
@@ -1827,10 +1832,12 @@ let cashCurrency = 'USD';
 
 async function loadCashSummary() {
     if (!accessToken) return;
+    const requestSequence = ++cashSummaryRequestSequence;
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/cash/today`);
         if (!response.ok) return;
         const data = await response.json();
+        if (requestSequence !== cashSummaryRequestSequence) return;
         cashBusinessDate = data.business_date;
         cashCurrency = data.currency || 'USD';
         const format = (cents) => new Intl.NumberFormat('es-DO', { style: 'currency', currency: cashCurrency }).format((Number(cents) || 0) / 100);
