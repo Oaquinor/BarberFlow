@@ -127,3 +127,22 @@ for (const viewport of viewports) {
     }
   });
 }
+
+test("registro y recuperación comparten la identidad visual de KingFlow", async ({ page }) => {
+  for (const route of ["/signup.html", "/reset-password.html"]) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    const design = await page.evaluate(() => ({
+      themeColor: document.querySelector('meta[name="theme-color"]').content,
+      bodyBackground: getComputedStyle(document.body).backgroundImage,
+      cardRadius: getComputedStyle(document.querySelector(".card")).borderRadius,
+      fieldRadius: getComputedStyle(document.querySelector("input")).borderRadius,
+      buttonBackground: getComputedStyle(document.querySelector("button")).backgroundImage,
+    }));
+
+    expect(design.themeColor).toBe("#667eea");
+    expect(design.bodyBackground).toContain("linear-gradient");
+    expect(design.cardRadius).toBe("20px");
+    expect(design.fieldRadius).toBe("12px");
+    expect(design.buttonBackground).toContain("linear-gradient");
+  }
+});

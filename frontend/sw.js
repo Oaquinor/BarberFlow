@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v28`;
+const CACHE_NAME = `${CACHE_PREFIX}v29`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -11,6 +11,7 @@ const ASSETS_TO_CACHE = [
   '/offline.html',
   '/manifest.webmanifest',
   '/css/styles.css',
+  '/css/auth-pages.css',
   '/css/account-security.css',
   '/css/ui-feedback.css',
   '/js/main.js?v=20261120-csp-events',
