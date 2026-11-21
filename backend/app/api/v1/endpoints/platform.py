@@ -3091,7 +3091,7 @@ def barber_record_appointment_payment(
     # Take the shared cash-close lock before the appointment row. Cash close
     # takes these locks in the same order, avoiding a shop/appointment cycle.
     shop = db.query(Barbershop).filter(
-        Barbershop.id == assignment.barbershop_id,
+        Barbershop.id == user.barbershop_id,
         Barbershop.is_deleted == False,
     ).with_for_update().first()
     if not shop or not shop.currency:
