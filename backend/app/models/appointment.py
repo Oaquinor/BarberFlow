@@ -4,7 +4,7 @@ Appointment model.
 Represents a booking/appointment between a client and barber.
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -15,6 +15,9 @@ class Appointment(BaseModel):
     """Appointment entity."""
 
     __tablename__ = "appointments"
+    __table_args__ = (
+        Index("ix_appointments_shop_created_at", "barbershop_id", "created_at"),
+    )
 
     # Multi-tenant
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=False, index=True)
