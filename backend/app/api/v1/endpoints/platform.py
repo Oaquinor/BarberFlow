@@ -205,7 +205,9 @@ def _cash_register_closed_for_user(
         ))
     else:
         query = query.filter(CashRegisterClose.closed_by_user_id == user.id)
-    return query.first() is not None
+    # A locking read uses current committed state after waiting on the shared
+    # barbershop mutex; a repeatable-read snapshot could miss a close that just won.
+    return query.with_for_update().first() is not None
 
 
 def _service_progress_percent(appointment: Appointment, now_utc: datetime) -> int:
@@ -1353,6 +1355,8 @@ def public_create_appointment(
     if slot_duration < timedelta(minutes=service.duration_minutes):
         raise HTTPException(status_code=409, detail="El turno no tiene duración suficiente para este servicio")
 
+    booking_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    scheduled_business_date = _utc_aware(scheduled_time).astimezone(_get_timezone(shop)).date()
     barber = db.query(User).filter(
         User.id == slot.barber_id,
         User.barbershop_id == shop.id,
@@ -1363,13 +1367,12 @@ def public_create_appointment(
     if not barber:
         raise HTTPException(status_code=400, detail="El barbero del turno no está disponible")
 
-    booking_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
-    if _utc_aware(scheduled_time).astimezone(_get_timezone(shop)).date() == booking_business_date:
-        locked_shop = db.query(Barbershop).filter(
+    if scheduled_business_date == booking_business_date:
+        shop = db.query(Barbershop).filter(
             Barbershop.id == shop.id,
             Barbershop.is_deleted == False,
         ).with_for_update().first()
-        if not locked_shop:
+        if not shop:
             raise HTTPException(status_code=404, detail="Barbería no encontrada")
         if _cash_register_closed_for_user(
             db, barber, shop.id, datetime.combine(booking_business_date, time.min),
@@ -2078,7 +2081,9 @@ def public_reschedule_appointment(
     _require_active_subscription(db, shop, lock=True)
 
     token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
-    appointment_ref = db.query(Appointment.id, Appointment.barber_id).filter(
+    appointment_ref = db.query(
+        Appointment.id, Appointment.barber_id, Appointment.scheduled_time,
+    ).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.tracking_token_hash == token_hash,
         Appointment.is_deleted == False,
@@ -2086,7 +2091,7 @@ def public_reschedule_appointment(
     if not appointment_ref:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
 
-    slot_ref = db.query(BarberAvailability.barber_id).filter(
+    slot_ref = db.query(BarberAvailability.barber_id, BarberAvailability.slot_start).filter(
         BarberAvailability.id == data.availability_id,
         BarberAvailability.barbershop_id == shop.id,
         BarberAvailability.is_deleted == False,
@@ -2094,8 +2099,16 @@ def public_reschedule_appointment(
     if not slot_ref:
         raise HTTPException(status_code=409, detail="El nuevo turno ya no está disponible")
 
-    # Public bookings and service transitions lock barber rows before appointments.
-    # Lock both barber rows in primary-key order before taking the appointment lock.
+    reschedule_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    changes_business_day = (
+        _utc_aware(appointment_ref.scheduled_time).astimezone(_get_timezone(shop)).date()
+        == reschedule_business_date
+        or _utc_aware(slot_ref.slot_start).astimezone(_get_timezone(shop)).date()
+        == reschedule_business_date
+    )
+    # Public bookings, service transitions, and cash close take locks in this
+    # order: barber rows (when needed), shop mutex, then appointment rows.
+    # Lock both barber rows in primary-key order before the appointment lock.
     barber_ids = sorted({appointment_ref.barber_id, slot_ref.barber_id})
     barbers_by_id = {}
     for barber_id in barber_ids:
@@ -2109,6 +2122,14 @@ def public_reschedule_appointment(
             barbers_by_id[barber.id] = barber
     if len(barbers_by_id) != len(barber_ids):
         raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
+
+    if changes_business_day:
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == shop.id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
 
     appointment = db.query(Appointment).filter(
         Appointment.id == appointment_ref.id,
@@ -2145,14 +2166,7 @@ def public_reschedule_appointment(
 
     new_start = new_slot.slot_start
     new_end = new_start + timedelta(minutes=appointment.estimated_duration)
-    reschedule_business_date = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
     if _utc_aware(new_start).astimezone(_get_timezone(shop)).date() == reschedule_business_date:
-        locked_shop = db.query(Barbershop).filter(
-            Barbershop.id == shop.id,
-            Barbershop.is_deleted == False,
-        ).with_for_update().first()
-        if not locked_shop:
-            raise HTTPException(status_code=404, detail="Barbería no encontrada")
         if _cash_register_closed_for_user(
             db, barber, shop.id, datetime.combine(reschedule_business_date, time.min),
         ):
@@ -2874,6 +2888,17 @@ def barber_update_appointment_status(
     if not assigned_barber:
         raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
 
+    shop = None
+    if status == "in_progress":
+        # Cash close locks the shop before reading appointments. Acquire that
+        # same mutex before locking this appointment to keep a consistent order.
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == user.barbershop_id,
+            Barbershop.is_deleted == False,
+        ).with_for_update().first()
+        if not shop:
+            raise HTTPException(status_code=404, detail="Barbería no encontrada")
+
     appointment = (
         db.query(Appointment)
         .filter(
@@ -2920,12 +2945,6 @@ def barber_update_appointment_status(
             raise HTTPException(status_code=409, detail="Solo se puede iniciar el servicio dentro de los 15 minutos de la hora programada")
         if not assigned_barber.is_active:
             raise HTTPException(status_code=409, detail="El barbero asignado ya no está activo en esta barbería")
-        shop = db.query(Barbershop).filter(
-            Barbershop.id == appointment.barbershop_id,
-            Barbershop.is_deleted == False,
-        ).with_for_update().first()
-        if not shop:
-            raise HTTPException(status_code=404, detail="Barbería no encontrada")
         business_day = _utc_aware(now).astimezone(_get_timezone(shop)).date()
         if _cash_register_closed_for_user(
             db, assigned_barber, shop.id, datetime.combine(business_day, time.min),
@@ -3069,6 +3088,15 @@ def barber_record_appointment_payment(
     if not barber:
         raise HTTPException(status_code=409, detail="El barbero asignado ya no está disponible")
 
+    # Take the shared cash-close lock before the appointment row. Cash close
+    # takes these locks in the same order, avoiding a shop/appointment cycle.
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == assignment.barbershop_id,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop or not shop.currency:
+        raise HTTPException(status_code=409, detail="Configura la moneda de la barbería antes de cobrar")
+
     appointment = db.query(Appointment).filter(
         Appointment.id == appointment_id,
         Appointment.barbershop_id == user.barbershop_id,
@@ -3091,14 +3119,7 @@ def barber_record_appointment_payment(
     if db.query(Payment.id).filter(Payment.appointment_id == appointment.id, Payment.is_deleted == False).first():
         raise HTTPException(status_code=409, detail="Esta cita ya tiene un pago registrado")
 
-    # A shop row is the shared lock for payment posting and daily cash close.
-    # This serializes a checkout against a close so no payment can slip in after it.
-    shop = db.query(Barbershop).filter(
-        Barbershop.id == appointment.barbershop_id,
-        Barbershop.is_deleted == False,
-    ).with_for_update().first()
-    if not shop or not shop.currency:
-        raise HTTPException(status_code=409, detail="Configura la moneda de la barbería antes de cobrar")
+    # The shop row is the shared mutex used above and by daily cash close.
     business_day = _utc_aware(now).astimezone(_get_timezone(shop)).date()
     close_key = datetime.combine(business_day, time.min)
     if _cash_register_closed_for_user(db, user, shop.id, close_key):
