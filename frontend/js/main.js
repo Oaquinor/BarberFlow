@@ -281,7 +281,10 @@ async function loadBarbershopProfile() {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/profile`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
-        if (!response.ok) return true;
+        if (!response.ok) {
+            showToast('No fue posible validar la configuración de tu barbería. Intenta iniciar sesión nuevamente.', 'error');
+            return false;
+        }
 
         barbershopProfile = await response.json();
 
@@ -297,7 +300,8 @@ async function loadBarbershopProfile() {
         return true;
     } catch (error) {
         console.error('Error loading profile:', error);
-        return true;
+        showToast('No fue posible validar la configuración de tu barbería. Revisa tu conexión e inicia sesión nuevamente.', 'error');
+        return false;
     }
 }
 
