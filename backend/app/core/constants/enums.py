@@ -156,10 +156,3 @@ EMAIL_TEMPLATES = {
     "appointment_rescheduled": "appointment_rescheduled.html",
     "welcome": "welcome.html",
 }
-
-# WebSocket Events
-WS_EVENT_APPOINTMENT_CREATED = "appointment_created"
-WS_EVENT_APPOINTMENT_UPDATED = "appointment_updated"
-WS_EVENT_APPOINTMENT_DELETED = "appointment_deleted"
-WS_EVENT_BARBER_STATUS_CHANGED = "barber_status_changed"
-WS_EVENT_CLIENT_CHECKED_IN = "client_checked_in"

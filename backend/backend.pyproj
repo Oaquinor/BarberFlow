@@ -73,7 +73,6 @@
     <Folder Include="app\schemas\" />
     <Folder Include="app\services\" />
     <Folder Include="app\utils\" />
-    <Folder Include="app\websocket\" />
     <Folder Include="app\workers\" />
     <Folder Include="scripts\" />
     <Folder Include="tests\" />

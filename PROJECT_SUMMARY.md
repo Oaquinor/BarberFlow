@@ -71,7 +71,7 @@ Para repetir la suite del backend, crea una base **desechable MySQL** cuyo nombr
 
 - Los cobros de suscripción y las comisiones de afiliado se registran después de recibir un pago externo; no existe pasarela de pago conectada.
 - El pronóstico es un promedio histórico explicable; no usa un modelo entrenado ni un proveedor generativo.
-- El manager WebSocket es un prototipo sin ruta autenticada ni emisión conectada a las citas. El portal usa bandeja interna con consulta periódica.
+- El portal usa bandeja interna con consulta periódica; no hay un canal WebSocket activo.
 - No hay notificaciones push ni proveedor SMS.
 - Credenciales y secretos de infraestructura se administran mediante configuración de despliegue, no desde la interfaz de plataforma.
 - La entrega depende de la configuración del proveedor; la cola reintenta y registra fallos, pero no garantiza entrega externa.
