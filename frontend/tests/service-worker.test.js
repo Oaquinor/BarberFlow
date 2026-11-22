@@ -48,7 +48,7 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v34");
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v35");
   assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261122-manual-renewal-request"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js"));
@@ -413,6 +413,9 @@ test("owner subscription panel reads period status and plan usage from the API",
   assert.doesNotMatch(script, /data\.auto_renew/);
   assert.match(adminPage, /Este indicador es administrativo; no procesa ni programa cargos/);
   assert.match(adminScript, /El cobro se registra manualmente/);
+  assert.match(adminPage, /id="supportOpenCount"/);
+  assert.match(adminScript, /refreshOpenSupportTicketCount\(true\)/);
+  assert.match(adminScript, /Llegó una nueva solicitud a la bandeja de soporte/);
 });
 
 test("does not persist navigations whose query carries a tracking token", async () => {

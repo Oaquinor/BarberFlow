@@ -11,6 +11,9 @@ let accessToken = sessionStorage.getItem('token');
 let currentTenants = [];
 let tenantsRequestSequence = 0;
 let supportTicketsOffset = 0;
+let latestOpenSupportTicketId = null;
+let supportAlertsInitialized = false;
+let supportAlertsRefreshing = false;
 const SUPPORT_TICKETS_PAGE_SIZE = 50;
 let usersOffset = 0;
 let usersRequestSequence = 0;
@@ -194,6 +197,34 @@ async function loadAuditLogs() {
         result.textContent = `${items.length} registro(s)`;
     } catch (error) {
         result.textContent = error.message;
+    }
+}
+
+async function refreshOpenSupportTicketCount(notifyNew = false) {
+    if (supportAlertsRefreshing) return;
+    supportAlertsRefreshing = true;
+    const counter = document.getElementById('supportOpenCount');
+    try {
+        const data = await fetchJson('/api/v1/admin/support/tickets?status=open&limit=1&offset=0');
+        const count = Number(data.total || 0);
+        const latestId = Number(data.items?.[0]?.id) || null;
+        if (counter) counter.textContent = `Solicitudes abiertas: ${count}`;
+
+        const isNew = notifyNew && supportAlertsInitialized && latestId !== null
+            && latestId > (latestOpenSupportTicketId || 0);
+        latestOpenSupportTicketId = latestId;
+        supportAlertsInitialized = true;
+        if (isNew) {
+            showToast('Llegó una nueva solicitud a la bandeja de soporte.');
+            if (document.getElementById('supportTicketFilter')?.value === 'open') {
+                supportTicketsOffset = 0;
+                await loadSupportTickets();
+            }
+        }
+    } catch (error) {
+        if (counter) counter.textContent = `No se pudo consultar soporte: ${error.message}`;
+    } finally {
+        supportAlertsRefreshing = false;
     }
 }
 
@@ -647,7 +678,10 @@ document.getElementById('nextUsersBtn')?.addEventListener('click', () => {
     usersOffset += USERS_PAGE_SIZE;
     loadUsers();
 });
-document.getElementById('refreshSupportTicketsBtn')?.addEventListener('click', loadSupportTickets);
+document.getElementById('refreshSupportTicketsBtn')?.addEventListener('click', async () => {
+    await loadSupportTickets();
+    await refreshOpenSupportTicketCount();
+});
 document.getElementById('previousSupportTicketsBtn')?.addEventListener('click', () => {
     supportTicketsOffset = Math.max(0, supportTicketsOffset - SUPPORT_TICKETS_PAGE_SIZE);
     loadSupportTickets();
@@ -686,6 +720,10 @@ async function init() {
         await loadUsers();
         await loadAffiliates();
         await loadSupportTickets();
+        await refreshOpenSupportTicketCount();
+        window.setInterval(() => {
+            if (document.visibilityState === 'visible') void refreshOpenSupportTicketCount(true);
+        }, 60_000);
     } catch (error) {
         console.error(error);
         showGate();

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v34`;
+const CACHE_NAME = `${CACHE_PREFIX}v35`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
