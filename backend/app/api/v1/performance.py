@@ -127,10 +127,12 @@ def get_monthly_summary(
     current_user: User = Depends(get_current_user)
 ):
     """Get monthly performance summary."""
-    if not year or not month:
+    if year is None and month is None:
         today = _tenant_today(current_user, db)
         year = today.year
         month = today.month
+    elif year is None or month is None:
+        raise HTTPException(status_code=422, detail="Especifica tanto el año como el mes")
 
     if month < 1 or month > 12 or year < 2000 or year > _tenant_today(current_user, db).year + 1:
         raise HTTPException(status_code=422, detail="Periodo no válido")

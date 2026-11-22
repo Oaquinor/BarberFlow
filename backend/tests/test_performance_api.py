@@ -50,6 +50,14 @@ def test_performance_api_enforces_barber_and_tenant_access(client: TestClient, t
     )
     assert owner_same_tenant.status_code == 200
 
+    partial_year = client.get(
+        f"/api/v1/performance/monthly/{barber_a.id}?year=2025", headers=auth(owner_a),
+    )
+    partial_month = client.get(
+        f"/api/v1/performance/monthly/{barber_a.id}?month=5", headers=auth(owner_a),
+    )
+    assert partial_year.status_code == partial_month.status_code == 422
+
 
 def test_dashboard_time_metrics_use_measured_service_durations(client: TestClient, test_db: Session):
     shop = Barbershop(
