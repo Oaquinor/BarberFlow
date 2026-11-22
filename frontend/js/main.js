@@ -2129,6 +2129,8 @@ if (sessionStorage.getItem('kingflow-password-changed') === '1') {
 document.getElementById('logoutButton')?.addEventListener('click', logout);
 document.getElementById('finishServiceButton')?.addEventListener('click', finishService);
 document.getElementById('testConnectionButton')?.addEventListener('click', testConnection);
+document.getElementById('quickStatsButton')?.addEventListener('click', () => showTab('performance'));
+document.getElementById('quickAgendaButton')?.addEventListener('click', () => showTab('appointments'));
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
     tab.addEventListener('click', () => showTab(tab.dataset.tab));
 });
