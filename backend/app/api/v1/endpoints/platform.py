@@ -490,7 +490,10 @@ def _queue_appointment_whatsapp(
 
 def _send_email(to_email: str, subject: str, body: str) -> bool:
     """Send an actual SMTP message; never report success for a console placeholder."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD or not settings.SMTP_HOST:
+    if not all((
+        settings.SMTP_USER.strip(), settings.SMTP_PASSWORD,
+        settings.SMTP_HOST.strip(), settings.EMAIL_FROM.strip(),
+    )):
         return False
     message = EmailMessage()
     message["From"] = settings.EMAIL_FROM

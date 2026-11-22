@@ -44,10 +44,19 @@ def test_render_api_builds_from_repository_root_to_serve_the_frontend():
     assert "key: WHATSAPP_API_URL\n        sync: false" in api_service
     assert "key: UPLOAD_DIR\n        value: /opt/render/project/src/frontend/uploads" in api_service
     assert "mountPath: /opt/render/project/src/frontend/uploads" in api_service
+    assert "key: EMAIL_FROM\n        sync: false" in api_service
 
     worker_service = render.split("  - type: worker", 1)[1]
     assert worker_service.count("- key: WHATSAPP_API_URL") == 1
     assert "key: WHATSAPP_API_URL\n        sync: false" in worker_service
+    assert "key: EMAIL_FROM\n        sync: false" in worker_service
+
+
+def test_production_compose_requires_an_explicit_email_sender():
+    repository_root = Path(__file__).resolve().parents[2]
+    compose = (repository_root / "docker-compose.prod.yml").read_text(encoding="utf-8")
+
+    assert compose.count("EMAIL_FROM=${EMAIL_FROM:?") == 2
 
 
 @pytest.mark.parametrize("url", [

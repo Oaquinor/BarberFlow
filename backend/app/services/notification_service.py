@@ -271,7 +271,10 @@ class NotificationService:
             return value.astimezone(timezone.utc)
 
     def _send_email(self, to_email: str, subject: str, body: str) -> bool:
-        if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        if not all((
+            settings.SMTP_HOST.strip(), settings.SMTP_USER.strip(),
+            settings.SMTP_PASSWORD, settings.EMAIL_FROM.strip(),
+        )):
             logger.info("Email delivery skipped because SMTP is not fully configured")
             return False
         message = EmailMessage()

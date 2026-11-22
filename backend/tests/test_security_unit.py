@@ -16,6 +16,7 @@ from app.api.v1.endpoints.platform import (
     _to_utc_naive,
     _utc_aware,
 )
+from app.api.v1.endpoints import platform as platform_module
 from app.core.exceptions import InvalidTokenError
 from app.core.security import (
     create_access_token, create_refresh_token, get_user_id_from_token,
@@ -38,6 +39,19 @@ def test_onboarding_requires_authentication():
 
 def test_password_hash_uses_explicit_twelve_round_bcrypt_cost():
     assert hash_password("StrongPassword123").split("$")[2] == "12"
+
+
+def test_smtp_senders_skip_delivery_when_verified_from_address_is_missing(monkeypatch):
+    import app.services.notification_service as notification_module
+
+    for settings in (platform_module.settings, notification_module.settings):
+        monkeypatch.setattr(settings, "SMTP_HOST", "smtp.example.test")
+        monkeypatch.setattr(settings, "SMTP_USER", "user")
+        monkeypatch.setattr(settings, "SMTP_PASSWORD", "secret")
+        monkeypatch.setattr(settings, "EMAIL_FROM", " ")
+
+    assert platform_module._send_email("client@example.test", "Subject", "Body") is False
+    assert NotificationService(None)._send_email("client@example.test", "Subject", "Body") is False
 
 
 def test_transactional_email_lines_escape_untrusted_content():

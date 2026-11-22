@@ -58,7 +58,7 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - EMAIL_FROM=${EMAIL_FROM:-noreply@kingflow.com}
+      - EMAIL_FROM=${EMAIL_FROM:?Set EMAIL_FROM to an address verified by your SMTP provider}
       - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:?Set WHATSAPP_API_TOKEN}
       - WHATSAPP_API_URL=http://whatsapp:3001/send
     ports:
@@ -90,7 +90,7 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - EMAIL_FROM=${EMAIL_FROM:-noreply@kingflow.com}
+      - EMAIL_FROM=${EMAIL_FROM:?Set EMAIL_FROM to an address verified by your SMTP provider}
       - WHATSAPP_API_TOKEN=${WHATSAPP_API_TOKEN:?Set WHATSAPP_API_TOKEN}
       - WHATSAPP_API_URL=http://whatsapp:3001/send
       - DEBUG=False
