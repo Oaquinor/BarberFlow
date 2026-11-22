@@ -403,3 +403,24 @@ def test_checkout_rolls_back_if_performance_or_achievements_cannot_be_persisted(
     assert test_db.query(BarberPerformance).filter_by(
         barbershop_id=shop.id, barber_id=barber.id,
     ).count() == 0
+
+    # Once the unavailable consequence service recovers, the rolled-back
+    # checkout can be retried without a partial payment or duplicate effects.
+    monkeypatch.undo()
+    test_db.expire_all()
+    retried = client.post(
+        f"/api/v1/barber/appointments/{appointment.id}/payment",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"method": "cash", "tip_cents": 0},
+    )
+    assert retried.status_code == 201
+    test_db.expire_all()
+    assert test_db.get(Appointment, appointment.id).status == "completed"
+    assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 1
+    assert test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == appointment.id,
+    ).count() > 0
+    assert test_db.query(AuditLog).filter_by(action="appointment.payment_recorded").count() == 1
+    assert test_db.query(BarberPerformance).filter_by(
+        barbershop_id=shop.id, barber_id=barber.id,
+    ).one().appointments_completed == 1
