@@ -113,7 +113,7 @@ El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y r
 | `POST` | `/onboarding/step/8` | Guarda el horario comercial |
 | `POST` | `/onboarding/step/9` | Guarda la personalidad del negocio |
 | `POST` | `/onboarding/complete` | Valida, guarda y audita la configuración final |
-| `GET` | `/onboarding/dashboard-layout` | Devuelve distribución y métricas orientativas del panel |
+| `GET` | `/onboarding/dashboard-layout` | Devuelve consejos según el objetivo del negocio; no declara widgets ni métricas que el panel no ofrezca |
 | `GET` | `/onboarding/greeting` | Devuelve saludo contextual por hora local del tenant |
 | `POST` | `/onboarding/motivational-message` | Devuelve mensaje según el logro indicado y datos del negocio |
 
@@ -184,7 +184,7 @@ La fecha predeterminada de rendimiento usa la zona horaria de la barbería. Ingr
 
 ## Onboarding y personalización
 
-Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `GET /greeting`; `POST /complete`, `/motivational-message`, `/step/1`, `/step/3` a `/step/9`, `/upload-logo`; `PUT /brand-colors`. El tenant se deriva del usuario autenticado. Las recomendaciones del layout son consejos generales; el mensaje motivacional calcula el conteo de citas de los últimos 30 días y no confía en el contexto enviado por el cliente.
+Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `GET /greeting`; `POST /complete`, `/motivational-message`, `/step/1`, `/step/3` a `/step/9`, `/upload-logo`; `PUT /brand-colors`. El tenant se deriva del usuario autenticado. `/dashboard-layout` devuelve `layout_type`, `greeting_message` e `insights` para orientar el uso del panel existente; no anuncia widgets o métricas inexistentes. El mensaje motivacional calcula el conteo de citas de los últimos 30 días y no confía en el contexto enviado por el cliente.
 
 ## Equipo y clientes del negocio
 

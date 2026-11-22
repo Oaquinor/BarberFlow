@@ -95,7 +95,7 @@ class OnboardingService:
 
     @staticmethod
     def get_dashboard_layout(db: Session, barbershop_id: int) -> DashboardLayoutResponse:
-        """Get dashboard layout adapted to barbershop's primary goal."""
+        """Return goal-focused advice without advertising unavailable dashboard widgets."""
 
         barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
@@ -103,18 +103,14 @@ class OnboardingService:
             # Default layout
             return DashboardLayoutResponse(
                 layout_type="default",
-                priority_metrics=["appointments", "revenue", "clients"],
-                widgets=["calendar", "stats", "performance"],
                 greeting_message="👋 Bienvenido al sistema",
                 insights=["Completa la configuración del negocio para adaptar este panel a tus objetivos."]
             )
 
-        # Adapt layout based on primary goal
+        # These are concrete operating recommendations for the existing dashboard.
         layouts = {
             "more_clients": {
                 "layout_type": "growth",
-                "priority_metrics": ["new_clients", "return_rate", "cancellations", "client_satisfaction"],
-                "widgets": ["growth_chart", "client_funnel", "retention_tracker", "referral_stats"],
                 "greeting_message": "📈 Enfocado en crecimiento de clientes",
                 "insights": [
                     "Revisa qué servicios atraen nuevos clientes antes de planificar promociones.",
@@ -124,8 +120,6 @@ class OnboardingService:
             },
             "organization": {
                 "layout_type": "organization",
-                "priority_metrics": ["upcoming_appointments", "schedule_occupancy", "gaps", "conflicts"],
-                "widgets": ["calendar_view", "schedule_optimizer", "reminder_status", "booking_flow"],
                 "greeting_message": "📅 Tu agenda organizada",
                 "insights": [
                     "Revisa las citas pendientes y confirma los cambios de horario.",
@@ -135,8 +129,6 @@ class OnboardingService:
             },
             "reduce_cancellations": {
                 "layout_type": "retention",
-                "priority_metrics": ["cancellation_rate", "no_shows", "confirmation_rate", "reminder_effectiveness"],
-                "widgets": ["cancellation_tracker", "reminder_dashboard", "client_communication", "penalty_stats"],
                 "greeting_message": "🎯 Reduciendo cancelaciones",
                 "insights": [
                     "Revisa las citas pendientes con anticipación y confirma con tus clientes.",
@@ -146,8 +138,6 @@ class OnboardingService:
             },
             "save_time": {
                 "layout_type": "efficiency",
-                "priority_metrics": ["avg_service_time", "idle_time", "prep_time", "efficiency_score"],
-                "widgets": ["time_tracker", "efficiency_meter", "automation_status", "quick_actions"],
                 "greeting_message": "⚡ Ahorrando tiempo",
                 "insights": [
                     "Registra el inicio y el fin de cada servicio para medir su duración.",
@@ -157,8 +147,6 @@ class OnboardingService:
             },
             "better_service": {
                 "layout_type": "quality",
-                "priority_metrics": ["client_satisfaction", "service_quality", "feedback_score", "loyalty"],
-                "widgets": ["satisfaction_meter", "feedback_dashboard", "service_tracker", "vip_clients"],
                 "greeting_message": "⭐ Excelencia en servicio",
                 "insights": [
                     "Solicita comentarios a tus clientes después de cada visita.",
@@ -168,8 +156,6 @@ class OnboardingService:
             },
             "productivity": {
                 "layout_type": "performance",
-                "priority_metrics": ["services_per_day", "revenue_per_hour", "utilization", "speed"],
-                "widgets": ["performance_chart", "productivity_score", "revenue_tracker", "speed_metrics"],
                 "greeting_message": "🔥 Maximizando productividad",
                 "insights": [
                     "Compara servicios completados y horas trabajadas por semana.",

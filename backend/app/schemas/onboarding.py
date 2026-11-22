@@ -137,10 +137,8 @@ class BarbershopProfile(BaseModel):
 
 
 class DashboardLayoutResponse(BaseModel):
-    """Dashboard layout adapted to barbershop goal"""
+    """Goal-focused recommendations shown alongside the existing dashboard."""
     layout_type: str
-    priority_metrics: List[str]
-    widgets: List[str]
     greeting_message: str
     insights: List[str]
 
