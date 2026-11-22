@@ -54,6 +54,8 @@ async def lifespan(app: FastAPI):
 def create_application() -> FastAPI:
     """Create and configure FastAPI application."""
 
+    cors_origins = settings.CORS_ORIGINS
+
     if settings.ENVIRONMENT.lower() == "production":
         if settings.DEBUG:
             raise RuntimeError("DEBUG must be disabled in production")
@@ -61,11 +63,6 @@ def create_application() -> FastAPI:
             raise RuntimeError("Set a strong SECRET_KEY before starting in production")
         if not settings.DATABASE_URL.startswith("mysql+pymysql://"):
             raise RuntimeError("Production DATABASE_URL must use the MySQL PyMySQL driver")
-        if not settings.CORS_ORIGINS or any(
-            origin == "*" or not origin.startswith("https://")
-            for origin in settings.CORS_ORIGINS
-        ):
-            raise RuntimeError("Production CORS_ORIGINS must contain explicit HTTPS origins")
         frontend_url = urlsplit(settings.FRONTEND_BASE_URL.strip())
         if (
             frontend_url.scheme != "https"
@@ -76,6 +73,9 @@ def create_application() -> FastAPI:
             or frontend_url.fragment
         ):
             raise RuntimeError("Production FRONTEND_BASE_URL must be an explicit HTTPS URL")
+        cors_origins = cors_origins or [settings.FRONTEND_BASE_URL.rstrip("/")]
+        if any(origin == "*" or not origin.startswith("https://") for origin in cors_origins):
+            raise RuntimeError("Production CORS_ORIGINS must contain explicit HTTPS origins")
 
     application = FastAPI(
         title="KingFlow Barber API",
@@ -89,7 +89,7 @@ def create_application() -> FastAPI:
     # CORS Configuration
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

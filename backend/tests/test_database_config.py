@@ -27,6 +27,19 @@ def test_production_compose_uses_the_trusted_reverse_proxy_ip_header():
     assert "CLIENT_IP_HEADER=X-Real-IP" in environment_example
 
 
+def test_render_api_builds_from_repository_root_to_serve_the_frontend():
+    repository_root = Path(__file__).resolve().parents[2]
+    render = (repository_root / "render.yaml").read_text(encoding="utf-8")
+    api_service = render.split("  - type: worker", 1)[0]
+
+    assert "name: kingflow-api" in api_service
+    assert "rootDir: backend" not in api_service
+    assert "buildCommand: pip install -r backend/requirements.txt" in api_service
+    assert "startCommand: cd backend && alembic upgrade head && uvicorn" in api_service
+    assert "value: '[]'" in api_service
+    assert "envVarKey: RENDER_EXTERNAL_URL" in api_service
+
+
 @pytest.mark.parametrize("url", [
     "sqlite:///kingflow.db",
     "postgresql://kingflow@localhost/kingflow_barber",

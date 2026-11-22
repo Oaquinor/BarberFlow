@@ -63,7 +63,7 @@ def test_production_rejects_documented_or_low_entropy_secret_placeholders(monkey
         main.create_application()
 
 
-@pytest.mark.parametrize("origins", [[], ["*"], ["http://kingflow.example"]])
+@pytest.mark.parametrize("origins", [["*"], ["http://kingflow.example"]])
 def test_production_rejects_wildcard_or_insecure_cors_origins(monkeypatch, origins):
     monkeypatch.setattr(main, "settings", SimpleNamespace(
         ENVIRONMENT="production",
@@ -119,3 +119,20 @@ def test_production_accepts_explicit_https_frontend_and_cors(monkeypatch):
 
     application = main.create_application()
     assert "/api/v1/auth/password-reset/request" in application.openapi()["paths"]
+
+
+def test_production_uses_explicit_frontend_origin_when_cors_list_is_empty(monkeypatch):
+    from fastapi.middleware.cors import CORSMiddleware
+
+    monkeypatch.setattr(main, "settings", SimpleNamespace(
+        ENVIRONMENT="production",
+        DEBUG=False,
+        SECRET_KEY="local-test-secret-that-is-long-enough-to-pass",
+        DATABASE_URL="mysql+pymysql://kingflow:secret@localhost/kingflow_barber",
+        CORS_ORIGINS=[],
+        FRONTEND_BASE_URL="https://kingflow.example/",
+    ))
+
+    application = main.create_application()
+    cors = next(middleware for middleware in application.user_middleware if middleware.cls is CORSMiddleware)
+    assert cors.kwargs["allow_origins"] == ["https://kingflow.example"]
