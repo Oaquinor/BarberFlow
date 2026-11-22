@@ -181,7 +181,7 @@ Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva espera
 | `POST` | `/achievements/check` | Barbero autenticado |
 | `POST` | `/achievements/mark-viewed/{achievement_id}` | Dueño del logro |
 
-La fecha predeterminada de rendimiento usa la zona horaria de la barbería. Ingresos se derivan de pagos efectivamente registrados. Los logros disponibles se insertan con la migración MySQL `011_seed_achievements`; el pago completado actualiza el rendimiento y evalúa logros compatibles.
+La fecha predeterminada de rendimiento usa la zona horaria de la barbería. En `/performance/monthly/{barber_id}`, `year` y `month` son opcionales solo como pareja: si se omiten ambos se usa el mes comercial actual; si se envía uno solo, la API responde `422`. Ingresos se derivan de pagos efectivamente registrados. Los logros disponibles se insertan con la migración MySQL `011_seed_achievements`; el pago completado actualiza el rendimiento y evalúa logros compatibles.
 
 ## Onboarding y personalización
 
