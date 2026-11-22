@@ -17,7 +17,6 @@ import smtplib
 import unicodedata
 from typing import Optional
 from urllib.parse import urlencode
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from time import sleep as sleep_seconds
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
@@ -27,12 +26,10 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user as authenticate_user
 from app.core import get_db
 from app.core.constants.enums import (
     MAX_ADVANCE_BOOKING_DAYS,
     MAX_SERVICE_DURATION_MINUTES,
-    SUBSCRIPTION_LIMITS,
 )
 from app.core.security.jwt import create_access_token, create_refresh_token, verify_token
 from app.core.security.password import verify_password, hash_password
@@ -82,12 +79,21 @@ from app.schemas.platform import (
     AppointmentPaymentRequest,
     CashRegisterCloseRequest,
 )
-from app.services.audit_service import record_audit
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.utils.client_ip import get_client_ip
 from app.services.notification_service import NotificationService
 from app.services.notification_outbox import enqueue_delivery
 from app.services.auth_record_retention import prune_expired_auth_records
+from app.api.v1.endpoints.common import (
+    _apply_plan_limits,
+    _audit,
+    _cash_register_closed_for_user,
+    _get_current_user,
+    _get_timezone,
+    _normalize_phone,
+    _require_active_subscription,
+    _utc_aware,
+)
 
 router = APIRouter(tags=["platform"])
 settings = get_settings()
@@ -95,8 +101,6 @@ logger = get_logger(__name__)
 DUMMY_LOGIN_PASSWORD_HASH = hash_password("unusable-login-sentinel-value")
 
 
-def _normalize_phone(phone: str) -> str:
-    return "".join(ch for ch in phone if ch.isdigit())
 
 
 def _build_client_link(slug: str) -> str:
@@ -112,34 +116,12 @@ def _get_public_shop(db: Session, slug: str) -> Optional[Barbershop]:
     ).first()
 
 
-def _require_active_subscription(db: Session, shop: Barbershop, lock: bool = False) -> Subscription:
-    if not shop.subscription_id:
-        raise HTTPException(status_code=402, detail="La barbería no tiene una suscripción activa")
-    query = db.query(Subscription).filter(
-        Subscription.id == shop.subscription_id,
-        Subscription.is_deleted == False,
-    )
-    if lock:
-        query = query.with_for_update()
-    subscription = query.first()
-    if (
-        not subscription
-        or subscription.status != "active"
-        or subscription.current_period_end <= utc_now_naive()
-    ):
-        raise HTTPException(status_code=402, detail="La suscripción de esta barbería no está activa")
-    return subscription
 
 
 def _parse_date_time(date_str: str, time_str: str) -> datetime:
     return datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
 
 
-def _get_timezone(shop: Barbershop) -> ZoneInfo:
-    try:
-        return ZoneInfo(shop.timezone)
-    except (ZoneInfoNotFoundError, TypeError):
-        raise HTTPException(status_code=500, detail="La zona horaria de la barbería no es válida")
 
 
 def _to_utc_naive(value: datetime, shop: Barbershop) -> datetime:
@@ -155,8 +137,6 @@ def _to_utc_naive(value: datetime, shop: Barbershop) -> datetime:
     return local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def _utc_aware(value: datetime) -> datetime:
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
 def _business_date_for_appointment(appointment: Appointment, shop: Barbershop):
@@ -164,26 +144,6 @@ def _business_date_for_appointment(appointment: Appointment, shop: Barbershop):
     return _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).date()
 
 
-def _cash_register_closed_for_user(
-    db: Session, user: User, barbershop_id: int, business_date: datetime,
-) -> bool:
-    query = db.query(CashRegisterClose.id).join(
-        User, User.id == CashRegisterClose.closed_by_user_id,
-    ).filter(
-        CashRegisterClose.barbershop_id == barbershop_id,
-        CashRegisterClose.business_date == business_date,
-        CashRegisterClose.is_deleted == False,
-    )
-    if user.role == "barber":
-        query = query.filter(or_(
-            CashRegisterClose.closed_by_user_id == user.id,
-            (User.role == "barbershop_owner") & (User.barbershop_id == barbershop_id),
-        ))
-    else:
-        query = query.filter(CashRegisterClose.closed_by_user_id == user.id)
-    # A locking read uses current committed state after waiting on the shared
-    # barbershop mutex; a repeatable-read snapshot could miss a close that just won.
-    return query.with_for_update().first() is not None
 
 
 def _service_progress_percent(appointment: Appointment, now_utc: datetime) -> int:
@@ -194,10 +154,6 @@ def _service_progress_percent(appointment: Appointment, now_utc: datetime) -> in
     return min(100, int(round(elapsed_minutes / appointment.estimated_duration * 100)))
 
 
-def _audit(db: Session, actor: Optional[User], action: str, entity_type: str, entity_id: int | None,
-           barbershop_id: int | None = None, details: dict | None = None) -> None:
-    """Add a minimal audit event to the current transaction without credentials or secrets."""
-    record_audit(db, actor, action, entity_type, entity_id, barbershop_id, details)
 
 
 def _get_user_feature_flags(db: Session, user_id: int) -> dict[str, bool]:
@@ -492,9 +448,6 @@ def _send_email(to_email: str, subject: str, body: str) -> bool:
         return False
 
 
-def _get_current_user(db: Session, authorization: Optional[str]) -> User:
-    """Use the shared authentication checks for every platform route."""
-    return authenticate_user(authorization, db)
 
 
 def _save_refresh_session(db: Session, user_id: int, token: str) -> RefreshSession:
@@ -786,14 +739,6 @@ def _tenant_slug(db: Session, name: str) -> str:
             return slug
 
 
-def _apply_plan_limits(sub: Subscription, plan: str) -> None:
-    """Sync subscription limits with the selected plan defaults."""
-    limits = SUBSCRIPTION_LIMITS.get(plan)
-    if limits is None:
-        return
-    sub.max_barbers = limits["max_barbers"]
-    sub.max_appointments_per_month = limits["max_appointments_per_month"]
-    sub.max_clients = limits["max_clients"]
 
 
 def _flush_tenant_registration(db: Session) -> None:

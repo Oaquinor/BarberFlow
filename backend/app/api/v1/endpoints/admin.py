@@ -42,7 +42,7 @@ from app.schemas.platform import (
 )
 from app.services.affiliate_service import AffiliateService
 from app.utils.datetime import utc_now_naive
-from app.api.v1.endpoints.platform import _apply_plan_limits, _audit, _get_current_user, _normalize_phone
+from app.api.v1.endpoints.common import _apply_plan_limits, _audit, _get_current_user, _normalize_phone
 
 router = APIRouter(tags=["platform"])
 

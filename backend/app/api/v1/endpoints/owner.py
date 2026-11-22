@@ -26,7 +26,7 @@ from app.schemas.platform import (
     OwnerBarberUpdateRequest,
 )
 from app.utils.datetime import utc_now_naive
-from app.api.v1.endpoints.platform import (
+from app.api.v1.endpoints.common import (
     _audit, _cash_register_closed_for_user, _get_current_user, _get_timezone,
     _normalize_phone, _require_active_subscription, _utc_aware,
 )
