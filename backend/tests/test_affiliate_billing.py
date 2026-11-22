@@ -111,6 +111,40 @@ def test_recorded_subscription_payment_creates_and_pays_referral_commission(
     assert affiliate.total_commissions_paid == 1500
 
 
+def test_admin_subscription_read_hides_soft_deleted_subscription(
+    client: TestClient, test_db: Session,
+):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="basic", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=3,
+        max_appointments_per_month=200, max_clients=500,
+    )
+    admin = User(
+        email="deleted-subscription-admin@example.com", password_hash="unused",
+        first_name="Admin", last_name="Billing", role="super_admin", is_active=True,
+    )
+    test_db.add_all([subscription, admin])
+    test_db.flush()
+    shop = Barbershop(
+        name="Deleted Subscription Shop", slug="deleted-subscription-shop-test",
+        email="deleted-subscription-shop@example.com", phone="8095554012",
+        address_line1="Calle 41", city="Santo Domingo", state="DN", postal_code="10106",
+        country="DO", timezone="America/Santo_Domingo", currency="DOP",
+        subscription_id=subscription.id,
+    )
+    test_db.add(shop)
+    test_db.commit()
+    subscription.soft_delete()
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': 'super_admin'})}"}
+    response = client.get(f"/api/v1/admin/tenants/{shop.id}/subscription", headers=headers)
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Suscripción no encontrada"
+
+
 def test_concurrent_subscription_payments_record_one_charge_and_commission(mysql_test_engine):
     suffix = uuid4().hex
     now = utc_now_naive().replace(microsecond=0)

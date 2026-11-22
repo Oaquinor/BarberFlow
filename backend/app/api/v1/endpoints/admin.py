@@ -459,7 +459,10 @@ def admin_get_subscription(
     if not shop.subscription_id:
         raise HTTPException(status_code=404, detail="La barbería no tiene una suscripción asociada")
 
-    sub = db.query(Subscription).filter(Subscription.id == shop.subscription_id).first()
+    sub = db.query(Subscription).filter(
+        Subscription.id == shop.subscription_id,
+        Subscription.is_deleted == False,
+    ).first()
     if not sub:
         raise HTTPException(status_code=404, detail="Suscripción no encontrada")
 
