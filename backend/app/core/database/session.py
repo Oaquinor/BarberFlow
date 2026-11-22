@@ -61,11 +61,6 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def init_db() -> None:
-    """Initialize database - create all tables."""
-    Base.metadata.create_all(bind=engine)
-
-
 def close_db() -> None:
     """Close database connections."""
     engine.dispose()
