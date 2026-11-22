@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.appointment import Appointment
 from app.models.barbershop import Barbershop
@@ -71,29 +71,50 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
         Appointment.scheduled_time > now,
         Appointment.scheduled_time <= now + timedelta(hours=24),
         Appointment.is_deleted == False,
+    ).options(
+        joinedload(Appointment.client),
+        joinedload(Appointment.barber),
+        joinedload(Appointment.barbershop),
     ).all()
+    appointment_ids = [appointment.id for appointment in appointments]
+    reminder_rows = db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id.in_(appointment_ids),
+        NotificationDelivery.event_type == "appointment_reminder",
+        NotificationDelivery.channel.in_(["email", "whatsapp"]),
+    ).with_for_update().all() if appointment_ids else []
+    reminders_by_appointment_and_channel = {
+        (row.appointment_id, row.channel): row for row in reminder_rows
+    }
     queued = 0
     notifier = NotificationService(db)
+
+    def add_reminder(appointment, shop, channel, recipient, body, due, subject=None):
+        row = NotificationDelivery(
+            barbershop_id=shop.id,
+            appointment_id=appointment.id,
+            dedupe_key=f"appointment:{appointment.id}:reminder:{channel}",
+            channel=channel,
+            event_type="appointment_reminder",
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            status="pending",
+            attempts=0,
+            scheduled_for=due.replace(microsecond=0),
+            next_attempt_at=due.replace(microsecond=0),
+        )
+        db.add(row)
+        reminders_by_appointment_and_channel[(appointment.id, channel)] = row
+
     for appointment in appointments:
-        client = db.query(User).filter(
-            User.id == appointment.client_id,
-            User.is_deleted == False,
-        ).first()
-        shop = db.query(Barbershop).filter(
-            Barbershop.id == appointment.barbershop_id,
-            Barbershop.is_deleted == False,
-        ).first()
-        barber = db.query(User).filter(User.id == appointment.barber_id).first()
-        if not client or not shop:
+        client = appointment.client
+        shop = appointment.barbershop
+        barber = appointment.barber
+        if not client or client.is_deleted or not shop or shop.is_deleted:
             continue
         due = max(now, appointment.scheduled_time - timedelta(hours=REMINDER_WINDOW_HOURS))
-        event = "appointment_reminder"
         if client.email and not client.email.endswith("@client.invalid"):
-            dedupe_key = f"appointment:{appointment.id}:reminder:email"
-            existing = db.query(NotificationDelivery).filter(
-                NotificationDelivery.barbershop_id == shop.id,
-                NotificationDelivery.dedupe_key == dedupe_key,
-            ).with_for_update().first()
+            existing = reminders_by_appointment_and_channel.get((appointment.id, "email"))
             body = notifier._get_reminder_email_template(
                 client_name=client.full_name,
                 barber_name=barber.full_name if barber else "Tu barbero",
@@ -120,20 +141,13 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
                 existing.scheduled_for = due.replace(microsecond=0)
                 existing.next_attempt_at = due.replace(microsecond=0)
             elif not existing:
-                enqueue_delivery(
-                    db, barbershop_id=shop.id, appointment_id=appointment.id,
-                    dedupe_key=dedupe_key,
-                    channel="email", event_type=event, recipient=client.email,
-                    subject=f"Recordatorio de cita - {shop.name}", body=body,
-                    scheduled_for=due,
+                add_reminder(
+                    appointment, shop, "email", client.email, body, due,
+                    subject=f"Recordatorio de cita - {shop.name}",
                 )
                 queued += 1
         if client.phone:
-            dedupe_key = f"appointment:{appointment.id}:reminder:whatsapp"
-            existing = db.query(NotificationDelivery).filter(
-                NotificationDelivery.barbershop_id == shop.id,
-                NotificationDelivery.dedupe_key == dedupe_key,
-            ).with_for_update().first()
+            existing = reminders_by_appointment_and_channel.get((appointment.id, "whatsapp"))
             body = notifier._get_sms_reminder_template(
                 barbershop_name=shop.name,
                 scheduled_time=notifier._local_scheduled_time(appointment.scheduled_time, shop),
@@ -156,12 +170,7 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
                 existing.scheduled_for = due.replace(microsecond=0)
                 existing.next_attempt_at = due.replace(microsecond=0)
             elif not existing:
-                enqueue_delivery(
-                    db, barbershop_id=shop.id, appointment_id=appointment.id,
-                    dedupe_key=dedupe_key,
-                    channel="whatsapp", event_type=event, recipient=client.phone,
-                    body=body, scheduled_for=due,
-                )
+                add_reminder(appointment, shop, "whatsapp", client.phone, body, due)
                 queued += 1
     # Existing reminder rows may have changed recipient, content, or schedule
     # even when no new row was inserted. Persist those refreshes as well.

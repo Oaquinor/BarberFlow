@@ -3,6 +3,7 @@
 from datetime import timedelta
 from uuid import uuid4
 
+from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from app.models import Appointment, Barbershop, NotificationDelivery, User
@@ -61,6 +62,41 @@ def test_reminders_are_due_and_idempotent(test_db: Session):
     assert {row.channel for row in rows} == {"email", "whatsapp"}
     assert all(row.recipient in {client.email, client.phone} for row in rows)
     assert all(row.scheduled_for <= now + timedelta(seconds=30) for row in rows)
+
+
+def test_reminder_materialization_uses_bounded_selects_for_many_appointments(test_db: Session):
+    now = utc_now_naive().replace(microsecond=0)
+    shop, client, first = _tenant_with_appointment(test_db, now + timedelta(hours=2))
+    appointments = [first]
+    for offset in range(2, 12):
+        appointment = Appointment(
+            barbershop_id=shop.id,
+            client_id=client.id,
+            barber_id=first.barber_id,
+            scheduled_time=now + timedelta(hours=offset),
+            estimated_duration=30,
+            service_type="Corte",
+            service_price=10000,
+            status="confirmed",
+        )
+        test_db.add(appointment)
+        appointments.append(appointment)
+    test_db.commit()
+
+    selects = []
+
+    def count_selects(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            selects.append(statement)
+
+    event.listen(test_db.bind, "before_cursor_execute", count_selects)
+    try:
+        queued = enqueue_due_appointment_reminders(test_db, now)
+    finally:
+        event.remove(test_db.bind, "before_cursor_execute", count_selects)
+
+    assert queued == len(appointments) * 2
+    assert len(selects) <= 2
 
 
 def test_refreshing_existing_reminders_commits_updates_for_other_workers(mysql_test_engine):
