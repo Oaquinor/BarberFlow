@@ -99,6 +99,52 @@ def test_reminder_materialization_uses_bounded_selects_for_many_appointments(tes
     assert len(selects) <= 2
 
 
+def test_reminder_materialization_pages_appointments_and_commits_each_batch(
+    test_db: Session, monkeypatch,
+):
+    now = utc_now_naive().replace(microsecond=0)
+    shop, client, first = _tenant_with_appointment(test_db, now + timedelta(hours=2))
+    for offset in range(3, 9):
+        test_db.add(Appointment(
+            barbershop_id=shop.id,
+            client_id=client.id,
+            barber_id=first.barber_id,
+            scheduled_time=now + timedelta(hours=offset),
+            estimated_duration=30,
+            service_type="Corte",
+            service_price=10000,
+            status="confirmed",
+        ))
+    test_db.commit()
+    monkeypatch.setattr(
+        "app.services.notification_outbox.REMINDER_ENQUEUE_BATCH_SIZE", 3,
+    )
+
+    selects = []
+    commits = []
+
+    def count_selects(_connection, _cursor, statement, _parameters, _context, _executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            selects.append(statement)
+
+    def count_commits(_session):
+        commits.append(True)
+
+    event.listen(test_db.bind, "before_cursor_execute", count_selects)
+    event.listen(test_db, "after_commit", count_commits)
+    try:
+        queued = enqueue_due_appointment_reminders(test_db, now)
+    finally:
+        event.remove(test_db.bind, "before_cursor_execute", count_selects)
+        event.remove(test_db, "after_commit", count_commits)
+
+    assert queued == 14
+    assert len(commits) == 3
+    # Each nonempty page loads appointments and existing reminders. The last
+    # partial page proves the keyset scan is complete without an empty query.
+    assert len(selects) == 6
+
+
 def test_refreshing_existing_reminders_commits_updates_for_other_workers(mysql_test_engine):
     suffix = uuid4().hex
     now = utc_now_naive().replace(microsecond=0)

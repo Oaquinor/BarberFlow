@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 8
 LEASE_MINUTES = 5
 REMINDER_WINDOW_HOURS = 24
+REMINDER_ENQUEUE_BATCH_SIZE = 500
 
 
 def enqueue_delivery(
@@ -64,18 +65,37 @@ def enqueue_delivery(
 
 
 def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
-    """Materialize reminders due within the next 24 hours, once per channel."""
+    """Materialize reminders due within the next 24 hours in bounded batches."""
     now = (now or utc_now_naive()).replace(microsecond=0)
-    appointments = db.query(Appointment).filter(
-        Appointment.status.in_(["pending", "confirmed"]),
-        Appointment.scheduled_time > now,
-        Appointment.scheduled_time <= now + timedelta(hours=24),
-        Appointment.is_deleted == False,
-    ).options(
-        joinedload(Appointment.client),
-        joinedload(Appointment.barber),
-        joinedload(Appointment.barbershop),
-    ).all()
+    last_appointment_id = 0
+    total_queued = 0
+    while True:
+        appointments = db.query(Appointment).filter(
+            Appointment.id > last_appointment_id,
+            Appointment.status.in_(["pending", "confirmed"]),
+            Appointment.scheduled_time > now,
+            Appointment.scheduled_time <= now + timedelta(hours=24),
+            Appointment.is_deleted == False,
+        ).order_by(Appointment.id).limit(REMINDER_ENQUEUE_BATCH_SIZE).options(
+            joinedload(Appointment.client),
+            joinedload(Appointment.barber),
+            joinedload(Appointment.barbershop),
+        ).all()
+        if not appointments:
+            break
+
+        total_queued += _enqueue_appointment_reminder_batch(db, appointments, now)
+        last_appointment_id = appointments[-1].id
+        # Commit each bounded batch so both memory and row locks remain bounded.
+        db.commit()
+        if len(appointments) < REMINDER_ENQUEUE_BATCH_SIZE:
+            break
+
+    return total_queued
+
+
+def _enqueue_appointment_reminder_batch(db: Session, appointments: list[Appointment], now) -> int:
+    """Refresh and queue reminders for one already-loaded appointment batch."""
     appointment_ids = [appointment.id for appointment in appointments]
     reminder_rows = db.query(NotificationDelivery).filter(
         NotificationDelivery.appointment_id.in_(appointment_ids),
@@ -172,9 +192,6 @@ def enqueue_due_appointment_reminders(db: Session, now=None) -> int:
             elif not existing:
                 add_reminder(appointment, shop, "whatsapp", client.phone, body, due)
                 queued += 1
-    # Existing reminder rows may have changed recipient, content, or schedule
-    # even when no new row was inserted. Persist those refreshes as well.
-    db.commit()
     return queued
 
 
