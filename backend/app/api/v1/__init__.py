@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import onboarding
 from app.api.v1.endpoints import platform
+from app.api.v1.endpoints import booking
 from app.api.v1.endpoints import admin
 from app.api.v1.endpoints import owner
 from app.api.v1 import services
@@ -13,6 +14,7 @@ router = APIRouter()
 
 router.include_router(onboarding.router)
 router.include_router(platform.router)
+router.include_router(booking.router)
 router.include_router(admin.router)
 router.include_router(owner.router)
 router.include_router(services.router)

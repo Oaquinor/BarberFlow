@@ -144,7 +144,7 @@ Follow the structure that exists in the repository; do not add layers only to ma
 - `models/`: SQLAlchemy entities and relationships.
 - `schemas/`: Pydantic request and response validation.
 - `api/v1/`: FastAPI routes registered in `app/api/v1/__init__.py`. Enforce authentication, role, and tenant checks on the server.
-- `services/`: use case logic when shared or substantial orchestration warrants it. Active API handlers are split between `api/v1/endpoints/platform.py` (authentication, registration, public booking, agenda and checkout), `api/v1/endpoints/owner.py` (team, commissions and clients), and `api/v1/endpoints/admin.py` (platform administration).
+- `services/`: use case logic when shared or substantial orchestration warrants it. Active API handlers are split between `api/v1/endpoints/platform.py` (authentication, registration, agenda and checkout), `api/v1/endpoints/booking.py` (public bookings, availability and absences), `api/v1/endpoints/owner.py` (team, commissions and clients), and `api/v1/endpoints/admin.py` (platform administration).
 - `core/database/`: synchronous SQLAlchemy sessions backed only by MySQL 8 through `mysql+pymysql://`.
 - `alembic/`: all schema changes must be versioned migrations.
 
