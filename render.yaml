@@ -4,7 +4,7 @@ services:
     name: kingflow-api
     env: python
     region: oregon
-    plan: free
+    plan: 0.5c-512mb
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -35,12 +35,18 @@ services:
         sync: false
       - key: WHATSAPP_API_URL
         sync: false
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/frontend/uploads
       - key: DEBUG
         value: False
       - key: ENVIRONMENT
         value: production
       - key: PYTHON_VERSION
         value: 3.12.0
+    disk:
+      name: kingflow-uploads
+      mountPath: /opt/render/project/src/frontend/uploads
+      sizeGB: 1
   - type: worker
     name: kingflow-notification-worker
     env: python

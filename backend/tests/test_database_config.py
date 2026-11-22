@@ -38,6 +38,16 @@ def test_render_api_builds_from_repository_root_to_serve_the_frontend():
     assert "startCommand: cd backend && alembic upgrade head && uvicorn" in api_service
     assert "value: '[]'" in api_service
     assert "envVarKey: RENDER_EXTERNAL_URL" in api_service
+    assert "plan: free" not in api_service
+    assert "plan: 0.5c-512mb" in api_service
+    assert api_service.count("- key: WHATSAPP_API_URL") == 1
+    assert "key: WHATSAPP_API_URL\n        sync: false" in api_service
+    assert "key: UPLOAD_DIR\n        value: /opt/render/project/src/frontend/uploads" in api_service
+    assert "mountPath: /opt/render/project/src/frontend/uploads" in api_service
+
+    worker_service = render.split("  - type: worker", 1)[1]
+    assert worker_service.count("- key: WHATSAPP_API_URL") == 1
+    assert "key: WHATSAPP_API_URL\n        sync: false" in worker_service
 
 
 @pytest.mark.parametrize("url", [
