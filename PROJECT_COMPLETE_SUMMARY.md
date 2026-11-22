@@ -4,4 +4,4 @@ Este documento reemplaza el resumen histórico de 2024. Aquel snapshot afirmaba 
 
 Consulta el estado verificado y las limitaciones vigentes en [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). La referencia de rutas vigente es [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
 
-El estado de producción no se considera demostrado: faltan validaciones de despliegue Docker y entregas reales con credenciales de proveedores, entre otros pendientes.
+La CI valida las imágenes de producción y ejecuta Docker Compose con MySQL, pero no se ha hecho un despliegue real a producción. Tampoco se ha verificado la entrega externa de correo o WhatsApp con credenciales de proveedores.
