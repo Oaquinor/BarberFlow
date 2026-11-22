@@ -10,8 +10,9 @@ Esta guía describe el código actualmente conectado. Los ejemplos y módulos no
 
 - `frontend/`: páginas HTML, CSS y JavaScript del panel, portal público y PWA. No es una aplicación React.
 - `backend/app/main.py`: configura FastAPI, seguridad HTTP, CORS, router `/api/v1`, health check dependiente de MySQL y servicio de archivos estáticos.
-- `backend/app/api/v1/__init__.py`: punto de registro de los routers activos: onboarding, plataforma, catálogo de servicios, logros, rendimiento, analítica, ajustes de administración, billing y recuperación de contraseña.
-- `backend/app/api/v1/endpoints/platform.py`: concentra los flujos de autenticación, registro SaaS, portal público, reservas, agenda, pagos/caja y administración que documenta `docs/API_REFERENCE.md`.
+- `backend/app/api/v1/__init__.py`: punto de registro de los routers activos: onboarding, plataforma, administración general, catálogo de servicios, logros, rendimiento, analítica, ajustes de administración, billing y recuperación de contraseña.
+- `backend/app/api/v1/endpoints/platform.py`: implementa autenticación, registro SaaS, portal público, reservas, agenda y operaciones de pagos/caja.
+- `backend/app/api/v1/endpoints/admin.py`: implementa soporte de plataforma, tenants, afiliados, suscripciones, usuarios y auditoría. Comparte los helpers de autenticación y auditoría del módulo `platform.py`; ambos routers conservan el tag público `platform`.
 - `backend/app/api/v1/endpoints/onboarding.py` y `backend/app/services/onboarding_service.py`: configuración inicial y ajustes del tenant autenticado.
 - `backend/app/models/` y `backend/app/schemas/`: entidades ORM y validación/serialización de solicitudes y respuestas.
 - `backend/app/services/`: lógica de servicios conectada a endpoints, notificaciones, auditoría, rendimiento y pronóstico.
