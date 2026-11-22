@@ -131,8 +131,8 @@ class OnboardingService:
                 "layout_type": "retention",
                 "greeting_message": "🎯 Reduciendo cancelaciones",
                 "insights": [
-                    "Revisa las citas pendientes con anticipación y confirma con tus clientes.",
-                    "Registra los motivos de cancelación para detectar patrones.",
+                    "Revisa las citas pendientes con anticipación y confirma los cambios de horario.",
+                    "Registra el motivo al cancelar para conservar el contexto en el historial de la cita.",
                     "Mantén clara la política de cancelación en la página pública."
                 ]
             },
@@ -149,16 +149,16 @@ class OnboardingService:
                 "layout_type": "quality",
                 "greeting_message": "⭐ Excelencia en servicio",
                 "insights": [
-                    "Solicita comentarios a tus clientes después de cada visita.",
-                    "Revisa las notas de citas anteriores para personalizar la atención.",
-                    "Mantén registrados los servicios preferidos de cada cliente."
+                    "Revisa el historial de citas y las notas antes de atender a un cliente recurrente.",
+                    "Confirma el servicio y las preferencias del cliente antes de iniciar.",
+                    "Mantén actualizado el catálogo y las notas que dan continuidad a cada visita."
                 ]
             },
             "productivity": {
                 "layout_type": "performance",
                 "greeting_message": "🔥 Maximizando productividad",
                 "insights": [
-                    "Compara servicios completados y horas trabajadas por semana.",
+                    "Compara los servicios completados y los cobros registrados entre semanas.",
                     "Revisa los periodos de mayor demanda antes de ajustar horarios.",
                     "Completa los cobros al finalizar cada servicio para conciliar la caja."
                 ]
