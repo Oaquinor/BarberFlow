@@ -165,10 +165,20 @@ async function loadTenants() {
         syncTenantOptions(filter, 'Todas las barberías');
         syncTenantOptions(document.getElementById('subscriptionTenantSelect'), 'Selecciona una barbería...');
         syncTenantOptions(document.getElementById('auditTenantFilter'), 'Todas las barberías');
+        updateSubscriptionPaymentCurrency();
     } catch (error) {
         if (requestSequence !== tenantsRequestSequence) return;
         console.error('Error cargando tenants:', error);
     }
+}
+
+function updateSubscriptionPaymentCurrency() {
+    const currencyLabel = document.getElementById('subscriptionPaymentCurrency');
+    const tenantSelect = document.getElementById('subscriptionTenantSelect');
+    if (!currencyLabel || !tenantSelect) return;
+
+    const tenant = currentTenants.find((item) => String(item.barbershop_id) === tenantSelect.value);
+    currencyLabel.textContent = tenant?.currency || 'moneda del negocio';
 }
 
 function renderToggle(userId, enabled, action) {
@@ -650,6 +660,7 @@ document.getElementById('subscriptionPaymentForm')?.addEventListener('submit', a
 
 document.getElementById('loadSubscriptionBtn')?.addEventListener('click', loadSubscription);
 document.getElementById('saveSubscriptionBtn')?.addEventListener('click', saveSubscription);
+document.getElementById('subscriptionTenantSelect')?.addEventListener('change', updateSubscriptionPaymentCurrency);
 
 document.getElementById('refreshTenantsBtn')?.addEventListener('click', loadTenants);
 document.getElementById('refreshOverviewBtn')?.addEventListener('click', loadOverview);

@@ -260,6 +260,7 @@ class BarberShareLinkResponse(BaseModel):
 class AdminTenantItem(BaseModel):
     barbershop_id: int
     barbershop_name: str
+    currency: str
     slug: str
     owner_email: Optional[str] = None
     plan: Optional[str] = None

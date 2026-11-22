@@ -241,6 +241,8 @@ Al cambiar el estado de una barbería, se revocan sus sesiones de renovación y 
 
 El listado de usuarios acepta `barbershop_id`, `search` (nombre o correo), `limit` (1–100, por defecto 50) y `offset` (por defecto 0); la respuesta incluye `total`, `offset` y `limit` para recorrer resultados sin cargar todos los usuarios en el navegador.
 
+`GET /admin/tenants` incluye el código ISO de moneda de cada barbería. La administración lo muestra al registrar cobros externos para evitar interpretar el importe en una moneda distinta de la que se guarda en MySQL.
+
 `GET /saas/registration-status` expone si el registro está habilitado y `free_period_days`, que el formulario de alta muestra según la configuración vigente. Si se desactiva, el formulario de alta se bloquea y el endpoint de registro lo rechaza de nuevo en servidor. Los cambios de estos parámetros se guardan en MySQL y generan auditoría; los secretos siguen en variables de entorno.
 
 La bandera disponible `branding_auto` controla si el portal autenticado aplica los colores de marca de la barbería. Solo se activa para un usuario owner/barbero con onboarding completado; su estado forma parte de `/auth/me` y del listado de usuarios. Los cambios se reflejan al volver a iniciar sesión.

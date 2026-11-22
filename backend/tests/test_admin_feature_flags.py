@@ -176,6 +176,8 @@ def test_super_admin_tenant_list_includes_owner_and_subscription_without_droppin
     assert tenants[subscribed_shop.id]["owner_email"] == owner.email
     assert tenants[subscribed_shop.id]["plan"] == "professional"
     assert tenants[subscribed_shop.id]["subscription_status"] == "active"
+    assert tenants[subscribed_shop.id]["currency"] == subscribed_shop.currency
     assert tenants[empty_shop.id]["owner_email"] is None
+    assert tenants[empty_shop.id]["currency"] == empty_shop.currency
     assert tenants[empty_shop.id]["plan"] is None
     assert tenants[empty_shop.id]["subscription_status"] is None

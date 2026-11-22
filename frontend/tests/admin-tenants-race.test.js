@@ -33,6 +33,7 @@ function createHarness() {
     tenantsCount,
     tenantFilter: createSelect("99"),
     subscriptionTenantSelect: createSelect("2"),
+    subscriptionPaymentCurrency: { textContent: "" },
     auditTenantFilter: createSelect("99"),
   };
   const sandbox = {
@@ -46,6 +47,7 @@ function createHarness() {
     console: { error() {} },
   };
   vm.runInNewContext(loader, sandbox);
+  vm.runInNewContext("globalThis.updateCurrency = updateSubscriptionPaymentCurrency;", sandbox);
   return { sandbox, elements, pending };
 }
 
@@ -55,7 +57,7 @@ test("latest tenant refresh wins and stale tenant options are removed", async ()
   const latestRequest = state.sandbox.loadTenants();
   const tenant = {
     barbershop_id: 2, barbershop_name: "Nueva barbería", slug: "nueva",
-    owner_email: "owner@example.com", plan: "free", subscription_status: "active", active: true,
+    currency: "DOP", owner_email: "owner@example.com", plan: "free", subscription_status: "active", active: true,
   };
 
   state.pending[1].resolve({ items: [tenant] });
@@ -70,5 +72,12 @@ test("latest tenant refresh wins and stale tenant options are removed", async ()
   assert.deepEqual(Array.from(state.elements.auditTenantFilter.options, (option) => option.value), ["", "2"]);
   assert.deepEqual(Array.from(state.elements.subscriptionTenantSelect.options, (option) => option.value), ["", "2"]);
   assert.equal(state.elements.subscriptionTenantSelect.value, "2");
+  assert.equal(state.elements.subscriptionPaymentCurrency.textContent, "DOP");
+  state.elements.subscriptionTenantSelect.value = "";
+  state.sandbox.updateCurrency();
+  assert.equal(state.elements.subscriptionPaymentCurrency.textContent, "moneda del negocio");
+  state.elements.subscriptionTenantSelect.value = "2";
+  state.sandbox.updateCurrency();
+  assert.equal(state.elements.subscriptionPaymentCurrency.textContent, "DOP");
   assert.equal(state.elements.tenantFilter.value, "");
 });

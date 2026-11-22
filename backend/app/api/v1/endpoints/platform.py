@@ -3963,6 +3963,7 @@ def admin_tenants(
         AdminTenantItem(
             barbershop_id=shop.id,
             barbershop_name=shop.name,
+            currency=shop.currency,
             slug=shop.slug,
             owner_email=owner_email,
             plan=plan,
