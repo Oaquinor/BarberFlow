@@ -380,6 +380,8 @@ def test_public_booking_tracking_and_cancel_are_connected(
         InAppNotification.event_type == "appointment_rescheduled",
     ).count() == 6
 
+    public_client.soft_delete()
+    test_db.commit()
     cancelled = client.post(
         f"/api/v1/public/{shop.slug}/appointments/cancel",
         json={"token": tracking_token, "reason": "Cambio de horario"},
@@ -393,6 +395,12 @@ def test_public_booking_tracking_and_cancel_are_connected(
     cancelled_appointment = test_db.get(Appointment, booking["appointment_id"])
     assert cancelled_appointment.cancelled_by == public_client.id
     assert cancelled_appointment.cancellation_reason == "Cambio de horario"
+    assert test_db.query(NotificationDelivery).filter(
+        NotificationDelivery.appointment_id == booking["appointment_id"],
+        NotificationDelivery.dedupe_key.like(
+            f"appointment:{booking['appointment_id']}:cancellation:%"
+        ),
+    ).count() == 0
 
     public_client.is_active = False
     test_db.commit()

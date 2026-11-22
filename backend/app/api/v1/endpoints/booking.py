@@ -978,7 +978,7 @@ def public_cancel_appointment(
         BarberAvailability.is_deleted == False,
     ).update({BarberAvailability.is_booked: False}, synchronize_session=False)
     _queue_appointment_email(db, appointment, "cancellation", data.reason)
-    if appointment.client and appointment.client.phone:
+    if appointment.client and not appointment.client.is_deleted and appointment.client.phone:
         _queue_appointment_whatsapp(
             db, appointment, appointment.client.phone,
             f"La cita en {shop.name} para {_utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')} fue cancelada.",
@@ -1148,7 +1148,7 @@ def public_reschedule_appointment(
     _audit(db, None, "appointment.rescheduled_by_client", "appointment", appointment.id, shop.id,
            {"previous_time": old_start.isoformat(), "new_time": new_start.isoformat(),
             "previous_barber_id": old_barber_id, "new_barber_id": barber.id})
-    if appointment.client and appointment.client.phone:
+    if appointment.client and not appointment.client.is_deleted and appointment.client.phone:
         _queue_appointment_whatsapp(
             db, appointment, appointment.client.phone,
             f"Tu cita en {shop.name} fue reprogramada para "

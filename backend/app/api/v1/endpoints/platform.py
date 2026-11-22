@@ -199,11 +199,20 @@ def _prepare_appointment_email(
     db: Session, appointment: Appointment, event: str, reason: str | None = None
 ) -> tuple[str, str, str] | None:
     """Render an email while request data is available; deliver after the response."""
-    client = db.query(User).filter(User.id == appointment.client_id).first()
+    client = db.query(User).filter(
+        User.id == appointment.client_id,
+        User.is_deleted == False,
+    ).first()
     if not client or not client.email or client.email.endswith("@client.invalid"):
         return None
-    barber = db.query(User).filter(User.id == appointment.barber_id).first()
-    shop = db.query(Barbershop).filter(Barbershop.id == appointment.barbershop_id).first()
+    barber = db.query(User).filter(
+        User.id == appointment.barber_id,
+        User.is_deleted == False,
+    ).first()
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == appointment.barbershop_id,
+        Barbershop.is_deleted == False,
+    ).first()
     if not barber or not shop:
         logger.error("Appointment email skipped because related records are missing",
                      extra={"appointment_id": appointment.id, "event": event})
@@ -1150,7 +1159,7 @@ def barber_update_appointment_status(
             Barbershop.id == appointment.barbershop_id,
             Barbershop.is_deleted == False,
         ).first()
-        if shop and appointment.client and appointment.client.phone:
+        if shop and appointment.client and not appointment.client.is_deleted and appointment.client.phone:
             local_time = _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop))
             _queue_appointment_whatsapp(
                 db, appointment, appointment.client.phone,
@@ -1162,8 +1171,11 @@ def barber_update_appointment_status(
            appointment.barbershop_id, {"previous_status": previous_status})
     if status == "cancelled":
         _queue_appointment_email(db, appointment, "cancellation", appointment.cancellation_reason)
-        shop = db.query(Barbershop).filter(Barbershop.id == appointment.barbershop_id).first()
-        if appointment.client and appointment.client.phone and shop:
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == appointment.barbershop_id,
+            Barbershop.is_deleted == False,
+        ).first()
+        if shop and appointment.client and not appointment.client.is_deleted and appointment.client.phone:
             _queue_appointment_whatsapp(
                 db, appointment, appointment.client.phone,
                 f"La cita en {shop.name} para "
@@ -1327,7 +1339,7 @@ def barber_record_appointment_payment(
         exclude_user_id=user.id,
     )
     _queue_appointment_email(db, appointment, "completion")
-    if appointment.client and appointment.client.phone:
+    if appointment.client and not appointment.client.is_deleted and appointment.client.phone:
         _queue_appointment_whatsapp(
             db, appointment, appointment.client.phone,
             f"Gracias por visitar {shop.name}. Registramos tu pago de "
@@ -1793,7 +1805,10 @@ def barber_dashboard(
         "next_appointment": (
             {
                 "id": next_appointment.id,
-                "client_name": next_appointment.client.full_name if next_appointment.client else "Cliente",
+                "client_name": (
+                    next_appointment.client.full_name
+                    if next_appointment.client and not next_appointment.client.is_deleted else "Cliente"
+                ),
                 "service_type": next_appointment.service_type,
                 "scheduled_time": _utc_aware(next_appointment.scheduled_time),
                 "estimated_duration": next_appointment.estimated_duration,
@@ -1804,7 +1819,10 @@ def barber_dashboard(
         "active_appointment": (
             {
                 "id": active_appointment.id,
-                "client_name": active_appointment.client.full_name if active_appointment.client else "Cliente",
+                "client_name": (
+                    active_appointment.client.full_name
+                    if active_appointment.client and not active_appointment.client.is_deleted else "Cliente"
+                ),
                 "service_type": active_appointment.service_type,
                 "scheduled_time": _utc_aware(active_appointment.scheduled_time),
                 "estimated_duration": active_appointment.estimated_duration,
