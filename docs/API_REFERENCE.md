@@ -16,6 +16,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `POST` | `/auth/password-reset/confirm` | Público; requiere token de un solo uso vigente y contraseña robusta |
 | `GET` | `/auth/me` | Usuario autenticado |
 | `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |
+| `POST` | `/billing/renewal-request` | Owner autenticado; crea o reutiliza una solicitud abierta en la bandeja de soporte. No cobra ni reactiva la cuenta |
 
 El registro de barbería recibe `owner_email`, `owner_password`, `owner_first_name`, `owner_last_name`, `owner_phone`, `barbershop_name`, `barbershop_email`, `barbershop_phone`, `address_line1`, `city`, `state`, `postal_code`, `country`, `timezone`, `currency` y un `affiliate_code` opcional. Un código inválido se rechaza; uno válido registra el referido con el owner, barbería y suscripción en una sola transacción. Las contraseñas nuevas —registro, cambio y recuperación— requieren al menos 12 caracteres, una mayúscula y un número, y no deben exceder 72 bytes UTF-8 por el límite de bcrypt. El registro no cobra ni simula un pago.
 
@@ -119,7 +120,7 @@ El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y r
 
 Las rutas de escritura requieren rol owner; las que admiten `super_admin` exigen además `barbershop_id`. Para owner/barbero, el tenant se deriva de la identidad autenticada. Las rutas de perfil y contenido del panel permiten owner o barbero. Los pasos 1 y 3–9 guardan el progreso en MySQL y permiten reanudar el onboarding. El paso 2 carga el logo por `/upload-logo` y el último paso aplica los datos por `/complete`. La actualización de configuración valida horas y zona horaria IANA.
 
-`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Las citas consumidas se cuentan por mes calendario en la zona horaria del negocio, igual que el límite mensual aplicado al reservar o crear turnos presenciales. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
+`GET /billing/subscription` devuelve al owner el estado efectivo del periodo y el uso de límites del plan para su tenant. Las citas consumidas se cuentan por mes calendario en la zona horaria del negocio, igual que el límite mensual aplicado al reservar o crear turnos presenciales. Una suscripción marcada activa cuyo periodo ya terminó se informa como vencida sin mutar datos al leer. `POST /billing/renewal-request` registra una solicitud tenant-scoped y auditada en soporte; solicitudes abiertas se reutilizan para evitar duplicados. La solicitud no cobra ni reactiva la cuenta. El campo histórico `auto_renew` es solo un indicador administrativo: no inicia renovaciones ni programa cobros. Cada periodo requiere registrar manualmente un pago externo recibido.
 
 ## Analítica de demanda
 

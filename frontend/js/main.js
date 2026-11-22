@@ -1146,12 +1146,33 @@ async function loadOwnerSubscription() {
             <p>Periodo: ${escapeHtml(new Date(data.current_period_start).toLocaleDateString('es-DO', dateOptions))} – ${escapeHtml(new Date(data.current_period_end).toLocaleDateString('es-DO', dateOptions))}.</p>
             <p>Renovación manual: cada periodo requiere que un administrador registre el pago recibido. El sistema no procesa ni programa cargos automáticos.</p>
             <div class="stats-grid">${usage}</div>`;
+        const renewalButton = document.getElementById('ownerRenewalRequestBtn');
+        if (renewalButton) renewalButton.hidden = data.status === 'active' && Number(data.days_remaining) > 7;
+        const renewalResult = document.getElementById('ownerRenewalRequestResult');
+        if (renewalResult) renewalResult.textContent = '';
     } catch (error) {
         summary.textContent = error.message || 'No se pudo cargar el estado del plan.';
     }
 }
 
 document.getElementById('refreshOwnerSubscription')?.addEventListener('click', loadOwnerSubscription);
+document.getElementById('ownerRenewalRequestBtn')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const result = document.getElementById('ownerRenewalRequestResult');
+    if (currentUser?.role !== 'barbershop_owner' || !result) return;
+    button.disabled = true;
+    result.textContent = 'Enviando solicitud…';
+    try {
+        const data = await ownerFetch('/billing/renewal-request', { method: 'POST' });
+        result.textContent = data.created
+            ? `Solicitud #${Number(data.ticket_id)} guardada en la bandeja de soporte. No procesa pagos ni reactiva la cuenta.`
+            : `Ya hay una solicitud abierta (#${Number(data.ticket_id)}). La bandeja de soporte conserva la solicitud; no procesa pagos ni reactiva la cuenta.`;
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo guardar la solicitud de renovación.';
+    } finally {
+        button.disabled = false;
+    }
+});
 
 document.getElementById('ownerClientsBody')?.addEventListener('click', async (event) => {
     const historyButton = event.target.closest('.owner-client-history');

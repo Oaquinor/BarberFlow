@@ -48,8 +48,8 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v33");
-  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261122-service-categories"));
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v34");
+  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261122-manual-renewal-request"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
@@ -407,6 +407,9 @@ test("owner subscription panel reads period status and plan usage from the API",
   assert.match(script, /loadOwnerSubscription/);
   assert.match(script, /Renovación manual: cada periodo requiere que un administrador registre el pago recibido/);
   assert.match(script, /El sistema no procesa ni programa cargos automáticos\./);
+  assert.ok(script.includes("ownerFetch('/billing/renewal-request'"));
+  assert.match(page, /id="ownerRenewalRequestBtn"/);
+  assert.match(script, /La bandeja de soporte conserva la solicitud/);
   assert.doesNotMatch(script, /data\.auto_renew/);
   assert.match(adminPage, /Este indicador es administrativo; no procesa ni programa cargos/);
   assert.match(adminScript, /El cobro se registra manualmente/);

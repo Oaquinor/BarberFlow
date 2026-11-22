@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
-from app.models import Appointment, Barbershop, Service, Subscription, User
+from app.models import AuditLog, Appointment, Barbershop, Service, Subscription, SupportTicket, User
 from app.utils.datetime import local_month_window_utc_naive, utc_now_naive
 from zoneinfo import ZoneInfo
 
@@ -79,6 +79,42 @@ def test_expired_subscription_blocks_public_booking_but_owner_can_review_billing
     assert billing.status_code == 200
     assert billing.json()["status"] == "expired"
     assert billing.json()["days_remaining"] == 0
+
+    renewal = client.post("/api/v1/billing/renewal-request", headers=_headers(owner))
+    assert renewal.status_code == 201
+    assert renewal.json()["created"] is True
+    ticket_id = renewal.json()["ticket_id"]
+    assert test_db.query(SupportTicket).filter(
+        SupportTicket.id == ticket_id, SupportTicket.barbershop_id == shop.id,
+    ).count() == 1
+    assert test_db.query(AuditLog).filter(
+        AuditLog.action == "subscription.renewal_requested",
+        AuditLog.entity_id == ticket_id,
+        AuditLog.barbershop_id == shop.id,
+    ).count() == 1
+
+    duplicate = client.post("/api/v1/billing/renewal-request", headers=_headers(owner))
+    assert duplicate.status_code == 200
+    assert duplicate.json() == {"success": True, "created": False, "ticket_id": ticket_id}
+    assert test_db.query(SupportTicket).filter(
+        SupportTicket.barbershop_id == shop.id,
+        SupportTicket.message.startswith("[Solicitud de renovación]"),
+    ).count() == 1
+    assert client.post(
+        "/api/v1/billing/renewal-request", headers=_headers(barber),
+    ).status_code == 403
+
+    admin = User(
+        email="expired-billing-admin@example.com", password_hash="unused", first_name="Platform",
+        last_name="Admin", role="super_admin", is_active=True,
+    )
+    test_db.add(admin)
+    test_db.commit()
+    support = client.get(
+        f"/api/v1/admin/support/tickets?barbershop_id={shop.id}", headers=_headers(admin),
+    )
+    assert support.status_code == 200
+    assert [item["id"] for item in support.json()["items"]] == [ticket_id]
 
 
 def test_owner_reads_subscription_period_and_real_limits(client: TestClient, test_db: Session):
