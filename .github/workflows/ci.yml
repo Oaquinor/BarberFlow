@@ -20,6 +20,7 @@ jobs:
       SECRET_KEY: ci-only-secret-key-at-least-32-characters-long
       CORS_ORIGINS: '["https://app.example.com"]'
       FRONTEND_BASE_URL: https://app.example.com
+      EMAIL_FROM: ci@kingflow.example
       WHATSAPP_API_TOKEN: ci-only-whatsapp-token
     steps:
       - uses: actions/checkout@v7

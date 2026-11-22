@@ -22,9 +22,11 @@ def test_production_compose_uses_the_trusted_reverse_proxy_ip_header():
     repository_root = Path(__file__).resolve().parents[2]
     compose = (repository_root / "docker-compose.prod.yml").read_text(encoding="utf-8")
     environment_example = (repository_root / ".env.production.example").read_text(encoding="utf-8")
+    workflow = (repository_root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "CLIENT_IP_HEADER=${CLIENT_IP_HEADER:-X-Real-IP}" in compose
     assert "CLIENT_IP_HEADER=X-Real-IP" in environment_example
+    assert "EMAIL_FROM: ci@kingflow.example" in workflow
 
 
 def test_render_api_builds_from_repository_root_to_serve_the_frontend():
