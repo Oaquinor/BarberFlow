@@ -799,7 +799,10 @@ def admin_set_user_feature(
         if not user.barbershop_id:
             raise HTTPException(status_code=400, detail="Usuario sin barbería asignada")
 
-        shop = db.query(Barbershop).filter(Barbershop.id == user.barbershop_id).first()
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == user.barbershop_id,
+            Barbershop.is_deleted == False,
+        ).first()
         if not shop or not shop.onboarding_completed:
             raise HTTPException(status_code=400, detail="El barbero debe completar onboarding para branding_auto")
 

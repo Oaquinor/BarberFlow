@@ -80,6 +80,41 @@ def test_branding_feature_state_is_returned_and_consumed_by_user_session(
     assert unsupported.status_code == 422
 
 
+def test_branding_feature_cannot_be_enabled_for_deleted_tenant(
+    client: TestClient, test_db: Session,
+):
+    shop = Barbershop(
+        name="Deleted Brand Feature", slug="deleted-brand-feature-test",
+        email="deleted-brand-feature@example.com", phone="8095556190",
+        address_line1="Calle 29", city="Santo Domingo", state="DN",
+        postal_code="10119", country="DO", timezone="America/Santo_Domingo",
+        onboarding_completed=True,
+    )
+    admin = User(
+        email="deleted-brand-admin@example.com", password_hash="unused",
+        first_name="Admin", last_name="Deleted", role="super_admin", is_active=True,
+    )
+    barber = User(
+        email="deleted-brand-barber@example.com", password_hash="unused",
+        first_name="Barber", last_name="Deleted", role="barber", is_active=True,
+        barbershop_id=None,
+    )
+    test_db.add_all([shop, admin, barber])
+    test_db.flush()
+    barber.barbershop_id = shop.id
+    test_db.commit()
+    shop.soft_delete()
+    test_db.commit()
+
+    response = client.put(
+        f"/api/v1/admin/users/{barber.id}/features", headers=_headers(admin),
+        json={"feature_key": "branding_auto", "enabled": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El barbero debe completar onboarding para branding_auto"
+
+
 def test_super_admin_user_list_supports_tenant_scoped_search_and_pagination(
     client: TestClient, test_db: Session,
 ):
