@@ -38,9 +38,10 @@ def test_public_slot_filter_uses_service_duration_for_conflicts_and_absences():
 def test_public_tracking_is_rate_limited_and_only_stores_hashed_ip(
     client: TestClient, test_db: Session, monkeypatch,
 ):
+    import app.api.v1.endpoints.booking as booking
     import app.api.v1.endpoints.platform as platform
 
-    monkeypatch.setattr(platform, "PUBLIC_TRACK_IP_LIMIT", 2)
+    monkeypatch.setattr(booking, "PUBLIC_TRACK_IP_LIMIT", 2)
     shop = Barbershop(
         name="Portal público limitado", slug="public-track-throttle",
         email="public-track-throttle@example.com", phone="8095550110",
@@ -68,10 +69,12 @@ def test_public_tracking_is_rate_limited_and_only_stores_hashed_ip(
 def test_public_booking_hides_and_rejects_today_slots_after_cash_close(
     client: TestClient, test_db: Session, monkeypatch,
 ):
-    import app.api.v1.endpoints.platform as platform
+    import app.api.v1.endpoints.booking as booking
+    import app.api.v1.endpoints.common as common
 
     now = datetime(2026, 11, 20, 15, 0)
-    monkeypatch.setattr(platform, "utc_now_naive", lambda: now)
+    monkeypatch.setattr(booking, "utc_now_naive", lambda: now)
+    monkeypatch.setattr(common, "utc_now_naive", lambda: now)
     subscription = Subscription(
         plan="free", status="active", current_period_start=now - timedelta(days=1),
         current_period_end=now + timedelta(days=29), max_barbers=1,
