@@ -703,8 +703,8 @@
                     <p id="serviceFormResult" role="status"></p>
                 </form>
 
-                <div class="services-categories">
-                    <button class="category-btn active" type="button">Todos</button>
+                <div id="serviceCategories" class="services-categories" role="group" aria-label="Filtrar servicios por categoría">
+                    <button class="category-btn active" type="button" data-all-categories="true" aria-pressed="true">Todos</button>
                 </div>
 
                 <div class="services-list" id="servicesList"></div>
@@ -884,7 +884,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261120-csp-events"></script>
+    <script src="js/main.js?v=20261122-service-categories"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

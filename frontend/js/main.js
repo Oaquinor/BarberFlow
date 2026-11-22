@@ -6,6 +6,8 @@ let barbershopProfile = null;
 let dashboardLayout = null;
 let accessToken = null;
 let serviceCache = [];
+let selectedServiceCategory = null;
+let serviceSearchQuery = '';
 let editingServiceId = null;
 let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
@@ -748,6 +750,85 @@ document.getElementById('appointmentsCalendarGrid')?.addEventListener('click', e
     loadAppointmentsForDate(button.dataset.date);
 });
 
+function filterServices(services, category, query) {
+    const normalizedQuery = String(query || '').trim().toLocaleLowerCase();
+    return services.filter((service) => {
+        const serviceCategory = String(service.category || '').trim();
+        if (category && serviceCategory !== category) return false;
+        if (!normalizedQuery) return true;
+        return [service.name, service.description, serviceCategory]
+            .some((value) => String(value || '').toLocaleLowerCase().includes(normalizedQuery));
+    });
+}
+
+function renderServiceCategoryFilters(services) {
+    const container = document.getElementById('serviceCategories');
+    if (!container) return;
+
+    const categories = [...new Set(services
+        .map((service) => String(service.category || '').trim())
+        .filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right));
+    if (selectedServiceCategory && !categories.includes(selectedServiceCategory)) {
+        selectedServiceCategory = null;
+    }
+
+    const options = [
+        { label: 'Todos', category: null },
+        ...categories.map((category) => ({ label: category, category })),
+    ];
+    container.replaceChildren(...options.map((option) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `category-btn${selectedServiceCategory === option.category ? ' active' : ''}`;
+        button.dataset.category = option.category || '';
+        button.dataset.allCategories = String(option.category === null);
+        button.setAttribute('aria-pressed', String(selectedServiceCategory === option.category));
+        button.textContent = option.label;
+        return button;
+    }));
+}
+
+function renderServiceCatalog(services) {
+    const list = document.getElementById('servicesList');
+    if (!list) return;
+
+    renderServiceCategoryFilters(services);
+    if (!services.length) {
+        list.innerHTML = '<div class="service-item"><div class="service-info"><h4>Sin servicios activos</h4><p>Crea servicios desde tu configuración para verlos aquí.</p></div></div>';
+        return;
+    }
+
+    const visibleServices = filterServices(services, selectedServiceCategory, serviceSearchQuery);
+    if (!visibleServices.length) {
+        list.innerHTML = '<div class="service-item"><div class="service-info"><h4>No hay servicios coincidentes</h4><p>Prueba otra categoría o búsqueda.</p></div></div>';
+        return;
+    }
+
+    list.innerHTML = visibleServices.map((service) => `
+        <div class="service-item ${service.category === 'combo' ? 'featured' : ''}">
+            <div class="service-icon">✂️</div>
+            <div class="service-info">
+                <h4>${escapeHtml(service.name)}</h4>
+                <p>${escapeHtml(service.description || 'Servicio personalizado de la barbería')}</p>
+                <div class="service-meta">
+                    <span class="tag">${escapeHtml(service.category || 'General')}</span>
+                    <span>⏱️ ${service.duration_minutes || 0} min</span>
+                </div>
+            </div>
+            <div class="service-price">${fmtMoneyFromCents(service.price_cents || 0)}</div>
+            ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}">✏️</button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}">🗑️</button>` : ''}
+        </div>
+    `).join('');
+}
+
+function handleServiceCategoryClick(event) {
+    const button = event.target.closest('button.category-btn');
+    if (!button || !event.currentTarget.contains(button)) return;
+    selectedServiceCategory = button.dataset.allCategories === 'true' ? null : button.dataset.category;
+    renderServiceCatalog(serviceCache);
+}
+
 async function loadBarberDashboardData() {
     if (!accessToken) return;
     const requestSequence = ++dashboardRequestSequence;
@@ -815,31 +896,10 @@ async function loadBarberDashboardData() {
         }
         if (requestSequence !== dashboardRequestSequence) return;
 
-        const servicesList = document.getElementById('servicesList');
-        if (servicesList) {
-            const services = Array.isArray(data.services) ? data.services : [];
-            serviceCache = services;
-            populateWalkInServices(services);
-            if (!services.length) {
-                servicesList.innerHTML = '<div class="service-item"><div class="service-info"><h4>Sin servicios activos</h4><p>Crea servicios desde tu configuración para verlos aquí.</p></div></div>';
-            } else {
-                servicesList.innerHTML = services.map((s) => `
-                    <div class="service-item ${s.category === 'combo' ? 'featured' : ''}">
-                        <div class="service-icon">✂️</div>
-                        <div class="service-info">
-                            <h4>${escapeHtml(s.name)}</h4>
-                            <p>${escapeHtml(s.description || 'Servicio personalizado de la barbería')}</p>
-                            <div class="service-meta">
-                                <span class="tag">${escapeHtml(s.category || 'General')}</span>
-                                <span>⏱️ ${s.duration_minutes || 0} min</span>
-                            </div>
-                        </div>
-                        <div class="service-price">${fmtMoneyFromCents(s.price_cents || 0)}</div>
-                        ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(s.id)}">✏️</button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(s.id)}">🗑️</button>` : ''}
-                    </div>
-                `).join('');
-            }
-        }
+        const services = Array.isArray(data.services) ? data.services : [];
+        serviceCache = services;
+        populateWalkInServices(services);
+        renderServiceCatalog(services);
 
         renderWeeklyChart(data.weekly_counts);
 
@@ -1952,11 +2012,10 @@ document.getElementById('newServiceBtn')?.addEventListener('click', () => {
 });
 document.getElementById('cancelServiceForm')?.addEventListener('click', () => { serviceForm.hidden = true; });
 document.getElementById('serviceSearch')?.addEventListener('input', (event) => {
-    const query = event.target.value.trim().toLocaleLowerCase();
-    document.querySelectorAll('#servicesList .service-item').forEach((item) => {
-        item.hidden = !item.textContent.toLocaleLowerCase().includes(query);
-    });
+    serviceSearchQuery = event.target.value;
+    renderServiceCatalog(serviceCache);
 });
+document.getElementById('serviceCategories')?.addEventListener('click', handleServiceCategoryClick);
 serviceForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const result = document.getElementById('serviceFormResult');
