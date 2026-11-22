@@ -373,7 +373,7 @@ def test_checkout_rolls_back_if_performance_or_achievements_cannot_be_persisted(
     appointment = Appointment(
         barbershop_id=shop.id, client_id=customer.id, barber_id=barber.id,
         scheduled_time=now, estimated_duration=30, service_type="haircut",
-        service_price=20000, status="in_progress", actual_start_time=now - timedelta(minutes=5),
+        service_price=20000, status="in_progress", actual_start_time=now - timedelta(minutes=6),
     )
     test_db.add(appointment)
     test_db.commit()
@@ -413,7 +413,7 @@ def test_checkout_rolls_back_if_performance_or_achievements_cannot_be_persisted(
         headers={"Authorization": f"Bearer {token}"},
         json={"method": "cash", "tip_cents": 0},
     )
-    assert retried.status_code == 201
+    assert retried.status_code == 201, retried.text
     test_db.expire_all()
     assert test_db.get(Appointment, appointment.id).status == "completed"
     assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 1
