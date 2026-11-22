@@ -380,6 +380,24 @@ def test_public_booking_tracking_and_cancel_are_connected(
         InAppNotification.event_type == "appointment_rescheduled",
     ).count() == 6
 
+    public_client.is_active = False
+    test_db.commit()
+    inactive_booking_payload = {
+        **payload,
+        "barber_id": barber.id,
+        "scheduled_time": replacement_slot.slot_start.replace(tzinfo=timezone.utc).isoformat(),
+    }
+    inactive_booking = client.post(
+        f"/api/v1/public/{shop.slug}/appointments", json=inactive_booking_payload,
+    )
+    assert inactive_booking.status_code == 409
+    assert test_db.query(Appointment).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.scheduled_time == replacement_slot.slot_start,
+        Appointment.status.in_({"pending", "confirmed", "in_progress"}),
+        Appointment.is_deleted == False,
+    ).count() == 0
+
     public_client.soft_delete()
     test_db.commit()
     cancelled = client.post(
@@ -400,24 +418,6 @@ def test_public_booking_tracking_and_cancel_are_connected(
         NotificationDelivery.dedupe_key.like(
             f"appointment:{booking['appointment_id']}:cancellation:%"
         ),
-    ).count() == 0
-
-    public_client.is_active = False
-    test_db.commit()
-    inactive_booking_payload = {
-        **payload,
-        "barber_id": barber.id,
-        "scheduled_time": replacement_slot.slot_start.replace(tzinfo=timezone.utc).isoformat(),
-    }
-    inactive_booking = client.post(
-        f"/api/v1/public/{shop.slug}/appointments", json=inactive_booking_payload,
-    )
-    assert inactive_booking.status_code == 409
-    assert test_db.query(Appointment).filter(
-        Appointment.barbershop_id == shop.id,
-        Appointment.scheduled_time == replacement_slot.slot_start,
-        Appointment.status.in_({"pending", "confirmed", "in_progress"}),
-        Appointment.is_deleted == False,
     ).count() == 0
 
     selected_barber_events = client.get("/api/v1/notifications", headers=barber_headers).json()["items"]
