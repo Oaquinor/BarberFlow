@@ -251,6 +251,28 @@ def test_worker_sends_one_due_delivery_once(test_db: Session, monkeypatch):
     assert row.sent_at is not None
 
 
+def test_worker_suppresses_queued_delivery_when_recipient_is_deleted(test_db: Session, monkeypatch):
+    now = utc_now_naive()
+    shop, client, appointment = _tenant_with_appointment(test_db, now + timedelta(hours=2))
+    row = enqueue_delivery(
+        test_db, barbershop_id=shop.id, appointment_id=appointment.id,
+        recipient_user_id=client.id,
+        dedupe_key="appointment:test:deleted-recipient", channel="whatsapp",
+        event_type="appointment_custom", recipient=client.phone, body="Mensaje de prueba",
+        scheduled_for=now,
+    )
+    client.is_deleted = True
+    test_db.commit()
+    sends = []
+    monkeypatch.setattr(NotificationService, "_send_whatsapp", lambda *_args: sends.append(True) or True)
+
+    assert process_due_deliveries(test_db, now=now) == 0
+    test_db.refresh(row)
+    assert sends == []
+    assert row.status == "failed"
+    assert row.last_error == "recipient_unavailable"
+
+
 def test_reminders_follow_rescheduled_appointments(test_db: Session, monkeypatch):
     now = utc_now_naive()
     shop, _, appointment = _tenant_with_appointment(test_db, now + timedelta(hours=23))

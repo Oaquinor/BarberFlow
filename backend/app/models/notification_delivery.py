@@ -15,6 +15,7 @@ class NotificationDelivery(BaseModel):
 
     barbershop_id = Column(Integer, ForeignKey("barbershops.id", ondelete="RESTRICT"), nullable=False)
     appointment_id = Column(Integer, ForeignKey("appointments.id", ondelete="RESTRICT"), nullable=True)
+    recipient_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     dedupe_key = Column(String(191), nullable=False)
     channel = Column(String(16), nullable=False)
     event_type = Column(String(50), nullable=False)

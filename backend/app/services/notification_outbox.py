@@ -29,6 +29,7 @@ def enqueue_delivery(
     event_type: str,
     recipient: str,
     body: str,
+    recipient_user_id: int | None = None,
     subject: str | None = None,
     appointment_id: int | None = None,
     scheduled_for=None,
@@ -49,6 +50,7 @@ def enqueue_delivery(
     row = NotificationDelivery(
         barbershop_id=barbershop_id,
         appointment_id=appointment_id,
+        recipient_user_id=recipient_user_id,
         dedupe_key=dedupe_key,
         channel=channel,
         event_type=event_type,
@@ -112,6 +114,7 @@ def _enqueue_appointment_reminder_batch(db: Session, appointments: list[Appointm
         row = NotificationDelivery(
             barbershop_id=shop.id,
             appointment_id=appointment.id,
+            recipient_user_id=client.id,
             dedupe_key=f"appointment:{appointment.id}:reminder:{channel}",
             channel=channel,
             event_type="appointment_reminder",
@@ -288,6 +291,19 @@ def process_due_deliveries(db: Session, limit: int = 25, now=None) -> int:
                 row.scheduled_for = rescheduled_for
                 row.next_attempt_at = rescheduled_for
                 row.attempts = max(0, row.attempts - 1)
+                row.claimed_at = None
+                db.commit()
+                continue
+        if row.recipient_user_id:
+            recipient_user = db.query(User).filter(
+                User.id == row.recipient_user_id,
+                User.is_deleted == False,
+                User.is_active == True,
+            ).with_for_update().first()
+            contact = (recipient_user.email if row.channel == "email" else recipient_user.phone) if recipient_user else None
+            if not contact or contact != row.recipient or (row.channel == "email" and contact.endswith("@client.invalid")):
+                row.status = "failed"
+                row.last_error = "recipient_unavailable"
                 row.claimed_at = None
                 db.commit()
                 continue

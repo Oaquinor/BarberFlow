@@ -412,7 +412,7 @@ def public_create_appointment(
         f"🔎 Seguimiento: {tracking_link}"
     )
     _queue_appointment_email(db, appointment, "booking_received")
-    _queue_appointment_whatsapp(db, appointment, phone, wa_message, "confirmation:client")
+    _queue_appointment_whatsapp(db, appointment, phone, wa_message, "confirmation:client", recipient_user_id=client.id)
 
     # Notificación al barbero (WhatsApp)
     barber_phone = barber.phone or ""
@@ -425,7 +425,7 @@ def public_create_appointment(
             f"Hora: {local_appointment_time.strftime('%d/%m/%Y %H:%M')}\n"
             f"Estado: {appointment.status}"
         )
-        _queue_appointment_whatsapp(db, appointment, barber_phone, barber_msg, "confirmation:barber")
+        _queue_appointment_whatsapp(db, appointment, barber_phone, barber_msg, "confirmation:barber", recipient_user_id=barber.id)
 
     db.commit()
     db.refresh(appointment)
@@ -583,6 +583,7 @@ def create_walk_in_appointment(
             db, appointment, phone,
             f"💈 {shop.name}: comenzamos tu servicio de {service.name} con {barber.full_name}.",
             "walk_in_started:client",
+            recipient_user_id=client.id,
         )
     try:
         db.commit()
@@ -983,6 +984,7 @@ def public_cancel_appointment(
             db, appointment, appointment.client.phone,
             f"La cita en {shop.name} para {_utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')} fue cancelada.",
             "cancellation:client",
+            recipient_user_id=appointment.client_id,
         )
     db.commit()
     return {"success": True, "appointment_id": appointment.id, "status": appointment.status}
@@ -1155,6 +1157,7 @@ def public_reschedule_appointment(
             f"{_utc_aware(new_start).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')}.",
             "rescheduled:client",
             dedupe_suffix=reschedule_event_id,
+            recipient_user_id=appointment.client_id,
         )
     _queue_appointment_email(db, appointment, "reschedule", dedupe_suffix=reschedule_event_id)
     db.commit()

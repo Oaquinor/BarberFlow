@@ -299,6 +299,7 @@ def _queue_appointment_email(
         channel="email",
         event_type=f"appointment_{event.split(':', 1)[0]}",
         recipient=recipient,
+        recipient_user_id=appointment.client_id,
         subject=subject,
         body=body,
     )
@@ -311,6 +312,7 @@ def _queue_appointment_whatsapp(
     message: str,
     event: str,
     dedupe_suffix: str | None = None,
+    recipient_user_id: int | None = None,
 ) -> None:
     suffix = f":{dedupe_suffix}" if dedupe_suffix else ""
     enqueue_delivery(
@@ -324,6 +326,7 @@ def _queue_appointment_whatsapp(
         channel="whatsapp",
         event_type=f"appointment_{event.split(':', 1)[0]}",
         recipient=recipient,
+        recipient_user_id=recipient_user_id,
         body=message,
     )
 
@@ -1166,6 +1169,7 @@ def barber_update_appointment_status(
                 f"Tu cita en {shop.name} fue confirmada para "
                 f"{local_time.strftime('%d/%m/%Y %H:%M')} ({appointment.service_type}).",
                 "confirmation:client:status",
+                recipient_user_id=appointment.client_id,
             )
     _audit(db, user, f"appointment.{status}", "appointment", appointment.id,
            appointment.barbershop_id, {"previous_status": previous_status})
@@ -1181,6 +1185,7 @@ def barber_update_appointment_status(
                 f"La cita en {shop.name} para "
                 f"{_utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')} fue cancelada.",
                 "cancellation:client",
+                recipient_user_id=appointment.client_id,
             )
     if status in {"cancelled", "no_show"}:
         try:
@@ -1345,6 +1350,7 @@ def barber_record_appointment_payment(
             f"Gracias por visitar {shop.name}. Registramos tu pago de "
             f"{(payment.amount_cents + payment.tip_cents) / 100:.2f} {payment.currency} por {appointment.service_type}.",
             "completion:client",
+            recipient_user_id=appointment.client_id,
         )
     try:
         from app.services.performance_service import PerformanceService
