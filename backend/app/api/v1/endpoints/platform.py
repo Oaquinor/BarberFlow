@@ -377,6 +377,7 @@ PUBLIC_BOOKING_TENANT_IP_LIMIT = 10
 PUBLIC_BOOKING_IP_LIMIT = 60
 PUBLIC_TRACK_IP_LIMIT = 120
 PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT = 20
+TENANT_REGISTRATION_IP_LIMIT = 5
 
 
 def _login_bucket_hash(kind: str, value: str) -> str:
@@ -678,11 +679,22 @@ def _lock_platform_settings(db: Session) -> PlatformSettings:
 
 
 @router.post("/saas/register", response_model=AuthLoginResponse, status_code=201)
-def register_tenant(data: TenantRegistrationRequest, db: Session = Depends(get_db)):
+def register_tenant(
+    data: TenantRegistrationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Atomically register a barber shop owner, the tenant and a free subscription."""
     platform_settings = _lock_platform_settings(db)
     if not platform_settings.registrations_enabled:
         raise HTTPException(status_code=503, detail="El registro de nuevas barberías está temporalmente cerrado")
+    _consume_public_token_quota(
+        db,
+        "tenant-registration",
+        get_client_ip(request, settings.CLIENT_IP_HEADER),
+        utc_now_naive(),
+        TENANT_REGISTRATION_IP_LIMIT,
+    )
     existing_user = db.query(User.id).filter(
         User.email == str(data.owner_email).lower(),
         User.is_deleted == False,

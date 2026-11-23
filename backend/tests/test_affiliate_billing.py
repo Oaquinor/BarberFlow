@@ -42,6 +42,39 @@ def test_saas_signup_attributes_valid_affiliate_code(client: TestClient, test_db
     assert affiliate.active_referrals == 1
 
 
+def test_saas_registration_is_limited_per_ip(client: TestClient, monkeypatch):
+    from app.api.v1.endpoints import platform
+
+    monkeypatch.setattr(platform, "TENANT_REGISTRATION_IP_LIMIT", 1)
+    payload = {
+        "owner_email": "registration-limit-one@example.com",
+        "owner_password": "SecureOwner2026",
+        "owner_first_name": "Owner",
+        "owner_last_name": "Limit",
+        "owner_phone": "8095554020",
+        "barbershop_name": "Registration Limit Shop",
+        "barbershop_email": "registration-limit-shop@example.com",
+        "barbershop_phone": "8095554021",
+        "address_line1": "Calle 42",
+        "city": "Santo Domingo",
+        "state": "DN",
+        "postal_code": "10107",
+        "country": "DO",
+        "timezone": "America/Santo_Domingo",
+        "currency": "DOP",
+    }
+
+    first = client.post("/api/v1/saas/register", json=payload)
+    second = client.post(
+        "/api/v1/saas/register",
+        json={**payload, "owner_email": "registration-limit-two@example.com"},
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 429
+    assert second.headers.get("retry-after")
+
+
 def test_recorded_subscription_payment_creates_and_pays_referral_commission(
     client: TestClient, test_db: Session,
 ):

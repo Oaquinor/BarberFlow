@@ -102,14 +102,15 @@ Ayudamos a:
 ### Cálculo de Métricas Diarias
 
 **Se ejecuta:**
-- Al finalizar cada cita
-- Al final del día (automático)
+- Al finalizar una cita con su pago
+- Al cancelar o marcar una cita como no presentada, para recalcular esas métricas
+- No hay un proceso automático al cierre del día; el worker activo se ocupa de notificaciones y recordatorios
 
 **Métricas calculadas:**
 1. `appointments_completed`: Citas finalizadas
 2. `appointments_cancelled`: Citas canceladas
 3. `appointments_no_show`: Clientes que no asistieron
-4. `total_revenue`: Suma de precios de citas completadas
+4. `total_revenue`: Suma de pagos registrados para citas completadas, incluida la propina
 5. `total_service_time_minutes`: Suma de duraciones reales
 6. `average_service_time_minutes`: Promedio de duración
 7. `time_efficiency_percentage`: (estimado / real) * 100
@@ -195,10 +196,7 @@ Ayudamos a:
 
 ### Detección de Logros
 
-**Se verifica en:**
-1. Al completar una cita
-2. Al calcular performance diaria
-3. Al finalizar la semana
+**Se verifica:** al registrar el pago que completa una cita. No existe una tarea automática diaria o semanal para evaluar logros.
 
 **Reglas:**
 - Un logro solo se otorga una vez
@@ -215,19 +213,18 @@ Ayudamos a:
 **Datos requeridos:**
 - Nombre completo
 - Email (único)
-- Teléfono
-- Información bancaria
+- Teléfono opcional
 
 **Al registrar:**
 - Se genera código único (8 caracteres)
-- Tasa de comisión: 15% (default)
-- Estado inicial: `pending`
-- Requiere verificación del admin
+- Tasa de comisión configurable (15% por defecto)
+- Estado inicial: activo y pendiente de verificación
+- Los datos bancarios no se solicitan en el formulario actual
 
 ### Referidos
 
 **Proceso:**
-1. Cliente usa código de afiliado al registrar barbería
+1. Owner usa el código al registrar una barbería
 2. Se vincula barbería con afiliado
 3. Se incrementa `total_referrals`
 4. Se incrementa `active_referrals` si barbería se activa
@@ -235,8 +232,9 @@ Ayudamos a:
 ### Comisiones
 
 **Cálculo:**
-- Comisión = Precio de suscripción × Tasa de comisión
-- Se genera comisión mensual por cada referido activo
+- Se calcula al registrar manualmente un pago externo de suscripción
+- Comisión = importe efectivamente recibido × tasa del afiliado
+- Un pago referido no puede registrarse dos veces para el mismo periodo de facturación
 
 **Estados:**
 1. **Pending:** Generada, esperando aprobación
@@ -295,17 +293,17 @@ Ayudamos a:
 **Validaciones:**
 1. La fecha debe ser futura
 2. El barbero debe estar disponible
-3. El horario debe estar dentro del horario laboral
+3. Si la barbería configuró horario laboral, la cita debe quedar dentro de ese horario
 4. No puede haber superposición con otras citas
 
 **Duración estimada:**
 - Se usa la duración del servicio seleccionado
-- Default: 30 minutos
+- El catálogo acepta servicios de 10 a 180 minutos; 30 minutos es solo el valor de respaldo del modelo de barbería, no reemplaza la duración del servicio
 
 ### Cancelación
 
 **Reglas:**
-- Cliente puede cancelar hasta 2 horas antes
+- El cliente puede cancelar una cita futura pendiente o confirmada mediante su token privado de seguimiento; no hay una ventana mínima de dos horas
 - Barbero puede cancelar en cualquier momento
 - Owner puede cancelar en cualquier momento
 - Se registra quién canceló y el motivo
@@ -352,27 +350,26 @@ Al alcanzar el límite, el backend rechaza con `402` la operación que crearía 
 - Super admin ve todo
 
 ### Rate Limiting
-- 100 requests por minuto por IP
-- 1000 requests por hora por IP
+- No hay un límite global activo de 100 solicitudes por minuto; esos valores de configuración no se aplican actualmente
+- Sí hay límites específicos para login, recuperación de contraseña, registro SaaS (5 por IP por hora), soporte, reservas públicas y cambios/seguimiento con token, persistidos en MySQL
 
 ---
 
 ## 📝 Reglas de Negocio Generales
 
 ### Horarios
-- Se usan zones horarias configurables
-- Default: America/New_York
-- Horario laboral default: 9:00 AM - 6:00 PM
+- Las citas y cierres se agrupan usando la zona IANA de la barbería
+- El registro SaaS requiere que se elija una zona horaria y propone `America/Santo_Domingo` en el formulario
+- El onboarding guarda el horario comercial; si no se configuró, ese rango no restringe las citas. Los turnos explícitos publicados por barberos y la duración del servicio siguen determinando disponibilidad
 
 ### Moneda
-- Todo se guarda en centavos (evita problemas de decimales)
-- Currency default: USD
-- Formato de display: $X.XX
+- Los importes de pagos y comisiones se guardan como enteros en centavos
+- El formulario de registro propone DOP y permite elegir DOP, USD o EUR; la moneda queda asociada a la barbería (el modelo conserva USD como valor de respaldo para altas internas antiguas)
+- Los informes separan monedas y no suman importes de monedas distintas
 
 ### Soft Delete
-- Nada se elimina físicamente
-- Se marca con `is_deleted = true`
-- Se registra `deleted_at`
+- Las entidades de negocio se conservan mediante borrado lógico (`is_deleted` y `deleted_at`)
+- Los registros temporales de autenticación vencidos se purgan físicamente por la política de retención
 
 ### Timestamps
 - Todos los registros tienen `created_at` y `updated_at`
@@ -380,4 +377,4 @@ Al alcanzar el límite, el backend rechaza con `402` la operación que crearía 
 
 ---
 
-**Última actualización:** 2024-05-30
+**Última actualización:** 2026-11-23
