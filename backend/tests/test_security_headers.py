@@ -36,6 +36,11 @@ def test_production_responses_add_hsts(client: TestClient, monkeypatch):
     )
     response = client.get("/signup.html")
     assert response.headers["strict-transport-security"] == "max-age=31536000; includeSubDomains"
+    assert response.headers["content-security-policy"] == (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; connect-src 'self' https:; "
+        "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
+    )
 
 
 def test_debug_api_docs_can_load_swagger_inline_bootstrap(client: TestClient):

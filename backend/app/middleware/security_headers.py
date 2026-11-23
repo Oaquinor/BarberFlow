@@ -15,10 +15,13 @@ async def add_security_headers(request: Request, call_next) -> Response:
         "/docs", "/docs/oauth2-redirect", "/redoc",
     }
     if not is_debug_api_docs:
+        connect_sources = "'self' https:"
+        if get_settings().ENVIRONMENT.lower() != "production":
+            connect_sources += " http://localhost:* http://127.0.0.1:*"
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; "
+            f"img-src 'self' data: blob:; connect-src {connect_sources}; "
             "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
         )
 
