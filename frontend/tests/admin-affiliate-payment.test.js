@@ -77,7 +77,6 @@ test("subscription period end includes the selected UTC calendar day", async () 
     subscriptionResult: { textContent: "" },
     subPlan: { value: "basic" },
     subStatus: { value: "active" },
-    subAutoRenew: { value: "false" },
     subPeriodEnd: { value: "2026-11-20" },
   };
   const calls = [];
@@ -95,4 +94,11 @@ test("subscription period end includes the selected UTC calendar day", async () 
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], "/api/v1/admin/tenants/42/subscription");
   assert.equal(JSON.parse(calls[0][1].body).current_period_end, "2026-11-20T23:59:59Z");
+  assert.equal(Object.hasOwn(JSON.parse(calls[0][1].body), "auto_renew"), false);
+});
+
+test("subscription admin screen does not offer fictitious automatic renewal", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "admin.html"), "utf8");
+  assert.doesNotMatch(html, /id="subAutoRenew"/);
+  assert.match(html, /La renovación es manual/);
 });

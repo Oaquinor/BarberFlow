@@ -534,7 +534,7 @@ def admin_update_subscription(
             status=data.status or "active",
             current_period_start=now,
             current_period_end=period_end,
-            auto_renew=data.auto_renew if data.auto_renew is not None else True,
+            auto_renew=False,
         )
         _apply_plan_limits(sub, sub.plan)
         db.add(sub)
@@ -553,9 +553,6 @@ def admin_update_subscription(
             if period_end <= sub.current_period_start:
                 raise HTTPException(status_code=422, detail="El fin del periodo debe ser posterior al inicio")
             sub.current_period_end = period_end
-        if data.auto_renew is not None:
-            sub.auto_renew = data.auto_renew
-
     _audit(
         db, admin, "subscription.updated", "subscription", sub.id, shop.id,
         {"previous": previous, "plan": sub.plan, "status": sub.status,

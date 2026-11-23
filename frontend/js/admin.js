@@ -559,7 +559,6 @@ async function loadSubscription() {
         panel.style.display = 'block';
         document.getElementById('subPlan').value = sub.plan;
         document.getElementById('subStatus').value = sub.status;
-        document.getElementById('subAutoRenew').value = String(sub.auto_renew);
         document.getElementById('subscriptionPaymentStart').value = (sub.current_period_start || '').slice(0, 10);
         document.getElementById('subscriptionPaymentEnd').value = (sub.current_period_end || '').slice(0, 10);
         document.getElementById('subPeriodEnd').value = (sub.current_period_end || '').slice(0, 10);
@@ -570,7 +569,6 @@ async function loadSubscription() {
             panel.style.display = 'block';
             document.getElementById('subPlan').value = 'free';
             document.getElementById('subStatus').value = 'active';
-            document.getElementById('subAutoRenew').value = 'true';
             document.getElementById('subscriptionPaymentStart').value = '';
             document.getElementById('subscriptionPaymentEnd').value = '';
             document.getElementById('subPeriodEnd').value = '';
@@ -594,7 +592,6 @@ async function saveSubscription() {
     const payload = {
         plan: document.getElementById('subPlan').value,
         status: document.getElementById('subStatus').value,
-        auto_renew: document.getElementById('subAutoRenew').value === 'true',
     };
     if (periodEndValue) {
         // The selected date is the final calendar day of the period. Store its

@@ -75,6 +75,32 @@ def test_saas_registration_is_limited_per_ip(client: TestClient, monkeypatch):
     assert second.headers.get("retry-after")
 
 
+def test_new_subscription_does_not_enable_unimplemented_automatic_renewal(
+    client: TestClient, test_db: Session,
+):
+    admin = User(
+        email="manual-renewal-admin@example.com", password_hash="unused",
+        first_name="Admin", last_name="Manual", role="super_admin", is_active=True,
+    )
+    shop = Barbershop(
+        name="Manual Renewal", slug="manual-renewal-test", email="manual-renewal@example.com",
+        phone="8095554022", address_line1="Calle 43", city="Santo Domingo", state="DN",
+        postal_code="10108", country="DO", timezone="America/Santo_Domingo", currency="DOP",
+    )
+    test_db.add_all([admin, shop])
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': 'super_admin'})}"}
+    response = client.put(
+        f"/api/v1/admin/tenants/{shop.id}/subscription", headers=headers,
+        json={"plan": "basic", "auto_renew": True},
+    )
+
+    assert response.status_code == 200
+    subscription = test_db.get(Subscription, response.json()["subscription_id"])
+    assert subscription.auto_renew is False
+
+
 def test_recorded_subscription_payment_creates_and_pays_referral_commission(
     client: TestClient, test_db: Session,
 ):
