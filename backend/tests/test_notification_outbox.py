@@ -225,11 +225,12 @@ def test_refreshing_existing_reminders_commits_updates_for_other_workers(mysql_t
 
 def test_worker_sends_one_due_delivery_once(test_db: Session, monkeypatch):
     now = utc_now_naive()
-    shop, _, appointment = _tenant_with_appointment(test_db, now + timedelta(hours=2))
+    shop, client, appointment = _tenant_with_appointment(test_db, now + timedelta(hours=2))
     row = enqueue_delivery(
         test_db, barbershop_id=shop.id, appointment_id=appointment.id,
         dedupe_key="appointment:test:custom", channel="whatsapp",
-        event_type="appointment_custom", recipient="8095550403", body="Mensaje de prueba",
+        event_type="appointment_custom", recipient=client.phone, body="Mensaje de prueba",
+        recipient_user_id=client.id,
         scheduled_for=now,
     )
     test_db.commit()
