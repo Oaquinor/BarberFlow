@@ -31,13 +31,13 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index(
-        "ix_notification_deliveries_recipient_user_id",
-        table_name="notification_deliveries",
-    )
     op.drop_constraint(
         "fk_notification_deliveries_recipient_user_id_users",
         "notification_deliveries",
         type_="foreignkey",
+    )
+    op.drop_index(
+        "ix_notification_deliveries_recipient_user_id",
+        table_name="notification_deliveries",
     )
     op.drop_column("notification_deliveries", "recipient_user_id")
