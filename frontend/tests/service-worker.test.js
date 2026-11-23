@@ -411,7 +411,7 @@ test("owner subscription panel reads period status and plan usage from the API",
   assert.match(page, /id="ownerRenewalRequestBtn"/);
   assert.match(script, /La bandeja de soporte conserva la solicitud/);
   assert.doesNotMatch(script, /data\.auto_renew/);
-  assert.match(adminPage, /Este indicador es administrativo; no procesa ni programa cargos/);
+  assert.match(adminPage, /La renovación es manual/);
   assert.match(adminScript, /El cobro se registra manualmente/);
   assert.match(adminPage, /id="supportOpenCount"/);
   assert.match(adminScript, /refreshOpenSupportTicketCount\(true\)/);
