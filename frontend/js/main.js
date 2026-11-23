@@ -180,7 +180,7 @@ function fmtMoneyFromCents(cents) {
     try {
         return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value);
     } catch (_) {
-        return `${currency} ${value.toFixed(2)}`;
+        return `${escapeHtml(currency)} ${value.toFixed(2)}`;
     }
 }
 

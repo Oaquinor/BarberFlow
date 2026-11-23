@@ -301,7 +301,7 @@ function formatAffiliateMoney(cents, currency) {
     try {
         return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(cents || 0) / 100);
     } catch (_) {
-        return `${currency} ${(Number(cents || 0) / 100).toFixed(2)}`;
+        return `${escapeHtml(currency)} ${(Number(cents || 0) / 100).toFixed(2)}`;
     }
 }
 

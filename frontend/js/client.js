@@ -77,7 +77,7 @@ function formatMoney(cents) {
   try {
     return new Intl.NumberFormat('es-DO', { style: 'currency', currency: shopCurrency }).format((Number(cents) || 0) / 100);
   } catch (_) {
-    return `${shopCurrency} ${((Number(cents) || 0) / 100).toFixed(2)}`;
+    return `${escapeHtml(shopCurrency)} ${((Number(cents) || 0) / 100).toFixed(2)}`;
   }
 }
 
