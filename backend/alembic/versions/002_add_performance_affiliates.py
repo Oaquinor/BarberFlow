@@ -12,6 +12,7 @@ Adds:
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
+from migration_safety import require_empty_tables, require_no_matching_rows
 
 revision = '002_add_performance_affiliates'
 down_revision = '001_initial'
@@ -186,6 +187,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    connection = op.get_bind()
+    require_empty_tables(
+        connection, 'user_achievements', 'achievements', 'barber_performances',
+        'commissions', 'affiliates', 'services',
+    )
+    require_no_matching_rows(
+        connection, 'barbershops',
+        'referred_by_affiliate_id IS NOT NULL OR primary_color IS NOT NULL OR secondary_color IS NOT NULL',
+        'affiliate attribution or custom branding',
+    )
     op.drop_table('user_achievements')
     op.drop_table('achievements')
     op.drop_table('barber_performances')

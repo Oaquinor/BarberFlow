@@ -6,7 +6,7 @@
 
 ## Overview
 
-KingFlow Barber uses **PostgreSQL** as the primary database with a **multi-tenant architecture** where each barbershop is isolated by `barbershop_id`.
+KingFlow Barber uses **MySQL 8** with a **multi-tenant architecture** where each barbershop is isolated by `barbershop_id`. The application uses SQLAlchemy's synchronous `mysql+pymysql` driver for the currently mounted API.
 
 ---
 
@@ -34,6 +34,10 @@ KingFlow Barber uses **PostgreSQL** as the primary database with a **multi-tenan
 
 ## Tables
 
+### barber_availability_blocks
+
+La migración `018_barber_availability_blocks` guarda los rangos futuros en los que un barbero no acepta citas. Cada fila referencia su tenant y barbero, almacena inicio/fin UTC, motivo opcional y metadatos de soft delete. Se indexa por barbero y rango para filtrar turnos públicos existentes y rechazar turnos que se intenten generar durante la ausencia. El endpoint serializa la operación con creación y reserva de turnos y rechaza el cambio si hay citas activas en el rango. Cancelar una ausencia restaura la disponibilidad anterior sin modificar las filas de turnos.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.
@@ -48,12 +52,12 @@ Barbershop subscription plans.
 | max_barbers | INTEGER | Maximum barbers allowed |
 | max_appointments_per_month | INTEGER | Maximum appointments per month |
 | max_clients | INTEGER | Maximum clients |
-| stripe_subscription_id | VARCHAR(255) | Stripe subscription ID |
-| stripe_customer_id | VARCHAR(255) | Stripe customer ID |
+| stripe_subscription_id | VARCHAR(255) | Legacy compatibility column; unused, with no Stripe integration |
+| stripe_customer_id | VARCHAR(255) | Legacy compatibility column; unused, with no Stripe integration |
 | trial_start | TIMESTAMP | Trial period start |
 | trial_end | TIMESTAMP | Trial period end |
 | is_trial | BOOLEAN | Is in trial period |
-| auto_renew | BOOLEAN | Auto-renewal enabled |
+| auto_renew | BOOLEAN | Administrative indicator only; automatic charges are not processed or scheduled |
 | created_at | TIMESTAMP | Creation timestamp |
 | updated_at | TIMESTAMP | Last update timestamp |
 | is_deleted | BOOLEAN | Soft delete flag |
@@ -134,7 +138,10 @@ System users (super admin, barbershop owners, barbers, clients).
 - PRIMARY KEY (id)
 - UNIQUE INDEX (email)
 - INDEX (barbershop_id)
+- INDEX (`barbershop_id`, `role`, `is_deleted`, `id`) para listados y conteos paginados por tenant
 - FOREIGN KEY (barbershop_id) REFERENCES barbershops(id)
+
+La migración `026_users_client_listing` añade el índice compuesto sin cambiar ni eliminar registros. Al revertirla, se elimina ese índice; si MySQL lo estaba usando como soporte de la clave foránea, se conserva un índice sencillo sobre `barbershop_id` para mantener la integridad referencial.
 
 ---
 
@@ -152,7 +159,7 @@ Appointment bookings between clients and barbers.
 | estimated_duration | INTEGER | Estimated duration in minutes |
 | actual_start_time | TIMESTAMP | Actual start time |
 | actual_end_time | TIMESTAMP | Actual end time |
-| service_type | VARCHAR(50) | Service type (haircut, beard_trim, etc.) |
+| service_type | VARCHAR(100) | Service name snapshot captured when the appointment is created |
 | service_price | INTEGER | Price in cents |
 | status | VARCHAR(50) | Status (pending, confirmed, in_progress, completed, cancelled, no_show) |
 | client_notes | TEXT | Notes from client |
@@ -172,6 +179,7 @@ Appointment bookings between clients and barbers.
 - INDEX (barber_id)
 - INDEX (scheduled_time)
 - INDEX (status)
+- INDEX (barbershop_id, created_at) for tenant-scoped monthly appointment usage
 - FOREIGN KEY (barbershop_id) REFERENCES barbershops(id)
 - FOREIGN KEY (client_id) REFERENCES users(id)
 - FOREIGN KEY (barber_id) REFERENCES users(id)
@@ -220,50 +228,42 @@ All tables include:
 
 ---
 
-## Future Tables (Not Yet Implemented)
+## Operación MySQL agregada por migraciones
 
-### notifications
-```sql
-CREATE TABLE notifications (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    type VARCHAR(50),
-    title VARCHAR(200),
-    message TEXT,
-    is_read BOOLEAN DEFAULT FALSE,
-    read_at TIMESTAMP,
-    created_at TIMESTAMP,
-    ...
-);
-```
+La cadena vigente termina en `025_perf_day_unique` y todas las conexiones de la aplicación usan `mysql+pymysql`.
 
-### affiliates
-```sql
-CREATE TABLE affiliates (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    referral_code VARCHAR(50) UNIQUE,
-    tier VARCHAR(50),
-    total_referrals INTEGER,
-    total_earnings INTEGER,
-    created_at TIMESTAMP,
-    ...
-);
-```
+| Revisión | Cambio |
+|---|---|
+| `006_appointment_tracking_token` | Hash único para seguimiento privado de cita |
+| `007_refresh_sessions` | Sesiones refresh con expiración y revocación |
+| `008_payments_cash_register` | Pagos únicos por cita y cierre de caja por barbería, usuario y fecha |
+| `009_login_attempt_limits` | Contadores hash de intentos fallidos y bloqueos temporales |
+| `010_audit_logs` | Eventos sensibles con actor, tenant, objeto y detalles |
+| `011_seed_achievements` | Catálogo persistente de logros calculables |
+| `012_subscription_payments` | Registro de cobros SaaS externos efectivamente recibidos |
+| `013_commission_currency` | Moneda de origen y backfill en cada comisión |
+| `014_align_mysql_schema` | Alinea nulabilidad, claves foráneas e índices con los modelos SQLAlchemy preservando datos existentes |
+| `015_barber_commissions` | Añade tasas configurables por barbero y comisiones vinculadas de forma única a pagos de citas |
+| `016_in_app_notifications` | Bandeja persistente de eventos operativos con destinatario, tenant, idempotencia y estado de lectura |
+| `017_notification_delivery_outbox` | Cola MySQL idempotente para SMTP/WhatsApp con reintentos y programación de recordatorios |
+| `018_barber_availability_blocks` | Bloqueos de disponibilidad del barbero con reversión protegida ante rangos con citas activas |
+| `019_platform_settings` | Parámetros no secretos para habilitar el registro y definir los días iniciales de suscripción free |
+| `020_password_reset_tokens` | Tokens hash de recuperación de un solo uso con expiración y revocación |
+| `021_user_auth_version` | Versión de credenciales para invalidar access tokens tras cambio/recuperación de contraseña |
+| `022_auth_record_retention_index` | Índice para depurar en lotes acotados los buckets de autenticación vencidos |
+| `023_persist_support_tickets` | Bandeja MySQL de solicitudes de soporte, estado y vínculo opcional a barbería; downgrade protegido si existen tickets |
+| `024_service_name_100` | Amplía a 100 caracteres el snapshot del servicio de una cita; el downgrade rechaza snapshots más largos |
+| `025_perf_day_unique` | Garantiza una fila diaria por barbería/barbero/fecha; aborta sin borrar ni fusionar datos si detecta duplicados existentes |
+| `026_users_client_listing` | Índice compuesto para listados y conteos de usuarios por barbería, rol y estado de eliminación |
+| `027_appointment_monthly_usage` | Índice compuesto de barbería y fecha de creación para aplicar y mostrar los límites mensuales de citas |
 
-### commissions
-```sql
-CREATE TABLE commissions (
-    id INTEGER PRIMARY KEY,
-    affiliate_id INTEGER REFERENCES affiliates(id),
-    barbershop_id INTEGER REFERENCES barbershops(id),
-    amount INTEGER,
-    status VARCHAR(50),
-    paid_at TIMESTAMP,
-    created_at TIMESTAMP,
-    ...
-);
-```
+`support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
+
+Los importes operativos se guardan en centavos enteros. Las fechas de cita y pago se guardan como UTC sin zona en MySQL; el negocio las convierte usando su zona IANA para presentación y cierres diarios. Las migraciones son aditivas y no borran datos operativos al actualizar.
+
+CI valida el avance desde una base vacía hasta `head`, el retroceso de la base descartable de migraciones hasta `base` y una nueva aplicación hasta `head`, usando MySQL 8.4. Los downgrades que eliminarían datos de negocio, auditoría, autenticación, preferencias, notificaciones, pagos, logros o soporte se niegan intencionalmente; las revisiones con semillas solo eliminan valores originales no utilizados. Realiza una reversión de producción solo después de respaldar y revisar los datos afectados.
+
+Los modelos `affiliates` y `commissions` registran el programa de referidos SaaS. `barber_commissions` es independiente: se origina en pagos de servicios, se guarda en la moneda del tenant y se liquida por su propietario. Los cobros SaaS externos se registran en `subscription_payments` y solo después se calculan comisiones de afiliados. `in_app_notifications` es la bandeja del usuario; `notification_deliveries` conserva entregas SMTP/WhatsApp pendientes, enviadas o fallidas, con clave idempotente y reintentos.
 
 ---
 

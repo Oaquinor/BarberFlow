@@ -2,8 +2,10 @@
 Onboarding schemas for barbershop personalization.
 """
 
+from datetime import time
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 class OnboardingStep1(BaseModel):
@@ -61,26 +63,69 @@ class OnboardingStep9(BaseModel):
 
 class OnboardingComplete(BaseModel):
     """Complete onboarding data"""
-    barbershop_name: str
-    primary_color: str
-    secondary_color: str
-    style: str
-    primary_goal: str
-    team_size: int
-    avg_service_duration: int
-    opening_time: str
-    closing_time: str
-    personality: str
+    barbershop_name: str = Field(..., min_length=2, max_length=200)
+    primary_color: str = Field(..., pattern=r'^#[0-9A-Fa-f]{6}$')
+    secondary_color: str = Field(..., pattern=r'^#[0-9A-Fa-f]{6}$')
+    style: str = Field(..., pattern=r'^(classic|modern|urban|premium|family|custom)$')
+    primary_goal: str = Field(..., pattern=r'^(more_clients|organization|reduce_cancellations|save_time|better_service|productivity)$')
+    team_size: int = Field(..., ge=1, le=100)
+    avg_service_duration: int = Field(..., ge=5, le=240)
+    opening_time: str = Field(..., pattern=r'^\d{2}:\d{2}$')
+    closing_time: str = Field(..., pattern=r'^\d{2}:\d{2}$')
+    personality: str = Field(..., pattern=r'^(professional|friendly|energetic|elegant|authentic)$')
     logo_uploaded: bool = False
+
+    @model_validator(mode="after")
+    def validate_business_hours(self):
+        try:
+            opening = time.fromisoformat(self.opening_time)
+            closing = time.fromisoformat(self.closing_time)
+        except ValueError as exc:
+            raise ValueError("Business hours must use valid HH:MM times") from exc
+        if opening >= closing:
+            raise ValueError("Opening time must be before closing time")
+        return self
+
+
+class BusinessSettingsUpdate(BaseModel):
+    """Editable owner settings used by both the dashboard and public booking page."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=2, max_length=200)
+    opening_time: time
+    closing_time: time
+    timezone: str = Field(..., min_length=3, max_length=50)
+    primary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
+    secondary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
+
+    @model_validator(mode="after")
+    def validate_hours(self):
+        if self.opening_time >= self.closing_time:
+            raise ValueError("La hora de apertura debe preceder al cierre")
+        return self
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, TypeError) as exc:
+            raise ValueError("Selecciona una zona horaria IANA válida") from exc
+        return value
 
 
 class BarbershopProfile(BaseModel):
     """Barbershop profile for frontend"""
     id: int
     name: str
+    currency: str = "USD"
+    timezone: str
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
     logo_url: Optional[str]
-    primary_color: str
-    secondary_color: str
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
     style: Optional[str]
     primary_goal: Optional[str]
     team_size: Optional[int]
@@ -88,15 +133,12 @@ class BarbershopProfile(BaseModel):
     personality: Optional[str]
     onboarding_completed: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DashboardLayoutResponse(BaseModel):
-    """Dashboard layout adapted to barbershop goal"""
+    """Goal-focused recommendations shown alongside the existing dashboard."""
     layout_type: str
-    priority_metrics: List[str]
-    widgets: List[str]
     greeting_message: str
     insights: List[str]
 

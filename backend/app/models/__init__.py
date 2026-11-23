@@ -11,6 +11,18 @@ from app.models.affiliate import Affiliate
 from app.models.commission import Commission
 from app.models.achievement import Achievement, UserAchievement
 from app.models.barber_availability import BarberAvailability
+from app.models.barber_availability_block import BarberAvailabilityBlock
+from app.models.refresh_session import RefreshSession
+from app.models.payment import Payment, CashRegisterClose
+from app.models.login_attempt import LoginAttempt
+from app.models.audit_log import AuditLog
+from app.models.subscription_payment import SubscriptionPayment
+from app.models.barber_commission import BarberCommission
+from app.models.in_app_notification import InAppNotification
+from app.models.notification_delivery import NotificationDelivery
+from app.models.platform_settings import PlatformSettings
+from app.models.password_reset_token import PasswordResetToken
+from app.models.support_ticket import SupportTicket
 
 __all__ = [
     "BaseModel",
@@ -28,4 +40,17 @@ __all__ = [
     "Achievement",
     "UserAchievement",
     "BarberAvailability",
+    "BarberAvailabilityBlock",
+    "RefreshSession",
+    "Payment",
+    "CashRegisterClose",
+    "LoginAttempt",
+    "AuditLog",
+    "SubscriptionPayment",
+    "BarberCommission",
+    "InAppNotification",
+    "NotificationDelivery",
+    "PlatformSettings",
+    "PasswordResetToken",
+    "SupportTicket",
 ]

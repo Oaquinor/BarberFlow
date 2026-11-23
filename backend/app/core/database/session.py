@@ -13,9 +13,17 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+
+def validate_database_url(database_url: str) -> str:
+    """KingFlow's models and migrations target MySQL 8 only."""
+    if not database_url.startswith("mysql+pymysql://"):
+        raise RuntimeError("DATABASE_URL must use the MySQL PyMySQL driver")
+    return database_url
+
+
 # Create engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    validate_database_url(settings.DATABASE_URL),
     echo=settings.DEBUG,
     pool_size=settings.DATABASE_POOL_SIZE,
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
@@ -51,11 +59,6 @@ def get_db() -> Generator[Session, None, None]:
         raise
     finally:
         db.close()
-
-
-def init_db() -> None:
-    """Initialize database - create all tables."""
-    Base.metadata.create_all(bind=engine)
 
 
 def close_db() -> None:

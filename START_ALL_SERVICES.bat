@@ -36,6 +36,13 @@ npm --version
 echo.
 echo [OK] Node.js esta instalado
 
+if not defined WHATSAPP_API_TOKEN (
+    echo [WARN] WHATSAPP_API_TOKEN no esta definido.
+    echo        WhatsApp iniciara sin permitir envios; configura el mismo secreto para
+    echo        el backend y el servicio Node.js antes de usar notificaciones.
+    echo.
+)
+
 echo.
 echo ============================================================
 echo    PASO 2: Instalando dependencias de WhatsApp Service

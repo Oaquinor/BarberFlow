@@ -4,7 +4,7 @@ Performance model.
 Tracks barber performance metrics and statistics.
 """
 
-from sqlalchemy import Column, String, Integer, Float, Date, ForeignKey, JSON
+from sqlalchemy import Column, Date, Float, ForeignKey, Integer, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -14,6 +14,14 @@ class BarberPerformance(BaseModel):
     """Barber performance tracking."""
 
     __tablename__ = "barber_performances"
+    __table_args__ = (
+        UniqueConstraint(
+            "barbershop_id",
+            "barber_id",
+            "date",
+            name="uq_barber_performance_tenant_barber_date",
+        ),
+    )
 
     # Multi-tenant
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=False, index=True)

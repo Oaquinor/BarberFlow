@@ -4,7 +4,7 @@ User model.
 Represents system users (super admin, barbershop owners, barbers, clients).
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -15,9 +15,12 @@ class User(BaseModel):
     """User entity."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        Index("ix_users_tenant_role_deleted_id", "barbershop_id", "role", "is_deleted", "id"),
+    )
 
     # Basic Info
-    email = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
@@ -28,6 +31,8 @@ class User(BaseModel):
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     support_contact_enabled = Column(Boolean, default=False, nullable=False)
+    commission_rate_basis_points = Column(Integer, nullable=False, default=0)
+    auth_version = Column(Integer, nullable=False, default=0, server_default="0")
 
     # Multi-tenant
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=True)

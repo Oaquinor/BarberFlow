@@ -1,21 +1,20 @@
 # 💬 KingFlow Barber - WhatsApp Service (Baileys)
 
-**Servicio de notificaciones WhatsApp GRATIS e ILIMITADO usando Baileys**
+**Gateway opcional de WhatsApp usando Baileys**
 
 ---
 
 ## 🎯 ¿Qué es esto?
 
-Un servicio Node.js independiente que mantiene una conexión permanente con WhatsApp usando el protocolo oficial de WhatsApp Multi-Device (Baileys). Expone una API REST que FastAPI puede usar para enviar mensajes.
+Un servicio Node.js independiente que expone una API REST autenticada. Se vincula a una cuenta con QR y FastAPI lo usa para enviar los mensajes encolados. La conexión requiere una sesión activa y las entregas reales dependen del estado del servicio y de las condiciones aplicables a la cuenta.
 
 ---
 
 ## ✅ Características
 
-- ✅ **100% GRATIS** - Sin costos, sin límites
-- ✅ **Ilimitado** - Envía todos los mensajes que necesites
-- ✅ **Protocolo oficial** - Usa WhatsApp Multi-Device
-- ✅ **Tu propio número** - Usa tu WhatsApp personal o Business
+- ✅ Vinculación de cuenta mediante QR
+- ✅ Sesión persistente en volumen protegido
+- ✅ API REST autenticada para el backend
 - ✅ **Reconexión automática** - Si se cae, se reconecta solo
 - ✅ **Formato completo** - Negritas, cursivas, emojis, imágenes
 - ✅ **Sesión persistente** - Escanea QR una sola vez
@@ -53,6 +52,21 @@ Esto instalará:
 ---
 
 ## 🚀 Uso
+
+### Seguridad de la API
+
+Antes de iniciar el servicio, configura un secreto largo y aleatorio en `WHATSAPP_API_TOKEN` tanto en el proceso Node.js como en `backend/.env`. FastAPI lo envía como `Authorization: Bearer ...`. Los endpoints de envío, consulta de número, información de la sesión y desconexión responden `401` sin el token; si falta la configuración responden `503`. `/health` permanece disponible sin autenticación y no revela el número vinculado. El servicio escucha en `127.0.0.1` por defecto; define `WHATSAPP_BIND_HOST` solo si necesitas otro enlace de red y protege esa red.
+
+Las solicitudes JSON están limitadas a 16 KB. Los cuerpos demasiado grandes reciben `413`; el JSON malformado recibe `400`. Los errores internos se registran en el servicio y la API devuelve mensajes genéricos sin detalles de la excepción.
+
+Ejemplo PowerShell (usa el mismo valor en ambas consolas):
+
+```powershell
+$env:WHATSAPP_API_TOKEN = "<secreto-aleatorio-largo>"
+npm start
+```
+
+Si FastAPI está en otra máquina o contenedor, define `WHATSAPP_API_URL` con una dirección alcanzable desde el backend y configura el acceso de red de forma explícita.
 
 ### Primera Vez: Conectar WhatsApp
 
@@ -132,6 +146,7 @@ GET http://localhost:3001/health
 ```http
 POST http://localhost:3001/send
 Content-Type: application/json
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 
 {
   "phone": "+18095555555",
@@ -199,6 +214,7 @@ Content-Type: application/json
 
 ```http
 GET http://localhost:3001/check/18095555555
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 **Respuesta:**
@@ -216,6 +232,7 @@ GET http://localhost:3001/check/18095555555
 
 ```http
 GET http://localhost:3001/info
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 **Respuesta:**
@@ -237,31 +254,14 @@ GET http://localhost:3001/info
 
 ```http
 POST http://localhost:3001/disconnect
+Authorization: Bearer <WHATSAPP_API_TOKEN>
 ```
 
 ---
 
 ## 🔗 Integración con FastAPI
 
-El servicio de notificaciones de Python (`notification_service.py`) ya está configurado para usar Baileys automáticamente.
-
-**Cuando creas una cita:**
-```python
-# FastAPI automáticamente enviará WhatsApp si el servicio está corriendo
-POST /api/v1/appointments/
-{
-  "barbershop_id": 1,
-  "barber_id": 2,
-  "scheduled_time": "2024-05-30T14:00:00",
-  "service_type": "haircut",
-  "send_confirmation": true  # ← Envía email + WhatsApp
-}
-```
-
-**El sistema automáticamente:**
-1. Envía email de confirmación
-2. Llama a `http://localhost:3001/send` con el mensaje de WhatsApp
-3. El cliente recibe el WhatsApp inmediatamente
+El backend usa `WHATSAPP_API_URL` y autentica las solicitudes con `WHATSAPP_API_TOKEN`. Las operaciones de negocio escriben las notificaciones en `notification_deliveries` dentro de la transacción MySQL correspondiente; el worker `python -m scripts.notification_worker` procesa WhatsApp y SMTP con leases e intentos automáticos. Una caída del proveedor no revierte una cita ni un pago: la entrega permanece registrada y se reintenta hasta el máximo configurado. La entrega puede ocurrir más de una vez si el proveedor acepta un mensaje justo antes de que el worker pierda su lease. Consulta [el sistema de notificaciones](../docs/NOTIFICATIONS_SYSTEM.md) para configuración y operación.
 
 ---
 
@@ -448,46 +448,9 @@ npm update @whiskeysockets/baileys
 
 ---
 
-## 💡 Tips Avanzados
+## 💡 Cola y recordatorios
 
-### 1. Enviar a Múltiples Números
-
-```javascript
-app.post('/send-bulk', async (req, res) => {
-    const { phones, message } = req.body;
-
-    const results = await Promise.all(
-        phones.map(phone => 
-            sock.sendMessage(formatPhoneNumber(phone), { text: message })
-        )
-    );
-
-    res.json({ success: true, sent: results.length });
-});
-```
-
-### 2. Programar Mensajes
-
-Usar `node-cron`:
-
-```javascript
-const cron = require('node-cron');
-
-// Enviar recordatorios diarios a las 9 AM
-cron.schedule('0 9 * * *', async () => {
-    // Llamar a FastAPI para obtener citas del día
-    // Enviar recordatorios
-});
-```
-
-### 3. Webhook para Respuestas
-
-```javascript
-sock.ev.on('messages.upsert', async ({ messages }) => {
-    // Procesar respuestas de clientes
-    // Enviar a FastAPI para actualizar estado
-});
-```
+No programes recordatorios dentro del proceso Node ni agregues rutas de envío masivo aquí. La programación, deduplicación y reintentos pertenecen a la outbox MySQL del backend; el worker materializa recordatorios al entrar una cita en las siguientes 24 horas. El servicio Baileys se limita a entregar los mensajes que recibe del backend.
 
 ---
 

@@ -2,11 +2,14 @@
 Onboarding service for barbershop personalization.
 """
 
-from typing import Optional, List, Dict
-from datetime import datetime, time
+from typing import Optional, Dict
+from datetime import datetime, time, timedelta, timezone
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.models.barbershop import Barbershop
+from app.models.appointment import Appointment
 from app.schemas.onboarding import (
     OnboardingComplete,
     BarbershopProfile,
@@ -19,14 +22,37 @@ class OnboardingService:
     """Service for managing barbershop onboarding and personalization."""
 
     @staticmethod
+    def _message_for_appointment_counts(status_counts: Dict[str, int]) -> ContextualMessage:
+        total = sum(status_counts.values())
+        completed = status_counts.get("completed", 0)
+        cancelled = status_counts.get("cancelled", 0)
+        if total == 0:
+            return ContextualMessage(
+                type="insight", message="Aún no hay citas en los últimos 30 días. Comparte tu enlace para recibir reservas.",
+                icon="📅", priority="low",
+            )
+        if cancelled and (cancelled / total) >= 0.2:
+            rate = round(cancelled / total * 100)
+            return ContextualMessage(
+                type="warning", message=f"Se cancelaron {cancelled} de {total} citas en los últimos 30 días ({rate} %). Revisa los motivos registrados.",
+                icon="⚠️", priority="medium",
+            )
+        return ContextualMessage(
+            type="celebration" if completed else "insight",
+            message=f"En los últimos 30 días se completaron {completed} de {total} citas.",
+            icon="⭐" if completed else "📅", priority="low",
+        )
+
+    @staticmethod
     def complete_onboarding(
         db: Session,
         barbershop_id: int,
-        data: OnboardingComplete
+        data: OnboardingComplete,
+        commit: bool = True,
     ) -> Barbershop:
         """Complete onboarding process and update barbershop profile."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop:
             raise ValueError("Barbershop not found")
@@ -48,8 +74,11 @@ class OnboardingService:
         barbershop.opening_time = time(int(opening_parts[0]), int(opening_parts[1]))
         barbershop.closing_time = time(int(closing_parts[0]), int(closing_parts[1]))
 
-        db.commit()
-        db.refresh(barbershop)
+        if commit:
+            db.commit()
+            db.refresh(barbershop)
+        else:
+            db.flush()
 
         return barbershop
 
@@ -57,95 +86,81 @@ class OnboardingService:
     def get_barbershop_profile(db: Session, barbershop_id: int) -> Optional[BarbershopProfile]:
         """Get barbershop profile for frontend."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop:
             return None
 
-        return BarbershopProfile.from_orm(barbershop)
+        return BarbershopProfile.model_validate(barbershop)
 
     @staticmethod
     def get_dashboard_layout(db: Session, barbershop_id: int) -> DashboardLayoutResponse:
-        """Get dashboard layout adapted to barbershop's primary goal."""
+        """Return goal-focused advice without advertising unavailable dashboard widgets."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop or not barbershop.primary_goal:
             # Default layout
             return DashboardLayoutResponse(
                 layout_type="default",
-                priority_metrics=["appointments", "revenue", "clients"],
-                widgets=["calendar", "stats", "performance"],
                 greeting_message="👋 Bienvenido al sistema",
-                insights=[]
+                insights=["Completa la configuración del negocio para adaptar este panel a tus objetivos."]
             )
 
-        # Adapt layout based on primary goal
+        # These are concrete operating recommendations for the existing dashboard.
         layouts = {
             "more_clients": {
                 "layout_type": "growth",
-                "priority_metrics": ["new_clients", "return_rate", "cancellations", "client_satisfaction"],
-                "widgets": ["growth_chart", "client_funnel", "retention_tracker", "referral_stats"],
                 "greeting_message": "📈 Enfocado en crecimiento de clientes",
                 "insights": [
-                    "Tus clientes regresan con frecuencia. ¡Sigue así!",
-                    "Tip: Ofrece promociones para primeras visitas",
-                    "Mantén baja la tasa de cancelaciones"
+                    "Revisa qué servicios atraen nuevos clientes antes de planificar promociones.",
+                    "Consulta el historial de visitas para identificar oportunidades de seguimiento.",
+                    "Mantén actualizado el catálogo y los horarios disponibles."
                 ]
             },
             "organization": {
                 "layout_type": "organization",
-                "priority_metrics": ["upcoming_appointments", "schedule_occupancy", "gaps", "conflicts"],
-                "widgets": ["calendar_view", "schedule_optimizer", "reminder_status", "booking_flow"],
                 "greeting_message": "📅 Tu agenda organizada",
                 "insights": [
-                    "Agenda optimizada para hoy",
-                    "Todos los recordatorios enviados",
-                    "Sin conflictos de horario"
+                    "Revisa las citas pendientes y confirma los cambios de horario.",
+                    "Mantén actualizada la disponibilidad de cada barbero.",
+                    "Usa el cierre diario para conciliar los cobros registrados."
                 ]
             },
             "reduce_cancellations": {
                 "layout_type": "retention",
-                "priority_metrics": ["cancellation_rate", "no_shows", "confirmation_rate", "reminder_effectiveness"],
-                "widgets": ["cancellation_tracker", "reminder_dashboard", "client_communication", "penalty_stats"],
                 "greeting_message": "🎯 Reduciendo cancelaciones",
                 "insights": [
-                    "Tasa de cancelación: Baja",
-                    "Recordatorios automáticos activos",
-                    "Confirma citas 24h antes"
+                    "Revisa las citas pendientes con anticipación y confirma los cambios de horario.",
+                    "Registra el motivo al cancelar para conservar el contexto en el historial de la cita.",
+                    "Mantén clara la política de cancelación en la página pública."
                 ]
             },
             "save_time": {
                 "layout_type": "efficiency",
-                "priority_metrics": ["avg_service_time", "idle_time", "prep_time", "efficiency_score"],
-                "widgets": ["time_tracker", "efficiency_meter", "automation_status", "quick_actions"],
                 "greeting_message": "⚡ Ahorrando tiempo",
                 "insights": [
-                    "Tiempo promedio optimizado",
-                    "Notificaciones automáticas activas",
-                    "Procesos simplificados"
+                    "Registra el inicio y el fin de cada servicio para medir su duración.",
+                    "Configura duraciones realistas en el catálogo de servicios.",
+                    "Agrupa las citas para reducir espacios vacíos en la agenda."
                 ]
             },
             "better_service": {
                 "layout_type": "quality",
-                "priority_metrics": ["client_satisfaction", "service_quality", "feedback_score", "loyalty"],
-                "widgets": ["satisfaction_meter", "feedback_dashboard", "service_tracker", "vip_clients"],
                 "greeting_message": "⭐ Excelencia en servicio",
                 "insights": [
-                    "Clientes satisfechos regresan",
-                    "Feedback positivo creciendo",
-                    "Servicio personalizado activo"
+                    "Revisa el historial de citas y las notas antes de atender a un cliente recurrente.",
+                    "Confirma el servicio y las preferencias del cliente antes de iniciar.",
+                    "Mantén actualizado el catálogo y las notas que dan continuidad a cada visita."
                 ]
             },
             "productivity": {
                 "layout_type": "performance",
-                "priority_metrics": ["services_per_day", "revenue_per_hour", "utilization", "speed"],
-                "widgets": ["performance_chart", "productivity_score", "revenue_tracker", "speed_metrics"],
                 "greeting_message": "🔥 Maximizando productividad",
                 "insights": [
-                    "Has mejorado tu velocidad",
-                    "Productividad en aumento",
-                    "Récord de servicios esta semana"
+                    "Compara los servicios completados y los cobros registrados entre semanas.",
+                    "Revisa los periodos de mayor demanda antes de ajustar horarios.",
+                    "Completa los cobros al finalizar cada servicio para conciliar la caja."
                 ]
             }
         }
@@ -158,7 +173,7 @@ class OnboardingService:
     def get_contextual_greeting(db: Session, barbershop_id: int, hour: int) -> ContextualMessage:
         """Get contextual greeting message based on time and barbershop data."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop:
             return ContextualMessage(
@@ -192,51 +207,30 @@ class OnboardingService:
         barbershop_id: int,
         context: Dict
     ) -> Optional[ContextualMessage]:
-        """Get motivational message based on performance context."""
-
-        # Example contexts: perfect_week, improved_speed, full_schedule, etc.
-
-        messages = {
-            "perfect_week": ContextualMessage(
-                type="celebration",
-                message="💚 ¡Semana perfecta! Sin cancelaciones.",
-                icon="💚",
-                priority="high"
-            ),
-            "improved_speed": ContextualMessage(
-                type="insight",
-                message="⚡ Has mejorado tu velocidad promedio en 8%.",
-                icon="⚡",
-                priority="medium"
-            ),
-            "full_schedule": ContextualMessage(
-                type="celebration",
-                message="👑 Agenda 100% ocupada. ¡Eres imparable!",
-                icon="👑",
-                priority="high"
-            ),
-            "high_return_rate": ContextualMessage(
-                type="insight",
-                message="💙 Tus clientes regresan con frecuencia.",
-                icon="💙",
-                priority="medium"
-            ),
-            "record_day": ContextualMessage(
-                type="celebration",
-                message="🏆 ¡Nuevo récord! Mejor día hasta ahora.",
-                icon="🏆",
-                priority="high"
-            ),
-            "consistent": ContextualMessage(
-                type="insight",
-                message="⭐ Manteniéndote constante. Sigue así.",
-                icon="⭐",
-                priority="low"
+        """Return a short message based on appointment facts, never caller-supplied claims."""
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == barbershop_id,
+            Barbershop.is_deleted == False,
+        ).first()
+        if not shop:
+            return None
+        try:
+            ZoneInfo(shop.timezone)
+        except (ZoneInfoNotFoundError, TypeError):
+            return ContextualMessage(
+                type="warning", message="Configura una zona horaria válida para consultar tus métricas.",
+                icon="⚠️", priority="medium",
             )
-        }
 
-        achievement_type = context.get("achievement_type")
-        return messages.get(achievement_type)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        start = now - timedelta(days=30)
+        status_counts = dict(db.query(Appointment.status, func.count(Appointment.id)).filter(
+            Appointment.barbershop_id == barbershop_id,
+            Appointment.scheduled_time >= start,
+            Appointment.scheduled_time < now,
+            Appointment.is_deleted == False,
+        ).group_by(Appointment.status).all())
+        return OnboardingService._message_for_appointment_counts(status_counts)
 
     @staticmethod
     def update_barbershop_logo(
@@ -246,7 +240,7 @@ class OnboardingService:
     ) -> Barbershop:
         """Update barbershop logo URL."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop:
             raise ValueError("Barbershop not found")
@@ -262,18 +256,22 @@ class OnboardingService:
         db: Session,
         barbershop_id: int,
         primary_color: str,
-        secondary_color: str
+        secondary_color: str,
+        commit: bool = True,
     ) -> Barbershop:
         """Update barbershop brand colors."""
 
-        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
+        barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id, Barbershop.is_deleted == False).first()
 
         if not barbershop:
             raise ValueError("Barbershop not found")
 
         barbershop.primary_color = primary_color
         barbershop.secondary_color = secondary_color
-        db.commit()
-        db.refresh(barbershop)
+        if commit:
+            db.commit()
+            db.refresh(barbershop)
+        else:
+            db.flush()
 
         return barbershop

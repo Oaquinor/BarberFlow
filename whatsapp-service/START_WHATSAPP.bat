@@ -16,6 +16,12 @@ cd /d "%~dp0"
 echo 📍 Directorio: %CD%
 echo.
 
+if not defined WHATSAPP_API_TOKEN (
+    echo [AVISO] WHATSAPP_API_TOKEN no esta definido. Las rutas protegidas responderan 503.
+    echo Configura el mismo secreto en este proceso y en backend\.env.
+    echo.
+)
+
 REM Verificar que node_modules existe
 if not exist "node_modules" (
     echo ❌ node_modules no encontrado

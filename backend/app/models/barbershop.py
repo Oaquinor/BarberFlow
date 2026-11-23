@@ -17,7 +17,7 @@ class Barbershop(BaseModel):
 
     # Basic Info
     name = Column(String(200), nullable=False)
-    slug = Column(String(100), unique=True, nullable=False, index=True)
+    slug = Column(String(100), unique=True, nullable=False)
     description = Column(String(1000), nullable=True)
 
     # Contact
@@ -69,10 +69,6 @@ class Barbershop(BaseModel):
 
     # Affiliate
     referred_by_affiliate_id = Column(Integer, ForeignKey("affiliates.id"), nullable=True)
-
-    # Branding Colors (for personalization)
-    primary_color = Column(String(7), nullable=True)  # hex color
-    secondary_color = Column(String(7), nullable=True)
 
     # Relationships
     users = relationship("User", back_populates="barbershop")

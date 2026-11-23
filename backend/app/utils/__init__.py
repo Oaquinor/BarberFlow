@@ -6,6 +6,7 @@ from app.utils.datetime import (
     get_date_range,
     is_business_hours,
     calculate_duration_minutes,
+    utc_now_naive,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "get_date_range",
     "is_business_hours",
     "calculate_duration_minutes",
+    "utc_now_naive",
 ]

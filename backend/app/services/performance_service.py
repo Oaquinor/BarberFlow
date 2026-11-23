@@ -4,36 +4,76 @@ Performance Service.
 Handles barber performance tracking, metrics, and analytics.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import and_
 
-from app.models import BarberPerformance, Appointment, User
-from app.core.constants import AppointmentStatus, UserRole
+from app.models import BarberPerformance, Appointment, Payment, Barbershop, User
+from app.core.constants import AppointmentStatus
+from app.utils.datetime import local_day_start_utc_naive
 
 
 class PerformanceService:
     """Service for performance tracking and analytics."""
 
     @staticmethod
+    def time_efficiency(appointments: list[Appointment]) -> float:
+        """Compare estimated to actual time using only completed services with timings."""
+        measured = [
+            appointment for appointment in appointments
+            if appointment.actual_duration is not None and appointment.actual_duration > 0
+        ]
+        total_actual = sum(appointment.actual_duration for appointment in measured)
+        if total_actual <= 0:
+            return 0.0
+        total_estimated = sum(appointment.estimated_duration for appointment in measured)
+        return total_estimated / total_actual * 100
+
+    @staticmethod
     def calculate_daily_performance(
         db: Session,
         barbershop_id: int,
         barber_id: int,
-        target_date: date
+        target_date: date,
+        commit: bool = True,
     ) -> BarberPerformance:
         """
         Calculate and save daily performance metrics for a barber.
 
         This should be called at the end of each day or when an appointment is completed.
         """
-        # Get all appointments for the day
+        shop = db.query(Barbershop).filter(
+            Barbershop.id == barbershop_id,
+            Barbershop.is_deleted == False,
+        ).first()
+        if not shop:
+            raise ValueError("Barbershop not found")
+        # Serialize daily recomputations per barber. Two checkouts can concern
+        # different appointments but still race to create the same daily row.
+        barber = db.query(User.id).filter(
+            User.id == barber_id,
+            User.barbershop_id == barbershop_id,
+            User.role == "barber",
+            User.is_deleted == False,
+        ).with_for_update().first()
+        if not barber:
+            raise ValueError("Barber not found in barbershop")
+        try:
+            business_timezone = ZoneInfo(shop.timezone)
+        except (ZoneInfoNotFoundError, TypeError) as exc:
+            raise ValueError("Barbershop timezone is invalid") from exc
+        start_utc = local_day_start_utc_naive(target_date, business_timezone)
+        end_utc = local_day_start_utc_naive(target_date + timedelta(days=1), business_timezone)
+
+        # Appointments use UTC-naive timestamps in MySQL; derive business-day bounds in tenant time.
         appointments = db.query(Appointment).filter(
             and_(
                 Appointment.barbershop_id == barbershop_id,
                 Appointment.barber_id == barber_id,
-                func.date(Appointment.scheduled_time) == target_date,
+                Appointment.scheduled_time >= start_utc,
+                Appointment.scheduled_time < end_utc,
                 Appointment.is_deleted == False
             )
         ).all()
@@ -43,16 +83,21 @@ class PerformanceService:
         cancelled = [a for a in appointments if a.status == AppointmentStatus.CANCELLED]
         no_show = [a for a in appointments if a.status == AppointmentStatus.NO_SHOW]
 
-        total_service_time = sum(a.actual_duration or 0 for a in completed)
-        total_estimated_time = sum(a.estimated_duration for a in completed)
+        measured = [a for a in completed if a.actual_duration is not None and a.actual_duration > 0]
+        total_service_time = sum(a.actual_duration for a in measured)
+        avg_service_time = total_service_time / len(measured) if measured else 0
+        efficiency = PerformanceService.time_efficiency(completed)
 
-        avg_service_time = total_service_time / len(completed) if completed else 0
-
-        # Calculate efficiency (actual vs estimated)
-        efficiency = (total_estimated_time / total_service_time * 100) if total_service_time > 0 else 100
-
-        # Calculate revenue
-        total_revenue = sum(a.service_price or 0 for a in completed)
+        # Revenue reflects actual collected payments (including tips), not list prices.
+        appointment_ids = [appointment.id for appointment in completed]
+        total_revenue = sum(
+            amount + tip for amount, tip in db.query(Payment.amount_cents, Payment.tip_cents).filter(
+                Payment.barbershop_id == barbershop_id,
+                Payment.barber_id == barber_id,
+                Payment.appointment_id.in_(appointment_ids),
+                Payment.is_deleted == False,
+            ).all()
+        ) if appointment_ids else 0
 
         # Check if performance record exists
         performance = db.query(BarberPerformance).filter(
@@ -61,7 +106,7 @@ class PerformanceService:
                 BarberPerformance.barber_id == barber_id,
                 BarberPerformance.date == target_date
             )
-        ).first()
+        ).with_for_update().first()
 
         if not performance:
             performance = BarberPerformance(
@@ -83,8 +128,11 @@ class PerformanceService:
         # Update streaks
         PerformanceService._update_streaks(db, barbershop_id, barber_id, target_date, performance)
 
-        db.commit()
-        db.refresh(performance)
+        if commit:
+            db.commit()
+            db.refresh(performance)
+        else:
+            db.flush()
 
         return performance
 
@@ -152,11 +200,15 @@ class PerformanceService:
                 BarberPerformance.date >= start_date,
                 BarberPerformance.date <= end_date
             )
-        ).all()
+        ).order_by(BarberPerformance.date.asc()).all()
 
         total_completed = sum(p.appointments_completed for p in performances)
         total_revenue = sum(p.total_revenue for p in performances)
-        avg_efficiency = sum(p.time_efficiency_percentage or 0 for p in performances) / len(performances) if performances else 0
+        worked = [p for p in performances if p.appointments_completed > 0]
+        avg_efficiency = (
+            sum(p.time_efficiency_percentage or 0 for p in worked) / len(worked)
+            if worked else 0
+        )
 
         return {
             "start_date": start_date,
@@ -164,7 +216,7 @@ class PerformanceService:
             "total_appointments": total_completed,
             "total_revenue": total_revenue,
             "average_efficiency": round(avg_efficiency, 2),
-            "days_worked": len([p for p in performances if p.appointments_completed > 0]),
+            "days_worked": len(worked),
             "current_streak": performances[-1].current_streak if performances else 0,
             "best_streak": max((p.best_streak for p in performances), default=0),
             "daily_breakdown": [
@@ -200,12 +252,13 @@ class PerformanceService:
                 BarberPerformance.date >= start_date,
                 BarberPerformance.date <= end_date
             )
-        ).all()
+        ).order_by(BarberPerformance.date.asc()).all()
 
         total_completed = sum(p.appointments_completed for p in performances)
         total_revenue = sum(p.total_revenue for p in performances)
         total_cancelled = sum(p.appointments_cancelled for p in performances)
         total_no_show = sum(p.appointments_no_show for p in performances)
+        worked = [p for p in performances if p.appointments_completed > 0]
 
         return {
             "year": year,
@@ -214,16 +267,17 @@ class PerformanceService:
             "total_revenue": total_revenue,
             "total_cancelled": total_cancelled,
             "total_no_show": total_no_show,
-            "days_worked": len([p for p in performances if p.appointments_completed > 0]),
+            "days_worked": len(worked),
             "best_streak": max((p.best_streak for p in performances), default=0),
-            "average_daily_appointments": round(total_completed / len(performances), 2) if performances else 0,
+            "average_daily_appointments": round(total_completed / len(worked), 2) if worked else 0,
         }
 
     @staticmethod
     def get_performance_insights(
         db: Session,
         barbershop_id: int,
-        barber_id: int
+        barber_id: int,
+        as_of_date: Optional[date] = None,
     ) -> List[str]:
         """
         Generate performance insights and recommendations.
@@ -233,14 +287,16 @@ class PerformanceService:
         insights = []
 
         # Get last 30 days of data
-        thirty_days_ago = date.today() - timedelta(days=30)
+        today = as_of_date or date.today()
+        thirty_days_ago = today - timedelta(days=30)
         recent_performances = db.query(BarberPerformance).filter(
             and_(
                 BarberPerformance.barbershop_id == barbershop_id,
                 BarberPerformance.barber_id == barber_id,
-                BarberPerformance.date >= thirty_days_ago
+                BarberPerformance.date >= thirty_days_ago,
+                BarberPerformance.date <= today,
             )
-        ).all()
+        ).order_by(BarberPerformance.date.asc()).all()
 
         if not recent_performances:
             return ["¡Comienza tu viaje! Completa tu primera cita para ver tus estadísticas."]
@@ -258,17 +314,19 @@ class PerformanceService:
             insights.append(f"⭐ Tu mejor día fue el {best_day.date.strftime('%d/%m')}: {best_day.appointments_completed} citas completadas.")
 
         # Efficiency trend
-        recent_7_days = recent_performances[-7:] if len(recent_performances) >= 7 else recent_performances
-        avg_efficiency = sum(p.time_efficiency_percentage or 0 for p in recent_7_days) / len(recent_7_days)
-        if avg_efficiency >= 90:
-            insights.append("🎯 Tu eficiencia de tiempo es excelente. ¡Sigue optimizando!")
-        elif avg_efficiency < 70:
-            insights.append("⏱️ Hay oportunidad de mejorar tu tiempo promedio de servicio.")
+        recent_work_days = [p for p in recent_performances if p.appointments_completed > 0][-7:]
+        if recent_work_days:
+            avg_efficiency = sum(p.time_efficiency_percentage or 0 for p in recent_work_days) / len(recent_work_days)
+            if avg_efficiency >= 90:
+                insights.append("🎯 Tu eficiencia de tiempo es excelente. ¡Sigue optimizando!")
+            elif avg_efficiency < 70:
+                insights.append("⏱️ Hay oportunidad de mejorar tu tiempo promedio de servicio.")
 
         # Revenue insight
         total_revenue = sum(p.total_revenue for p in recent_performances)
         if total_revenue > 0:
-            insights.append(f"💰 Has generado ${total_revenue/100:.2f} en los últimos 30 días.")
+            currency = db.query(Barbershop.currency).filter(Barbershop.id == barbershop_id).scalar() or "USD"
+            insights.append(f"💰 Has generado {currency} {total_revenue / 100:.2f} en los últimos 30 días.")
 
         # Cancellation rate
         total_completed = sum(p.appointments_completed for p in recent_performances)

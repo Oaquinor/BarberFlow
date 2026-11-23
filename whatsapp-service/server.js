@@ -10,14 +10,39 @@ const express = require('express');
 const cors = require('cors');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
+const crypto = require('crypto');
 
 // Configuración
 const PORT = 3001;
+const HOST = process.env.WHATSAPP_BIND_HOST || '127.0.0.1';
+const API_TOKEN = process.env.WHATSAPP_API_TOKEN || '';
 const app = express();
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = (process.env.WHATSAPP_CORS_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(null, false);
+    }
+}));
+// Keep payloads bounded; message validation runs after JSON parsing.
+app.use(express.json({ limit: '16kb' }));
+
+function requireApiToken(req, res, next) {
+    if (!API_TOKEN) {
+        return res.status(503).json({ success: false, error: 'WhatsApp API token is not configured' });
+    }
+    const match = /^Bearer\s+(.+)$/i.exec(req.get('authorization') || '');
+    const supplied = Buffer.from(match?.[1] || '');
+    const expected = Buffer.from(API_TOKEN);
+    if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
+        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    return next();
+}
+
+app.use(['/send', '/send-formatted', '/send-image', '/check', '/info', '/disconnect'], requireApiToken);
 
 // Logger
 const logger = pino({ level: 'info' });
@@ -97,38 +122,17 @@ async function connectToWhatsApp() {
         }
     });
 
-    // Manejar mensajes entrantes (opcional, para logs)
-    sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (type === 'notify') {
-            for (const msg of messages) {
-                if (!msg.key.fromMe && msg.message) {
-                    const from = msg.key.remoteJid;
-                    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-                    logger.info(`Mensaje recibido de ${from}: ${text}`);
-                }
-            }
-        }
-    });
 }
 
 /**
  * Formatear número de teléfono para WhatsApp
  */
 function formatPhoneNumber(phone) {
-    // Remover caracteres no numéricos
+    if (typeof phone !== 'string' || !/^\+?[\d\s().-]+$/.test(phone.trim())) return null;
     let cleaned = phone.replace(/\D/g, '');
-
-    // Si empieza con '1' y tiene 11 dígitos (USA/Canada), quitar el 1
-    if (cleaned.startsWith('1') && cleaned.length === 11) {
-        cleaned = cleaned.substring(1);
-    }
-
-    // Agregar código de país si no lo tiene (asumiendo República Dominicana)
-    if (!cleaned.startsWith('1') && !cleaned.startsWith('809') && !cleaned.startsWith('829') && !cleaned.startsWith('849')) {
-        cleaned = '1' + cleaned;
-    }
-
-    // Formato final para WhatsApp
+    // A ten digit number is in the NANP; retain/add its country code for the WhatsApp JID.
+    if (cleaned.length === 10) cleaned = `1${cleaned}`;
+    if (cleaned.length < 8 || cleaned.length > 15) return null;
     return cleaned + '@s.whatsapp.net';
 }
 
@@ -136,7 +140,7 @@ function formatPhoneNumber(phone) {
  * Validar que el mensaje no esté vacío
  */
 function validateMessage(message) {
-    if (!message || message.trim().length === 0) {
+    if (typeof message !== 'string' || message.trim().length === 0) {
         return { valid: false, error: 'Message cannot be empty' };
     }
     if (message.length > 4096) {
@@ -195,11 +199,12 @@ app.post('/send', async (req, res) => {
 
         // Formatear número
         const jid = formatPhoneNumber(phone);
+        if (!jid) return res.status(400).json({ success: false, error: 'Invalid phone number' });
 
         // Enviar mensaje
         const result = await sock.sendMessage(jid, { text: message });
 
-        logger.info(`Message sent to ${phone}`);
+        logger.info({ recipient_suffix: jid.slice(0, -'@s.whatsapp.net'.length).slice(-4) }, 'WhatsApp message sent');
 
         res.json({
             success: true,
@@ -212,7 +217,7 @@ app.post('/send', async (req, res) => {
         logger.error('Error sending message:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send message'
         });
     }
 });
@@ -234,6 +239,11 @@ app.post('/send-formatted', async (req, res) => {
             });
         }
 
+        const validation = validateMessage(message);
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
         if (!isConnected) {
             return res.status(503).json({
                 success: false,
@@ -242,6 +252,7 @@ app.post('/send-formatted', async (req, res) => {
         }
 
         const jid = formatPhoneNumber(phone);
+        if (!jid) return res.status(400).json({ success: false, error: 'Invalid phone number' });
         const result = await sock.sendMessage(jid, { text: message });
 
         res.json({
@@ -254,7 +265,7 @@ app.post('/send-formatted', async (req, res) => {
         logger.error('Error sending formatted message:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send formatted message'
         });
     }
 });
@@ -276,6 +287,16 @@ app.post('/send-image', async (req, res) => {
             });
         }
 
+        let image;
+        try {
+            image = new URL(imageUrl);
+        } catch (_) {
+            return res.status(400).json({ success: false, error: 'Invalid image URL' });
+        }
+        if (!['http:', 'https:'].includes(image.protocol)) {
+            return res.status(400).json({ success: false, error: 'Image URL must use HTTP or HTTPS' });
+        }
+
         if (!isConnected) {
             return res.status(503).json({
                 success: false,
@@ -284,6 +305,7 @@ app.post('/send-image', async (req, res) => {
         }
 
         const jid = formatPhoneNumber(phone);
+        if (!jid) return res.status(400).json({ success: false, error: 'Invalid phone number' });
         const result = await sock.sendMessage(jid, {
             image: { url: imageUrl },
             caption: caption || ''
@@ -299,7 +321,7 @@ app.post('/send-image', async (req, res) => {
         logger.error('Error sending image:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to send image'
         });
     }
 });
@@ -321,6 +343,7 @@ app.get('/check/:phone', async (req, res) => {
         }
 
         const jid = formatPhoneNumber(phone);
+        if (!jid) return res.status(400).json({ success: false, error: 'Invalid phone number' });
         const [result] = await sock.onWhatsApp(jid);
 
         res.json({
@@ -333,7 +356,7 @@ app.get('/check/:phone', async (req, res) => {
         logger.error('Error checking number:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to check number'
         });
     }
 });
@@ -382,21 +405,32 @@ app.post('/disconnect', async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            error: error.message
+            error: 'Unable to disconnect WhatsApp'
         });
     }
 });
 
+// Keep parser failures bounded and JSON-shaped without exposing stack traces.
+app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    const tooLarge = error?.type === 'entity.too.large';
+    return res.status(tooLarge ? 413 : 400).json({
+        success: false,
+        error: tooLarge ? 'Request body too large' : 'Invalid request body'
+    });
+});
+
 // ==================== INICIALIZAR SERVIDOR ====================
 
-// Iniciar servidor Express
-app.listen(PORT, () => {
+function startServer() {
+  app.listen(PORT, HOST, () => {
     console.log('\n╔════════════════════════════════════════════════════════╗');
     console.log('║                                                        ║');
     console.log('║       🚀 KINGFLOW WHATSAPP SERVICE INICIADO 🚀        ║');
     console.log('║                                                        ║');
     console.log('╚════════════════════════════════════════════════════════╝\n');
-    console.log(`📍 Servidor corriendo en: http://localhost:${PORT}`);
+    console.log(`📍 Servidor corriendo en: http://${HOST}:${PORT}`);
+    if (!API_TOKEN) logger.warn('WHATSAPP_API_TOKEN is not configured; protected API endpoints are disabled');
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`📚 Endpoints disponibles:`);
     console.log(`   POST /send - Enviar mensaje`);
@@ -406,16 +440,20 @@ app.listen(PORT, () => {
     console.log(`   GET  /info - Info de conexión`);
     console.log(`   POST /disconnect - Desconectar\n`);
     console.log('⏳ Conectando a WhatsApp...\n');
-});
+  });
 
-// Conectar a WhatsApp al iniciar
-connectToWhatsApp();
+  // Connect only for the real service process; tests can import pure helpers safely.
+  connectToWhatsApp();
+}
 
-// Manejar cierre graceful
-process.on('SIGINT', async () => {
+if (require.main === module) startServer();
+
+if (require.main === module) process.on('SIGINT', async () => {
     console.log('\n\n🛑 Cerrando servicio...');
     if (sock) {
         await sock.end();
     }
     process.exit(0);
 });
+
+module.exports = { app, formatPhoneNumber, requireApiToken, validateMessage };

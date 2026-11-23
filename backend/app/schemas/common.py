@@ -5,7 +5,7 @@ These schemas provide standardized request/response formats.
 """
 
 from typing import Any, Generic, List, TypeVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 T = TypeVar("T")
@@ -22,15 +22,14 @@ class StandardResponse(BaseModel):
     data: Any = Field(None, description="Response data")
     errors: List[str] = Field(default_factory=list, description="List of errors if any")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "success": True,
                 "message": "Operation completed successfully",
                 "data": {"id": 1, "name": "Example"},
                 "errors": []
             }
-        }
+        })
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -45,8 +44,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
     size: int = Field(..., description="Items per page")
     pages: int = Field(..., description="Total number of pages")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "items": [],
                 "total": 100,
@@ -54,7 +52,7 @@ class PaginatedResponse(BaseModel, Generic[T]):
                 "size": 20,
                 "pages": 5
             }
-        }
+        })
 
 
 class PaginationParams(BaseModel):

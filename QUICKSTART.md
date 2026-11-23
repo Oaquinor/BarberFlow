@@ -1,5 +1,7 @@
 # 🚀 KingFlow Barber - Quick Start Guide
 
+> **Guía heredada, no operativa:** algunos comandos, rutas y ejemplos de este documento ya no coinciden con el repositorio. No ejecutes instrucciones de rollback/reset aquí sin una base desechable. Usa el [README vigente](README.md) y la [guía de validación actual](VALIDATION_GUIDE.md); la única base soportada es MySQL.
+
 Get up and running in **5 minutes**!
 
 ---
@@ -7,7 +9,7 @@ Get up and running in **5 minutes**!
 ## 📋 Prerequisites
 
 - Python 3.12+
-- PostgreSQL 15+
+- MySQL 8.0+
 - Git
 
 ---
@@ -24,13 +26,13 @@ cd kingflow-barber
 ### 2. Setup Database
 
 ```bash
-# Start PostgreSQL and create database
-createdb kingflow_barber
-
-# Or using PostgreSQL shell:
-psql postgres
-CREATE DATABASE kingflow_barber;
-\q
+# Start a local MySQL server, then create the application database and user.
+mysql -u root -p
+CREATE DATABASE kingflow_barber CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'kingflow'@'localhost' IDENTIFIED BY 'choose-a-local-password';
+GRANT ALL PRIVILEGES ON kingflow_barber.* TO 'kingflow'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 
 ### 3. Setup Backend
@@ -54,13 +56,14 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Edit .env with your database URL
-# DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@localhost:5432/kingflow_barber
+# For Docker Compose, MySQL is published to localhost:3307. The backend container uses db:3306.
+# DATABASE_URL=mysql+pymysql://USER:PASSWORD@localhost:3307/kingflow_barber
 
 # Run migrations
 alembic upgrade head
 
-# Seed database with test data
-python scripts/seed_db.py
+# Create the first platform administrator interactively
+python -m scripts.create_admin
 
 # Start server
 uvicorn app.main:app --reload
@@ -74,14 +77,16 @@ Open browser to:
 
 ---
 
-## 🎯 Test Accounts (After Seeding)
+## 🔐 Initial administrator
 
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | admin@kingflow.com | Admin123! |
-| Owner | owner@kingsbarbershop.com | Owner123! |
-| Barber | mike@kingsbarbershop.com | Barber123! |
-| Client | client1@example.com | Client123! |
+After running migrations, create an administrator interactively:
+
+```bash
+cd backend
+python -m scripts.create_admin
+```
+
+KingFlow does not ship with reusable demo or default login credentials. Disposable demo records can be created only in development with `ENVIRONMENT=development python -m scripts.seed_db --allow-demo-data`; the script asks for confirmation and refuses to alter an existing demo tenant.
 
 ---
 
@@ -96,8 +101,8 @@ docker-compose up -d
 # Run migrations
 docker-compose exec backend alembic upgrade head
 
-# Seed database
-docker-compose exec backend python scripts/seed_db.py
+# Optional: create disposable demo records; only use on a development database
+docker-compose exec backend python -m scripts.seed_db --allow-demo-data
 
 # View logs
 docker-compose logs -f backend
@@ -120,7 +125,7 @@ Access:
 2. **Try API Endpoints**
    - Login: `POST /api/v1/auth/login`
    - Get Profile: `GET /api/v1/auth/me`
-   - Create Appointment: `POST /api/v1/appointments`
+   - Public appointment flow: `GET /api/v1/public/{slug}/slots`, then `POST /api/v1/public/{slug}/appointments`
 
 3. **Run Tests**
    ```bash
@@ -201,11 +206,11 @@ docker-compose exec backend bash
 ### Database Connection Error
 
 ```bash
-# Check PostgreSQL is running
-pg_isready
+# Check MySQL is running
+mysqladmin ping -h localhost -u kingflow -p
 
 # Check connection manually
-psql -U postgres -d kingflow_barber
+mysql -u kingflow -p kingflow_barber
 ```
 
 ### Module Not Found

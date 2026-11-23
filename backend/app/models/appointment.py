@@ -4,7 +4,7 @@ Appointment model.
 Represents a booking/appointment between a client and barber.
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text, Index
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -15,6 +15,9 @@ class Appointment(BaseModel):
     """Appointment entity."""
 
     __tablename__ = "appointments"
+    __table_args__ = (
+        Index("ix_appointments_shop_created_at", "barbershop_id", "created_at"),
+    )
 
     # Multi-tenant
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=False, index=True)
@@ -30,7 +33,8 @@ class Appointment(BaseModel):
     actual_end_time = Column(DateTime, nullable=True)
 
     # Service
-    service_type = Column(String(50), nullable=False, default=ServiceType.HAIRCUT)
+    # Snapshot the full service name (the tenant catalog accepts up to 100 chars).
+    service_type = Column(String(100), nullable=False, default=ServiceType.HAIRCUT)
     service_price = Column(Integer, nullable=True)  # in cents
 
     # Status
@@ -46,6 +50,7 @@ class Appointment(BaseModel):
 
     # Check-in
     checked_in_at = Column(DateTime, nullable=True)
+    tracking_token_hash = Column(String(64), nullable=True, unique=True, index=True)
 
     # Relationships
     barbershop = relationship("Barbershop", back_populates="appointments")

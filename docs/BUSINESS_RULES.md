@@ -79,14 +79,13 @@ Ayudamos a:
 1. El servicio debe estar en estado `in_progress`
 2. El barbero debe ser el asignado
 3. Debe haber transcurrido al menos 5 minutos
+4. Debe registrarse el cobro con un método de pago válido
 
-**Al finalizar servicio:**
-1. Estado cambia a `completed`
-2. Se registra `actual_end_time`
-3. Se calcula duración real
-4. Se compara con duración estimada
-5. Se actualiza performance diaria
-6. Se verifican logros automáticamente
+**Al registrar el cobro:**
+1. Se crea un pago inmutable con el precio del servicio, propina, método y moneda del negocio.
+2. En la misma transacción, la cita cambia a `completed` y se registra `actual_end_time`.
+3. Se actualizan comisión, rendimiento, logros y notificaciones.
+4. Si no se pueden persistir las consecuencias operativas, se revierte el cobro y la finalización.
 
 ### Alertas de Tiempo
 
@@ -103,14 +102,15 @@ Ayudamos a:
 ### Cálculo de Métricas Diarias
 
 **Se ejecuta:**
-- Al finalizar cada cita
-- Al final del día (automático)
+- Al finalizar una cita con su pago
+- Al cancelar o marcar una cita como no presentada, para recalcular esas métricas
+- No hay un proceso automático al cierre del día; el worker activo se ocupa de notificaciones y recordatorios
 
 **Métricas calculadas:**
 1. `appointments_completed`: Citas finalizadas
 2. `appointments_cancelled`: Citas canceladas
 3. `appointments_no_show`: Clientes que no asistieron
-4. `total_revenue`: Suma de precios de citas completadas
+4. `total_revenue`: Suma de pagos registrados para citas completadas, incluida la propina
 5. `total_service_time_minutes`: Suma de duraciones reales
 6. `average_service_time_minutes`: Promedio de duración
 7. `time_efficiency_percentage`: (estimado / real) * 100
@@ -196,10 +196,7 @@ Ayudamos a:
 
 ### Detección de Logros
 
-**Se verifica en:**
-1. Al completar una cita
-2. Al calcular performance diaria
-3. Al finalizar la semana
+**Se verifica:** al registrar el pago que completa una cita. No existe una tarea automática diaria o semanal para evaluar logros.
 
 **Reglas:**
 - Un logro solo se otorga una vez
@@ -216,19 +213,18 @@ Ayudamos a:
 **Datos requeridos:**
 - Nombre completo
 - Email (único)
-- Teléfono
-- Información bancaria
+- Teléfono opcional
 
 **Al registrar:**
 - Se genera código único (8 caracteres)
-- Tasa de comisión: 15% (default)
-- Estado inicial: `pending`
-- Requiere verificación del admin
+- Tasa de comisión configurable (15% por defecto)
+- Estado inicial: activo y pendiente de verificación
+- Los datos bancarios no se solicitan en el formulario actual
 
 ### Referidos
 
 **Proceso:**
-1. Cliente usa código de afiliado al registrar barbería
+1. Owner usa el código al registrar una barbería
 2. Se vincula barbería con afiliado
 3. Se incrementa `total_referrals`
 4. Se incrementa `active_referrals` si barbería se activa
@@ -236,8 +232,9 @@ Ayudamos a:
 ### Comisiones
 
 **Cálculo:**
-- Comisión = Precio de suscripción × Tasa de comisión
-- Se genera comisión mensual por cada referido activo
+- Se calcula al registrar manualmente un pago externo de suscripción
+- Comisión = importe efectivamente recibido × tasa del afiliado
+- Un pago referido no puede registrarse dos veces para el mismo periodo de facturación
 
 **Estados:**
 1. **Pending:** Generada, esperando aprobación
@@ -296,55 +293,46 @@ Ayudamos a:
 **Validaciones:**
 1. La fecha debe ser futura
 2. El barbero debe estar disponible
-3. El horario debe estar dentro del horario laboral
+3. Si la barbería configuró horario laboral, la cita debe quedar dentro de ese horario
 4. No puede haber superposición con otras citas
 
 **Duración estimada:**
 - Se usa la duración del servicio seleccionado
-- Default: 30 minutos
+- El catálogo acepta servicios de 10 a 180 minutos; 30 minutos es solo el valor de respaldo del modelo de barbería, no reemplaza la duración del servicio
 
 ### Cancelación
 
 **Reglas:**
-- Cliente puede cancelar hasta 2 horas antes
+- El cliente puede cancelar una cita futura pendiente o confirmada mediante su token privado de seguimiento; no hay una ventana mínima de dos horas
 - Barbero puede cancelar en cualquier momento
 - Owner puede cancelar en cualquier momento
 - Se registra quién canceló y el motivo
 
 ### No Show
 
-**Detección:**
-- Si pasan 15 minutos después de la hora programada
-- Y el estado sigue en `confirmed`
-- El sistema puede marcar automáticamente como `no_show`
+**Registro:**
+- Un propietario o el barbero asignado puede marcar manualmente una cita `pending` o `confirmed` como `no_show` cuando haya pasado la hora programada más la duración estimada del servicio.
+- La agenda habilita la acción al cumplirse ese plazo; el backend vuelve a validar el tiempo y el estado antes de guardar.
+- El cambio actualiza las métricas de rendimiento y queda registrado en auditoría. No hay detección automática.
 
 ---
 
 ## 💰 Planes de Suscripción
 
-### Plan Básico - RD$300/mes
-- Max 3 barberos
-- Max 200 citas/mes
-- Max 500 clientes
-- Métricas básicas
-- Soporte por email
+Los planes disponibles en el código son `free`, `basic`, `professional` y `enterprise`:
 
-### Plan Pro - RD$500/mes
-- Max 10 barberos
-- Max 1000 citas/mes
-- Max 2000 clientes
-- Métricas avanzadas
-- Gamificación
-- Insights automáticos
-- Soporte prioritario
+| Plan | Barberos activos | Citas creadas por mes | Clientes |
+|---|---:|---:|---:|
+| `free` | 1 | 50 | 100 |
+| `basic` | 3 | 200 | 500 |
+| `professional` | 10 | 1,000 | 2,000 |
+| `enterprise` | Sin límite | Sin límite | Sin límite |
+
+Los precios y prestaciones comerciales no están configurados como catálogo en la aplicación. La pasarela y los precios permanecen pendientes de definición; la plataforma solo registra manualmente pagos externos ya recibidos. Un plan de pago se prepara como inactivo y solo se activa o extiende al registrar el cobro externo confirmado; la ruta administrativa de edición no puede habilitarlo por sí sola.
 
 ### Límites
 
-**Al exceder límites:**
-1. Se notifica al owner
-2. Se sugiere upgrade
-3. No se bloquea inmediatamente (período de gracia de 7 días)
-4. Después de 7 días, no se pueden crear nuevas citas
+Al alcanzar el límite, el backend rechaza con `402` la operación que crearía otra cita, cliente o barbero según corresponda. La interfaz no implementa un periodo de gracia de siete días ni una compra o mejora automática. La consulta de uso de citas se calcula por mes calendario en la zona horaria del negocio.
 
 ---
 
@@ -353,7 +341,7 @@ Ayudamos a:
 ### Autenticación
 - Tokens JWT con expiración de 30 minutos
 - Refresh tokens válidos por 7 días
-- Passwords hasheados con Bcrypt (10 rounds)
+- Contraseñas hasheadas con bcrypt a costo 12
 
 ### Permisos
 - Multi-tenant: cada barbería es aislada
@@ -362,27 +350,26 @@ Ayudamos a:
 - Super admin ve todo
 
 ### Rate Limiting
-- 100 requests por minuto por IP
-- 1000 requests por hora por IP
+- No hay un límite global activo de 100 solicitudes por minuto; esos valores de configuración no se aplican actualmente
+- Sí hay límites específicos para login, recuperación de contraseña, registro SaaS (5 por IP por hora), soporte, reservas públicas y cambios/seguimiento con token, persistidos en MySQL
 
 ---
 
 ## 📝 Reglas de Negocio Generales
 
 ### Horarios
-- Se usan zones horarias configurables
-- Default: America/New_York
-- Horario laboral default: 9:00 AM - 6:00 PM
+- Las citas y cierres se agrupan usando la zona IANA de la barbería
+- El registro SaaS requiere que se elija una zona horaria y propone `America/Santo_Domingo` en el formulario
+- El onboarding guarda el horario comercial; si no se configuró, ese rango no restringe las citas. Los turnos explícitos publicados por barberos y la duración del servicio siguen determinando disponibilidad
 
 ### Moneda
-- Todo se guarda en centavos (evita problemas de decimales)
-- Currency default: USD
-- Formato de display: $X.XX
+- Los importes de pagos y comisiones se guardan como enteros en centavos
+- El formulario de registro propone DOP y permite elegir DOP, USD o EUR; la moneda queda asociada a la barbería (el modelo conserva USD como valor de respaldo para altas internas antiguas)
+- Los informes separan monedas y no suman importes de monedas distintas
 
 ### Soft Delete
-- Nada se elimina físicamente
-- Se marca con `is_deleted = true`
-- Se registra `deleted_at`
+- Las entidades de negocio se conservan mediante borrado lógico (`is_deleted` y `deleted_at`)
+- Los registros temporales de autenticación vencidos se purgan físicamente por la política de retención
 
 ### Timestamps
 - Todos los registros tienen `created_at` y `updated_at`
@@ -390,4 +377,4 @@ Ayudamos a:
 
 ---
 
-**Última actualización:** 2024-05-30
+**Última actualización:** 2026-11-23

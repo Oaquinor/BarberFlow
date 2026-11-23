@@ -4,19 +4,17 @@ Base model with common fields.
 All models should inherit from this base class.
 """
 
-from datetime import datetime
-
 from sqlalchemy import Column, Integer, DateTime, Boolean
-from sqlalchemy.ext.declarative import declared_attr
 
 from app.core.database import Base
+from app.utils.datetime import utc_now_naive
 
 
 class TimestampMixin:
     """Mixin for created_at and updated_at timestamps."""
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now_naive, nullable=False)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive, nullable=False)
 
 
 class SoftDeleteMixin:
@@ -38,12 +36,14 @@ class BaseModel(Base, TimestampMixin, SoftDeleteMixin):
 
     __abstract__ = True
 
-    id = Column(Integer, primary_key=True, index=True)
+    # A primary key is indexed by MySQL already; an extra index only bloats
+    # every table and drifts from the migration-managed schema.
+    id = Column(Integer, primary_key=True)
 
     def soft_delete(self) -> None:
         """Mark record as deleted."""
         self.is_deleted = True
-        self.deleted_at = datetime.utcnow()
+        self.deleted_at = utc_now_naive()
 
     def restore(self) -> None:
         """Restore soft-deleted record."""

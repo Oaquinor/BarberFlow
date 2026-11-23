@@ -4,15 +4,46 @@ Performance API endpoints.
 Handles barber performance metrics and analytics.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.services import PerformanceService
-from app.core.security import get_current_user
-from app.models import User
+from app.api.deps import get_current_user
+from app.models import User, Barbershop
+
+
+def _tenant_today(current_user: User, db: Session) -> date:
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == current_user.barbershop_id,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    try:
+        return datetime.now(timezone.utc).astimezone(ZoneInfo(shop.timezone)).date()
+    except (ZoneInfoNotFoundError, TypeError) as exc:
+        raise HTTPException(status_code=500, detail="Zona horaria de barbería inválida") from exc
+
+
+def _authorize_barber_metrics(current_user: User, barber_id: int, db: Session) -> None:
+    """Keep performance queries within the authenticated tenant and role."""
+    if current_user.role not in {"barber", "barbershop_owner"} or not current_user.barbershop_id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    if current_user.role == "barber" and current_user.id != barber_id:
+        raise HTTPException(status_code=403, detail="Solo puedes consultar tu rendimiento")
+    barber = db.query(User.id).filter(
+        User.id == barber_id,
+        User.barbershop_id == current_user.barbershop_id,
+        User.role == "barber",
+        User.is_active == True,
+        User.is_deleted == False,
+    ).first()
+    if not barber:
+        raise HTTPException(status_code=404, detail="Barbero no encontrado")
 
 router = APIRouter(prefix="/performance", tags=["Performance"])
 
@@ -26,7 +57,9 @@ def get_daily_performance(
 ):
     """Get daily performance metrics for a barber."""
     if not target_date:
-        target_date = date.today()
+        target_date = _tenant_today(current_user, db)
+
+    _authorize_barber_metrics(current_user, barber_id, db)
 
     try:
         performance = PerformanceService.calculate_daily_performance(
@@ -48,10 +81,10 @@ def get_daily_performance(
             "current_streak": performance.current_streak,
             "best_streak": performance.best_streak
         }
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudo calcular el rendimiento diario"
         )
 
 
@@ -65,8 +98,10 @@ def get_weekly_summary(
     """Get weekly performance summary."""
     if not start_date:
         # Get current week start (Monday)
-        today = date.today()
+        today = _tenant_today(current_user, db)
         start_date = today - timedelta(days=today.weekday())
+
+    _authorize_barber_metrics(current_user, barber_id, db)
 
     try:
         summary = PerformanceService.get_weekly_summary(
@@ -76,10 +111,10 @@ def get_weekly_summary(
             start_date=start_date
         )
         return summary
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudo calcular el resumen semanal"
         )
 
 
@@ -92,10 +127,16 @@ def get_monthly_summary(
     current_user: User = Depends(get_current_user)
 ):
     """Get monthly performance summary."""
-    if not year or not month:
-        today = date.today()
+    if year is None and month is None:
+        today = _tenant_today(current_user, db)
         year = today.year
         month = today.month
+    elif year is None or month is None:
+        raise HTTPException(status_code=422, detail="Especifica tanto el año como el mes")
+
+    if month < 1 or month > 12 or year < 2000 or year > _tenant_today(current_user, db).year + 1:
+        raise HTTPException(status_code=422, detail="Periodo no válido")
+    _authorize_barber_metrics(current_user, barber_id, db)
 
     try:
         summary = PerformanceService.get_monthly_summary(
@@ -106,10 +147,10 @@ def get_monthly_summary(
             month=month
         )
         return summary
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudo calcular el resumen mensual"
         )
 
 
@@ -120,15 +161,17 @@ def get_performance_insights(
     current_user: User = Depends(get_current_user)
 ):
     """Get performance insights and recommendations."""
+    _authorize_barber_metrics(current_user, barber_id, db)
     try:
         insights = PerformanceService.get_performance_insights(
             db=db,
             barbershop_id=current_user.barbershop_id,
-            barber_id=barber_id
+            barber_id=barber_id,
+            as_of_date=_tenant_today(current_user, db),
         )
         return {"insights": insights}
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail="No se pudieron generar las recomendaciones"
         )

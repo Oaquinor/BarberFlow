@@ -13,7 +13,6 @@ from app.core.exceptions.base import (
     AuthenticationError,
     AuthorizationError,
     ResourceNotFoundError,
-    ValidationError,
     BusinessLogicError,
     ExternalServiceError,
 )

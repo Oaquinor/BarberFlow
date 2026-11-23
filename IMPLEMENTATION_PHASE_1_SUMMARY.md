@@ -1,5 +1,7 @@
 # 🚀 IMPLEMENTACIÓN COMPLETA - FASE 1: PERSONALIZACIÓN
 
+> **Resumen histórico del 30 de mayo de 2024:** describe una fase inicial y no certifica que el producto esté completo o listo para producción. Para el stack vigente (MySQL), funciones conectadas y validación actual, consulta [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md).
+
 **Fecha:** 2024-05-30  
 **Estado:** ✅ COMPLETADO
 

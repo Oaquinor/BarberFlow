@@ -23,6 +23,7 @@ class Commission(BaseModel):
 
     # Amount
     amount = Column(Integer, nullable=False)  # in cents
+    currency = Column(String(3), nullable=False)
     commission_rate = Column(Integer, nullable=False)  # percentage * 100
 
     # Period

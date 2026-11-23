@@ -1,18 +1,29 @@
-"""
-Onboarding API endpoints.
-"""
+"""Authenticated, tenant-scoped onboarding endpoints."""
 
+import warnings
+from datetime import datetime, time
+from io import BytesIO
+from pathlib import Path
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
-from sqlalchemy.orm import Session
-from datetime import datetime
+from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from PIL import Image, UnidentifiedImageError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.api.deps import CurrentUser
 from app.core import get_db
+from app.core.config import get_settings
+from app.core.logging import get_logger
+from app.models.barbershop import Barbershop
 from app.schemas.onboarding import (
-    OnboardingComplete,
     BarbershopProfile,
-    DashboardLayoutResponse,
+    BusinessSettingsUpdate,
     ContextualMessage,
+    DashboardLayoutResponse,
+    OnboardingComplete,
     OnboardingStep1,
     OnboardingStep3,
     OnboardingStep4,
@@ -20,289 +31,410 @@ from app.schemas.onboarding import (
     OnboardingStep6,
     OnboardingStep7,
     OnboardingStep8,
-    OnboardingStep9
+    OnboardingStep9,
 )
+from app.services.audit_service import record_audit
 from app.services.onboarding_service import OnboardingService
 
-
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+MAX_LOGO_SIZE = get_settings().MAX_UPLOAD_SIZE
+ALLOWED_LOGO_TYPES = {"image/png": ".png", "image/jpeg": ".jpg"}
+LOGO_IMAGE_FORMATS = {"image/png": "PNG", "image/jpeg": "JPEG"}
+MAX_LOGO_PIXELS = 16_000_000
+UPLOAD_ROOT = Path(get_settings().UPLOAD_DIR) / "barbershops"
+logger = get_logger(__name__)
+
+
+def _remove_logo_file(path: Path, *, tenant_id: int, purpose: str) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.warning(
+            "Could not remove logo file after %s",
+            purpose,
+            extra={"tenant_id": tenant_id, "path": str(path)},
+            exc_info=True,
+        )
+
+
+def _sanitize_logo(contents: bytes, expected_format: str) -> bytes:
+    """Decode and re-encode a bounded, single-frame PNG/JPEG without metadata."""
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(BytesIO(contents), formats=(expected_format,)) as source:
+                if source.format != expected_format:
+                    raise ValueError("El formato no coincide")
+                width, height = source.size
+                if width < 1 or height < 1 or width * height > MAX_LOGO_PIXELS:
+                    raise ValueError("Las dimensiones del logo no son válidas")
+                if getattr(source, "n_frames", 1) != 1:
+                    raise ValueError("No se permiten imágenes animadas")
+                source.verify()
+
+            with Image.open(BytesIO(contents), formats=(expected_format,)) as source:
+                source.load()
+                image = source.convert("RGBA" if expected_format == "PNG" else "RGB")
+                output = BytesIO()
+                image.save(output, format=expected_format, optimize=True)
+                sanitized = output.getvalue()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning,
+            UnidentifiedImageError, OSError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo debe ser una imagen PNG o JPG válida y de dimensiones permitidas",
+        ) from exc
+
+    if len(sanitized) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="El logo procesado debe pesar como máximo 5 MB")
+    return sanitized
+
+
+def _get_tenant_id(user, requested_id: Optional[int] = None) -> int:
+    """Resolve tenant from the authenticated identity; only platform admins may select one."""
+    if user.role == "super_admin":
+        if requested_id is None:
+            raise HTTPException(status_code=400, detail="barbershop_id is required for platform administrators")
+        return requested_id
+    if requested_id is not None and requested_id != user.barbershop_id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a esta barbería")
+    if user.role not in {"barbershop_owner", "barber"} or user.barbershop_id is None:
+        raise HTTPException(status_code=403, detail="Tu cuenta no pertenece a una barbería")
+    return user.barbershop_id
+
+
+def _require_owner(user) -> None:
+    if user.role not in {"barbershop_owner", "super_admin"}:
+        raise HTTPException(status_code=403, detail="Se requiere el rol de propietario")
+
+
+def _get_barbershop(db: Session, tenant_id: int) -> Barbershop:
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == tenant_id, Barbershop.is_deleted == False
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    return shop
+
+
+def _lock_barbershop(db: Session, tenant_id: int) -> Barbershop:
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == tenant_id, Barbershop.is_deleted == False
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    return shop
 
 
 @router.post("/complete", response_model=BarbershopProfile)
 def complete_onboarding(
     data: OnboardingComplete,
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Complete onboarding process with all barbershop personalization data.
-    """
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous = {
+        "name": shop.name,
+        "primary_color": shop.primary_color,
+        "secondary_color": shop.secondary_color,
+        "style": shop.style,
+        "primary_goal": shop.primary_goal,
+        "team_size": shop.team_size,
+        "avg_service_duration": shop.avg_service_duration,
+        "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
+        "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
+        "personality": shop.personality,
+    }
     try:
-        barbershop = OnboardingService.complete_onboarding(db, barbershop_id, data)
-        return BarbershopProfile.from_orm(barbershop)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        shop = OnboardingService.complete_onboarding(db, tenant_id, data, commit=False)
+        record_audit(
+            db, current_user, "onboarding.completed", "barbershop", shop.id, shop.id,
+            {"previous": previous, "updated": {
+                "name": data.barbershop_name,
+                "primary_color": data.primary_color,
+                "secondary_color": data.secondary_color,
+                "style": data.style,
+                "primary_goal": data.primary_goal,
+                "team_size": data.team_size,
+                "avg_service_duration": data.avg_service_duration,
+                "opening_time": data.opening_time,
+                "closing_time": data.closing_time,
+                "personality": data.personality,
+            }},
+        )
+        db.commit()
+        db.refresh(shop)
+        return BarbershopProfile.model_validate(shop)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/profile", response_model=BarbershopProfile)
 def get_barbershop_profile(
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Get barbershop profile including personalization settings.
-    """
-    profile = OnboardingService.get_barbershop_profile(db, barbershop_id)
-
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    profile = OnboardingService.get_barbershop_profile(db, tenant_id)
     if not profile:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
     return profile
 
 
 @router.get("/dashboard-layout", response_model=DashboardLayoutResponse)
 def get_dashboard_layout(
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Get dashboard layout adapted to barbershop's primary goal.
-    """
-    return OnboardingService.get_dashboard_layout(db, barbershop_id)
+    return OnboardingService.get_dashboard_layout(db, _get_tenant_id(current_user, barbershop_id))
 
 
 @router.get("/greeting", response_model=ContextualMessage)
 def get_contextual_greeting(
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Get contextual greeting message based on time and barbershop.
-    """
-    current_hour = datetime.now().hour
-    return OnboardingService.get_contextual_greeting(db, barbershop_id, current_hour)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _get_barbershop(db, tenant_id)
+    try:
+        local_hour = datetime.now(ZoneInfo(shop.timezone)).hour
+    except (ZoneInfoNotFoundError, TypeError) as exc:
+        raise HTTPException(status_code=500, detail="La zona horaria de la barbería no es válida") from exc
+    return OnboardingService.get_contextual_greeting(
+        db, tenant_id, local_hour
+    )
 
 
 @router.post("/motivational-message", response_model=Optional[ContextualMessage])
 def get_motivational_message(
     context: dict,
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Get motivational message based on performance context.
-
-    Example context:
-    {
-        "achievement_type": "perfect_week"
-    }
-    """
-    return OnboardingService.get_motivational_message(db, barbershop_id, context)
+    return OnboardingService.get_motivational_message(
+        db, _get_tenant_id(current_user, barbershop_id), context
+    )
 
 
 @router.post("/upload-logo")
 async def upload_logo(
+    current_user: CurrentUser,
     file: UploadFile = File(...),
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Upload barbershop logo.
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    extension = ALLOWED_LOGO_TYPES.get(file.content_type or "")
+    if not extension:
+        raise HTTPException(status_code=400, detail="Solo se permiten imágenes PNG o JPG")
+    contents = await file.read(MAX_LOGO_SIZE + 1)
+    if not contents or len(contents) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="El logo debe pesar como máximo 5 MB")
+    contents = _sanitize_logo(contents, LOGO_IMAGE_FORMATS[file.content_type])
 
-    Accepts: PNG, JPG, JPEG
-    Max size: 5MB
-    """
-    # Validate file type
-    if file.content_type not in ["image/png", "image/jpeg", "image/jpg"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file type. Only PNG and JPG allowed."
-        )
-
-    # TODO: Implement actual file upload to storage (S3, local, etc.)
-    # For now, return mock URL
-    logo_url = f"/uploads/barbershops/{barbershop_id}/logo_{file.filename}"
-
-    # Update barbershop
+    shop = _lock_barbershop(db, tenant_id)
+    directory = UPLOAD_ROOT / str(tenant_id)
+    filename = f"{uuid4().hex}{extension}"
+    destination = directory / filename
+    previous_logo_url = shop.logo_url
     try:
-        barbershop = OnboardingService.update_barbershop_logo(db, barbershop_id, logo_url)
-        return {
-            "success": True,
-            "logo_url": logo_url,
-            "message": "Logo uploaded successfully"
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        directory.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(contents)
+    except OSError as exc:
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="write failure")
+        raise HTTPException(status_code=500, detail="No se pudo guardar el logo") from exc
+
+    logo_url = f"/uploads/barbershops/{tenant_id}/{filename}"
+    shop.logo_url = logo_url
+    record_audit(
+        db,
+        current_user,
+        "barbershop.logo_updated",
+        "barbershop",
+        shop.id,
+        shop.id,
+        {"previous_logo_url": previous_logo_url, "logo_url": logo_url},
+    )
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="database rollback")
+        raise HTTPException(status_code=503, detail="No se pudo actualizar el logo") from exc
+
+    # Remove only an older file managed under this tenant's upload directory.
+    tenant_prefix = f"/uploads/barbershops/{tenant_id}/"
+    if previous_logo_url and previous_logo_url.startswith(tenant_prefix):
+        previous_name = previous_logo_url[len(tenant_prefix):]
+        previous_path = (directory / previous_name).resolve()
+        if previous_path.parent == directory.resolve() and previous_path != destination.resolve():
+            _remove_logo_file(previous_path, tenant_id=tenant_id, purpose="logo replacement")
+    return {"success": True, "logo_url": logo_url, "message": "Logo subido correctamente"}
 
 
 @router.put("/brand-colors")
 def update_brand_colors(
     data: OnboardingStep3,
-    barbershop_id: int = 1,  # TODO: Get from auth
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
 ):
-    """
-    Update barbershop brand colors.
-    """
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous = {"primary_color": shop.primary_color, "secondary_color": shop.secondary_color}
     try:
-        barbershop = OnboardingService.update_brand_colors(
-            db,
-            barbershop_id,
-            data.primary_color,
-            data.secondary_color
+        shop = OnboardingService.update_brand_colors(
+            db, tenant_id, data.primary_color, data.secondary_color, commit=False
         )
-        return {
-            "success": True,
-            "primary_color": barbershop.primary_color,
-            "secondary_color": barbershop.secondary_color,
-            "message": "Colors updated successfully"
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        updated = {"primary_color": shop.primary_color, "secondary_color": shop.secondary_color}
+        if previous != updated:
+            record_audit(
+                db, current_user, "business.brand_colors_updated", "barbershop", shop.id,
+                shop.id, {"previous": previous, "updated": updated},
+            )
+        db.commit()
+        return {"success": True, "primary_color": shop.primary_color,
+                "secondary_color": shop.secondary_color, "message": "Colores actualizados"}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/business-settings", response_model=BarbershopProfile)
+def update_business_settings(
+    data: BusinessSettingsUpdate,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
+):
+    """Update owner-editable business identity, hours, timezone and public branding atomically."""
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == tenant_id,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+
+    previous = {
+        "name": shop.name,
+        "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
+        "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
+        "timezone": shop.timezone,
+        "primary_color": shop.primary_color,
+        "secondary_color": shop.secondary_color,
+    }
+    shop.name = data.name
+    shop.opening_time = data.opening_time
+    shop.closing_time = data.closing_time
+    shop.timezone = data.timezone
+    shop.primary_color = data.primary_color
+    shop.secondary_color = data.secondary_color
+    record_audit(db, current_user, "business.settings_updated", "barbershop", shop.id,
+                 shop.id, {"previous": previous, "name": data.name,
+                           "timezone": data.timezone,
+                           "opening_time": data.opening_time.isoformat(),
+                           "closing_time": data.closing_time.isoformat(),
+                           "primary_color": data.primary_color,
+                           "secondary_color": data.secondary_color})
+    db.commit()
+    db.refresh(shop)
+    return BarbershopProfile.model_validate(shop)
+
+
+def _save_step(db: Session, current_user, tenant_id: int, field: str, value) -> dict:
+    shop = _lock_barbershop(db, tenant_id)
+    previous = getattr(shop, field)
+    setattr(shop, field, value)
+    if previous != value:
+        record_audit(
+            db, current_user, f"onboarding.{field}_updated", "barbershop", shop.id,
+            shop.id, {"previous": previous.isoformat() if hasattr(previous, "isoformat") else previous,
+                      "updated": value.isoformat() if hasattr(value, "isoformat") else value},
+        )
+    db.commit()
+    return {"success": True, "message": "Paso guardado"}
+
+
+def _step_context(current_user, db, barbershop_id):
+    _require_owner(current_user)
+    return _get_tenant_id(current_user, barbershop_id)
 
 
 @router.post("/step/1")
-def onboarding_step_1(
-    data: OnboardingStep1,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 1: Barbershop name"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.name = data.barbershop_name
-    db.commit()
-
-    return {"success": True, "message": "Step 1 completed"}
+def onboarding_step_1(data: OnboardingStep1, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "name", data.barbershop_name)
 
 
 @router.post("/step/3")
-def onboarding_step_3(
-    data: OnboardingStep3,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 3: Brand colors"""
-    return update_brand_colors(data, barbershop_id, db)
+def onboarding_step_3(data: OnboardingStep3, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    return update_brand_colors(data, current_user, db, tenant_id)
 
 
 @router.post("/step/4")
-def onboarding_step_4(
-    data: OnboardingStep4,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 4: Style"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.style = data.style
-    db.commit()
-
-    return {"success": True, "message": "Step 4 completed"}
+def onboarding_step_4(data: OnboardingStep4, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "style", data.style)
 
 
 @router.post("/step/5")
-def onboarding_step_5(
-    data: OnboardingStep5,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 5: Primary goal"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.primary_goal = data.primary_goal
-    db.commit()
-
-    return {"success": True, "message": "Step 5 completed"}
+def onboarding_step_5(data: OnboardingStep5, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "primary_goal", data.primary_goal)
 
 
 @router.post("/step/6")
-def onboarding_step_6(
-    data: OnboardingStep6,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 6: Team size"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.team_size = data.team_size
-    db.commit()
-
-    return {"success": True, "message": "Step 6 completed"}
+def onboarding_step_6(data: OnboardingStep6, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "team_size", data.team_size)
 
 
 @router.post("/step/7")
-def onboarding_step_7(
-    data: OnboardingStep7,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 7: Average service duration"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.avg_service_duration = data.avg_service_duration
-    db.commit()
-
-    return {"success": True, "message": "Step 7 completed"}
+def onboarding_step_7(data: OnboardingStep7, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "avg_service_duration", data.avg_service_duration)
 
 
 @router.post("/step/8")
-def onboarding_step_8(
-    data: OnboardingStep8,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 8: Business hours"""
-    from app.models.barbershop import Barbershop
-    from datetime import time
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    opening_parts = data.opening_time.split(':')
-    closing_parts = data.closing_time.split(':')
-    barbershop.opening_time = time(int(opening_parts[0]), int(opening_parts[1]))
-    barbershop.closing_time = time(int(closing_parts[0]), int(closing_parts[1]))
+def onboarding_step_8(data: OnboardingStep8, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    tenant_id = _step_context(current_user, db, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous_hours = {
+        "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
+        "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
+    }
+    try:
+        shop.opening_time = time.fromisoformat(data.opening_time)
+        shop.closing_time = time.fromisoformat(data.closing_time)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Formato de horario inválido") from exc
+    if shop.opening_time >= shop.closing_time:
+        raise HTTPException(status_code=422, detail="La hora de apertura debe preceder al cierre")
+    record_audit(
+        db, current_user, "onboarding.business_hours_updated", "barbershop", shop.id,
+        shop.id, {"previous": previous_hours,
+                  "updated": {"opening_time": shop.opening_time.isoformat(),
+                              "closing_time": shop.closing_time.isoformat()}},
+    )
     db.commit()
-
-    return {"success": True, "message": "Step 8 completed"}
+    return {"success": True, "message": "Paso guardado"}
 
 
 @router.post("/step/9")
-def onboarding_step_9(
-    data: OnboardingStep9,
-    barbershop_id: int = 1,
-    db: Session = Depends(get_db)
-):
-    """Save step 9: Personality"""
-    from app.models.barbershop import Barbershop
-
-    barbershop = db.query(Barbershop).filter(Barbershop.id == barbershop_id).first()
-    if not barbershop:
-        raise HTTPException(status_code=404, detail="Barbershop not found")
-
-    barbershop.personality = data.personality
-    db.commit()
-
-    return {"success": True, "message": "Step 9 completed"}
+def onboarding_step_9(data: OnboardingStep9, current_user: CurrentUser,
+                      db: Session = Depends(get_db), barbershop_id: Optional[int] = Query(default=None)):
+    return _save_step(db, current_user, _step_context(current_user, db, barbershop_id), "personality", data.personality)

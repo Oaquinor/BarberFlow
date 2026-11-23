@@ -4,14 +4,14 @@ Simple HTTP server to serve the frontend
 """
 import http.server
 import socketserver
-import os
+from pathlib import Path
 
 PORT = 3000
-DIRECTORY = "../frontend"
+FRONTEND_DIRECTORY = Path(__file__).resolve().parents[2] / "frontend"
 
 class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=DIRECTORY, **kwargs)
+        super().__init__(*args, directory=str(FRONTEND_DIRECTORY), **kwargs)
 
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -24,9 +24,7 @@ class CORSRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
 if __name__ == "__main__":
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-    with socketserver.TCPServer(("", PORT), CORSRequestHandler) as httpd:
+    with socketserver.TCPServer(("127.0.0.1", PORT), CORSRequestHandler) as httpd:
         print(f"")
         print(f"🌐 ===============================================")
         print(f"   KingFlow Barber - Frontend Server")

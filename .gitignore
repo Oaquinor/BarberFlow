@@ -7,11 +7,11 @@ env/
 # Environment variables
 .env
 .env.local
+.env.*
+!.env.*.example
 .env.*.local
 
 # Database
-*.db
-*.sqlite3
 
 # Logs
 logs/
@@ -30,6 +30,8 @@ build/
 .coverage
 htmlcov/
 .tox/
+frontend/test-results/
+frontend/playwright-report/
 
 # IDEs
 .vscode/

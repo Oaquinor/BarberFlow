@@ -4,12 +4,13 @@ Achievement Service.
 Handles gamification, achievements, and badges.
 """
 
-from datetime import datetime, date
+from datetime import date
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func
 
-from app.models import Achievement, UserAchievement, BarberPerformance
+from app.models import Achievement, UserAchievement, BarberPerformance, User
+from app.utils.datetime import utc_now_naive
 
 
 class AchievementService:
@@ -109,34 +110,13 @@ class AchievementService:
                 "points": 1000,
                 "rarity": "legendary"
             },
-            # Efficiency Achievements
-            {
-                "code": "SPEED_DEMON",
-                "name": "Demonio de la Velocidad",
-                "description": "Mantén 95% de eficiencia de tiempo durante una semana",
-                "icon": "⚡",
-                "category": "efficiency",
-                "requirement_type": "weekly_efficiency",
-                "requirement_value": 95,
-                "points": 100,
-                "rarity": "epic"
-            },
-            {
-                "code": "PERFECT_WEEK",
-                "name": "Semana Perfecta",
-                "description": "Completa todas tus citas sin cancelaciones durante una semana",
-                "icon": "✨",
-                "category": "excellence",
-                "requirement_type": "weekly_perfect",
-                "requirement_value": 1,
-                "points": 150,
-                "rarity": "epic"
-            }
         ]
 
         for ach_data in default_achievements:
             # Check if already exists
-            existing = db.query(Achievement).filter(Achievement.code == ach_data["code"]).first()
+            existing = db.query(Achievement).filter(
+                Achievement.code == ach_data["code"], Achievement.is_deleted == False
+            ).first()
             if not existing:
                 achievement = Achievement(**ach_data)
                 db.add(achievement)
@@ -149,7 +129,8 @@ class AchievementService:
         user_id: int,
         barbershop_id: int,
         trigger_type: str,
-        context_data: Optional[Dict[str, Any]] = None
+        context_data: Optional[Dict[str, Any]] = None,
+        commit: bool = True,
     ) -> List[UserAchievement]:
         """
         Check if user has earned new achievements and award them.
@@ -158,8 +139,23 @@ class AchievementService:
         """
         newly_earned = []
 
+        # Serialize award checks for a barber so concurrent completed services cannot
+        # create duplicate UserAchievement records for the same achievement.
+        barber = db.query(User).filter(
+            User.id == user_id,
+            User.barbershop_id == barbershop_id,
+            User.role == "barber",
+            User.is_active == True,
+            User.is_deleted == False,
+        ).with_for_update().first()
+        if not barber:
+            return newly_earned
+
         # Get all active achievements
-        all_achievements = db.query(Achievement).filter(Achievement.is_active == True).all()
+        all_achievements = db.query(Achievement).filter(
+            Achievement.is_active == True,
+            Achievement.is_deleted == False,
+        ).all()
 
         # Get user's already earned achievements
         earned_achievement_ids = {
@@ -167,7 +163,8 @@ class AchievementService:
             for ua in db.query(UserAchievement).filter(
                 and_(
                     UserAchievement.user_id == user_id,
-                    UserAchievement.barbershop_id == barbershop_id
+                    UserAchievement.barbershop_id == barbershop_id,
+                    UserAchievement.is_deleted == False,
                 )
             ).all()
         }
@@ -187,16 +184,19 @@ class AchievementService:
                     user_id=user_id,
                     achievement_id=achievement.id,
                     barbershop_id=barbershop_id,
-                    earned_at=datetime.utcnow(),
+                    earned_at=utc_now_naive(),
                     context_data=context_data
                 )
                 db.add(user_achievement)
                 newly_earned.append(user_achievement)
 
         if newly_earned:
-            db.commit()
-            for ua in newly_earned:
-                db.refresh(ua)
+            if commit:
+                db.commit()
+                for ua in newly_earned:
+                    db.refresh(ua)
+            else:
+                db.flush()
 
         return newly_earned
 
@@ -234,11 +234,25 @@ class AchievementService:
                     latest_performance.current_streak >= achievement.requirement_value)
 
         elif achievement.requirement_type == "daily_appointments":
-            # Check if any day had this many appointments
+            target_date = None
+            if context_data and context_data.get("business_date"):
+                try:
+                    target_date = date.fromisoformat(context_data["business_date"])
+                except (TypeError, ValueError):
+                    return False
+            if target_date is None:
+                target_date = db.query(BarberPerformance.date).filter(
+                    BarberPerformance.barber_id == user_id,
+                    BarberPerformance.barbershop_id == barbershop_id,
+                ).order_by(BarberPerformance.date.desc()).limit(1).scalar()
+            if target_date is None:
+                return False
+
             performance = db.query(BarberPerformance).filter(
                 and_(
                     BarberPerformance.barber_id == user_id,
                     BarberPerformance.barbershop_id == barbershop_id,
+                    BarberPerformance.date == target_date,
                     BarberPerformance.appointments_completed >= achievement.requirement_value
                 )
             ).first()
@@ -268,17 +282,22 @@ class AchievementService:
         earned = db.query(UserAchievement).filter(
             and_(
                 UserAchievement.user_id == user_id,
-                UserAchievement.barbershop_id == barbershop_id
+                UserAchievement.barbershop_id == barbershop_id,
+                UserAchievement.is_deleted == False,
             )
         ).all()
 
         # Get all achievements
-        all_achievements = db.query(Achievement).filter(Achievement.is_active == True).all()
+        all_achievements = db.query(Achievement).filter(
+            Achievement.is_active == True,
+            Achievement.is_deleted == False,
+        ).all()
+        achievement_by_id = {achievement.id: achievement for achievement in all_achievements}
 
         # Calculate total points
         total_points = sum(
-            db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().points
-            for ua in earned
+            achievement_by_id[ua.achievement_id].points or 0
+            for ua in earned if ua.achievement_id in achievement_by_id
         )
 
         return {
@@ -288,17 +307,17 @@ class AchievementService:
             "earned": [
                 {
                     "achievement": {
-                        "code": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().code,
-                        "name": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().name,
-                        "description": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().description,
-                        "icon": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().icon,
-                        "rarity": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().rarity,
-                        "points": db.query(Achievement).filter(Achievement.id == ua.achievement_id).first().points
+                        "code": achievement_by_id[ua.achievement_id].code,
+                        "name": achievement_by_id[ua.achievement_id].name,
+                        "description": achievement_by_id[ua.achievement_id].description,
+                        "icon": achievement_by_id[ua.achievement_id].icon,
+                        "rarity": achievement_by_id[ua.achievement_id].rarity,
+                        "points": achievement_by_id[ua.achievement_id].points,
                     },
                     "earned_at": ua.earned_at,
                     "is_viewed": ua.is_viewed
                 }
-                for ua in earned
+                for ua in earned if ua.achievement_id in achievement_by_id
             ],
             "available": [
                 {
