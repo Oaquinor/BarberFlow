@@ -101,4 +101,5 @@ test("subscription admin screen does not offer fictitious automatic renewal", ()
   const html = fs.readFileSync(path.join(__dirname, "..", "admin.html"), "utf8");
   assert.doesNotMatch(html, /id="subAutoRenew"/);
   assert.match(html, /La renovación es manual/);
+  assert.match(html, /solo ese registro lo activa/);
 });

@@ -514,6 +514,47 @@ def admin_update_subscription(
             Subscription.is_deleted == False,
         ).with_for_update().first()
 
+    now = utc_now_naive()
+    target_plan = data.plan or (sub.plan if sub else "free")
+    target_status = data.status or (sub.status if sub else "active")
+    target_period_end = data.current_period_end or (sub.current_period_end if sub else now + timedelta(days=30))
+    if target_period_end.tzinfo is not None:
+        target_period_end = target_period_end.astimezone(timezone.utc).replace(tzinfo=None)
+
+    if target_plan != "free" and target_status == "active":
+        if not sub:
+            raise HTTPException(
+                status_code=409,
+                detail="Registra primero el pago externo para activar un plan de pago",
+            )
+        if data.plan is not None and data.plan != sub.plan:
+            raise HTTPException(
+                status_code=409,
+                detail="Un plan de pago nuevo debe permanecer inactivo hasta registrar el cobro externo",
+            )
+        if target_period_end != sub.current_period_end:
+            raise HTTPException(
+                status_code=409,
+                detail="No se puede extender un plan de pago activo sin registrar el cobro del nuevo periodo",
+            )
+        if target_period_end <= now:
+            raise HTTPException(
+                status_code=409,
+                detail="El periodo de pago venció; registra el cobro de renovación antes de reactivar",
+            )
+        recorded_payment = db.query(SubscriptionPayment.id).filter(
+            SubscriptionPayment.barbershop_id == shop.id,
+            SubscriptionPayment.subscription_id == sub.id,
+            SubscriptionPayment.period_start == sub.current_period_start,
+            SubscriptionPayment.period_end == target_period_end,
+            SubscriptionPayment.is_deleted == False,
+        ).first()
+        if not recorded_payment:
+            raise HTTPException(
+                status_code=409,
+                detail="Los planes de pago solo se activan desde el registro de un cobro externo confirmado",
+            )
+
     previous = None if sub is None else {
         "plan": sub.plan,
         "status": sub.status,
@@ -523,10 +564,7 @@ def admin_update_subscription(
 
     if not sub:
         # Crear una suscripción nueva si la barbería aún no tenía una asociada.
-        now = utc_now_naive()
-        period_end = data.current_period_end or (now + timedelta(days=30))
-        if period_end.tzinfo is not None:
-            period_end = period_end.astimezone(timezone.utc).replace(tzinfo=None)
+        period_end = target_period_end
         if period_end <= now:
             raise HTTPException(status_code=422, detail="El fin del periodo debe ser posterior al inicio")
         sub = Subscription(
@@ -547,9 +585,7 @@ def admin_update_subscription(
         if data.status is not None:
             sub.status = data.status
         if data.current_period_end is not None:
-            period_end = data.current_period_end
-            if period_end.tzinfo is not None:
-                period_end = period_end.astimezone(timezone.utc).replace(tzinfo=None)
+            period_end = target_period_end
             if period_end <= sub.current_period_start:
                 raise HTTPException(status_code=422, detail="El fin del periodo debe ser posterior al inicio")
             sub.current_period_end = period_end

@@ -328,7 +328,7 @@ Los planes disponibles en el código son `free`, `basic`, `professional` y `ente
 | `professional` | 10 | 1,000 | 2,000 |
 | `enterprise` | Sin límite | Sin límite | Sin límite |
 
-Los precios y prestaciones comerciales no están configurados como catálogo en la aplicación. La pasarela y los precios permanecen pendientes de definición; la plataforma solo registra manualmente pagos externos ya recibidos.
+Los precios y prestaciones comerciales no están configurados como catálogo en la aplicación. La pasarela y los precios permanecen pendientes de definición; la plataforma solo registra manualmente pagos externos ya recibidos. Un plan de pago se prepara como inactivo y solo se activa o extiende al registrar el cobro externo confirmado; la ruta administrativa de edición no puede habilitarlo por sí sola.
 
 ### Límites
 

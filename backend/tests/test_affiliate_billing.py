@@ -93,12 +93,77 @@ def test_new_subscription_does_not_enable_unimplemented_automatic_renewal(
     headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': 'super_admin'})}"}
     response = client.put(
         f"/api/v1/admin/tenants/{shop.id}/subscription", headers=headers,
-        json={"plan": "basic", "auto_renew": True},
+        json={"plan": "basic", "status": "inactive", "auto_renew": True},
     )
 
     assert response.status_code == 200
     subscription = test_db.get(Subscription, response.json()["subscription_id"])
     assert subscription.auto_renew is False
+
+
+def test_admin_cannot_activate_a_paid_subscription_without_a_recorded_payment(
+    client: TestClient, test_db: Session,
+):
+    now = utc_now_naive()
+    admin = User(
+        email="subscription-bypass-admin@example.com", password_hash="unused",
+        first_name="Admin", last_name="Billing", role="super_admin", is_active=True,
+    )
+    subscription = Subscription(
+        plan="free", status="active", current_period_start=now,
+        current_period_end=now + timedelta(days=30), max_barbers=1,
+        max_appointments_per_month=30, max_clients=50, auto_renew=False,
+    )
+    inactive_paid_subscription = Subscription(
+        plan="basic", status="inactive", current_period_start=now,
+        current_period_end=now + timedelta(days=30), max_barbers=3,
+        max_appointments_per_month=200, max_clients=500, auto_renew=False,
+    )
+    test_db.add_all([admin, subscription, inactive_paid_subscription])
+    test_db.flush()
+    existing_shop = Barbershop(
+        name="Existing Free", slug="existing-free-billing-test", email="existing-free-billing@example.com",
+        phone="8095554030", address_line1="Calle 44", city="Santo Domingo", state="DN",
+        postal_code="10109", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP", subscription_id=subscription.id,
+    )
+    new_shop = Barbershop(
+        name="No Subscription", slug="new-paid-billing-test", email="new-paid-billing@example.com",
+        phone="8095554031", address_line1="Calle 45", city="Santo Domingo", state="DN",
+        postal_code="10110", country="DO", timezone="America/Santo_Domingo", currency="DOP",
+    )
+    inactive_paid_shop = Barbershop(
+        name="Inactive Paid", slug="inactive-paid-billing-test", email="inactive-paid-billing@example.com",
+        phone="8095554032", address_line1="Calle 46", city="Santo Domingo", state="DN",
+        postal_code="10111", country="DO", timezone="America/Santo_Domingo",
+        currency="DOP", subscription_id=inactive_paid_subscription.id,
+    )
+    test_db.add_all([existing_shop, new_shop, inactive_paid_shop])
+    test_db.commit()
+
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(admin.id), 'role': 'super_admin'})}"}
+    payload = {"plan": "basic", "status": "active"}
+    upgrade = client.put(
+        f"/api/v1/admin/tenants/{existing_shop.id}/subscription", headers=headers, json=payload,
+    )
+    create_paid = client.put(
+        f"/api/v1/admin/tenants/{new_shop.id}/subscription", headers=headers, json=payload,
+    )
+    reactivate = client.put(
+        f"/api/v1/admin/tenants/{inactive_paid_shop.id}/subscription",
+        headers=headers, json={"status": "active"},
+    )
+
+    assert upgrade.status_code == 409
+    assert create_paid.status_code == 409
+    assert reactivate.status_code == 409
+    test_db.refresh(subscription)
+    test_db.refresh(new_shop)
+    assert subscription.plan == "free"
+    assert subscription.status == "active"
+    assert new_shop.subscription_id is None
+    test_db.refresh(inactive_paid_subscription)
+    assert inactive_paid_subscription.status == "inactive"
 
 
 def test_recorded_subscription_payment_creates_and_pays_referral_commission(
