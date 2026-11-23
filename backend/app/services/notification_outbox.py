@@ -294,19 +294,29 @@ def process_due_deliveries(db: Session, limit: int = 25, now=None) -> int:
                 row.claimed_at = None
                 db.commit()
                 continue
-        if row.recipient_user_id:
-            recipient_user = db.query(User).filter(
-                User.id == row.recipient_user_id,
-                User.is_deleted == False,
-                User.is_active == True,
-            ).with_for_update().first()
-            contact = (recipient_user.email if row.channel == "email" else recipient_user.phone) if recipient_user else None
-            if not contact or contact != row.recipient or (row.channel == "email" and contact.endswith("@client.invalid")):
+        if not row.recipient_user_id:
+            contact_column = User.email if row.channel == "email" else User.phone
+            matches = db.query(User).filter(contact_column == row.recipient).with_for_update().all()
+            if len(matches) == 1:
+                row.recipient_user_id = matches[0].id
+            else:
                 row.status = "failed"
                 row.last_error = "recipient_unavailable"
                 row.claimed_at = None
                 db.commit()
                 continue
+        recipient_user = db.query(User).filter(
+            User.id == row.recipient_user_id,
+            User.is_deleted == False,
+            User.is_active == True,
+        ).with_for_update().first()
+        contact = (recipient_user.email if row.channel == "email" else recipient_user.phone) if recipient_user else None
+        if not contact or contact != row.recipient or (row.channel == "email" and contact.endswith("@client.invalid")):
+            row.status = "failed"
+            row.last_error = "recipient_unavailable"
+            row.claimed_at = None
+            db.commit()
+            continue
         if row.channel == "email":
             delivered = notifier._send_email(row.recipient, row.subject or "KingFlow Barber", row.body)
         else:
