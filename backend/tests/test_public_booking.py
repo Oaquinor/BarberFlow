@@ -268,6 +268,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
         "service_id": service.id,
         "barber_id": preferred_barber.id,
         "scheduled_time": start.replace(tzinfo=timezone.utc).isoformat(),
+        "notes": "Estilo buscado: Degradado / fade\nLargo actual: Medio\nAcabado preferido: Definir barba y contornos",
     }
     public_slots = client.get(f"/api/v1/public/{shop.slug}/slots?duration_minutes=30")
     same_time_slots = [
@@ -291,6 +292,12 @@ def test_public_booking_tracking_and_cancel_are_connected(
     ).count() == 1
     barber_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(preferred_barber.id), 'role': preferred_barber.role})}"}
     owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
+    business_date = start.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(shop.timezone)).date().isoformat()
+    barber_agenda = client.get(
+        f"/api/v1/barber/appointments?target_date={business_date}", headers=barber_headers,
+    )
+    assert barber_agenda.status_code == 200
+    assert barber_agenda.json()["appointments"][0]["client_notes"] == payload["notes"]
     barber_inbox = client.get("/api/v1/notifications", headers=barber_headers)
     owner_inbox = client.get("/api/v1/notifications", headers=owner_headers)
     assert barber_inbox.status_code == owner_inbox.status_code == 200

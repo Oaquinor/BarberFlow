@@ -1,206 +1,106 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#667eea">
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
-    <link rel="stylesheet" href="/css/ui-feedback.css">
-    <title>Cliente - KingFlow Barber</title>
-    <style>
-        :root {
-            --brand-primary: #667eea;
-            --brand-secondary: #764ba2;
-            --text-primary: #18181b;
-            --text-secondary: #52525b;
-            --surface: rgba(255, 255, 255, 0.9);
-            --surface-strong: #ffffff;
-            --ring: rgba(255, 255, 255, 0.35);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background:
-                radial-gradient(circle at 0% 0%, rgba(255,255,255,0.35) 0%, transparent 35%),
-                radial-gradient(circle at 100% 100%, rgba(255,255,255,0.15) 0%, transparent 30%),
-                linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            min-height: 100vh;
-            color: var(--text-primary);
-            padding: 18px;
-        }
-        .container { max-width: 1040px; margin: 0 auto; }
-        .card {
-            background: var(--surface);
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--ring);
-            border-radius: 20px;
-            padding: 22px;
-            box-shadow: 0 12px 35px rgba(0,0,0,.12);
-            margin-bottom: 16px;
-        }
-        .title { font-size: 1.5rem; margin-bottom: 8px; font-weight: 800; letter-spacing: .2px; }
-        .muted { color: var(--text-secondary); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .actions-bar { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-        .option-panel { max-width: 780px; margin: 0 auto 14px auto; }
-        .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-        .field label { font-weight: 700; color: #3f3f46; }
-        input, select, textarea {
-            border: 1px solid #d4d4d8;
-            background: #fff;
-            border-radius: 12px;
-            padding: 12px;
-            font: inherit;
-            width: 100%;
-            transition: all .2s ease;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--brand-primary);
-            box-shadow: 0 0 0 4px rgba(102,126,234,.18);
-        }
-        textarea { min-height: 88px; }
-        button {
-            border: none;
-            border-radius: 12px;
-            padding: 12px 14px;
-            font-weight: 700;
-            cursor: pointer;
-            color: #fff;
-            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            box-shadow: 0 8px 20px rgba(102,126,234,.25);
-            transition: transform .15s ease, box-shadow .2s ease, opacity .2s ease;
-        }
-        button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 24px rgba(102,126,234,.35);
-        }
-        .secondary {
-            background: #f4f4f5;
-            color: #27272a;
-            box-shadow: none;
-        }
-        .actions-bar button.active {
-            color: #fff;
-            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            box-shadow: 0 10px 22px rgba(102,126,234,.35);
-        }
-        .list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-        .item {
-            border: 1px solid #e4e4e7;
-            background: #fff;
-            border-radius: 12px;
-            padding: 12px;
-        }
-        #shopName {
-            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            display: inline-block;
-        }
-        .brand-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-        #shopLogo { width: 52px; height: 52px; object-fit: cover; border-radius: 12px; }
-        #shopLogo[hidden] { display: none; }
-        .option-panel {
-            animation: fadeIn .25s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#11110f">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <link rel="stylesheet" href="/css/ui-feedback.css">
+  <link rel="stylesheet" href="/css/client.css">
+  <title>Reserva - KingFlow Barber</title>
 </head>
 <body>
-    <div class="container">
-        <div class="card">
-            <div class="brand-header">
-                <img id="shopLogo" alt="" hidden>
-                <h1 class="title" id="shopName">💈 Cargando barbería...</h1>
-            </div>
-            <button id="retryShopBtn" type="button" class="secondary" hidden>Reintentar carga</button>
-            <p class="muted">Agenda tu cita sin registrarte y consulta su estado con el código privado de seguimiento.</p>
-        </div>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="brand-lockup" href="#inicio" aria-label="Inicio">
+        <span class="brand-mark" id="shopInitial">K</span><img id="shopLogo" class="brand-logo" alt="" hidden>
+        <span><strong id="shopName">Cargando barbería…</strong><small>BARBERÍA · RESERVAS</small></span>
+      </a>
+      <nav class="header-nav" aria-label="Navegación principal">
+        <a href="#servicios">Servicios</a><a href="#galeria">Galería</a>
+        <button id="showTrackBtn" type="button" class="nav-track">Consultar cita</button>
+      </nav>
+    </header>
 
-        <div class="card actions-bar">
-            <button id="showBookBtn" type="button">📅 Quiero agendar</button>
-            <button id="showTrackBtn" type="button" class="secondary">🔎 Quiero consultar</button>
-            <button id="showSupportBtn" type="button" class="secondary">🆘 Tengo problemas / Contactar soporte</button>
+    <main id="inicio">
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="live-dot"></span> RESERVAS ABIERTAS</p>
+          <h1 id="heroTitle">Tu estilo.<br><em>En buenas manos.</em></h1>
+          <p id="shopDescription" class="hero-description">Un buen corte empieza con una buena conversación. Elige el servicio y cuéntanos qué tienes en mente.</p>
+          <a class="hero-cta" href="#servicios">Explorar servicios <span>↓</span></a>
         </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="hero-art-glow"></div><div class="hero-art-word">KF<span>✳</span></div>
+          <div class="hero-art-caption">PRECISIÓN · ESTILO · DETALLE</div>
+        </div>
+        <div class="hero-rule"><span>01 / SERVICIOS</span><span>02 / TU ESTILO</span><span>03 / TU CITA</span></div>
+      </section>
 
-        <div id="optionsContainer">
-            <section class="card option-panel" id="bookSection" style="display:none;">
-                <h2 class="title">📅 Agendar cita</h2>
-                <div class="field">
-                    <label for="clientName">Nombre</label>
-                    <input id="clientName" placeholder="Tu nombre" />
+      <section class="section services-section" id="servicios">
+        <div class="section-heading"><div><p class="eyebrow">HECHOS PARA TI</p><h2>Elige tu servicio</h2></div><p>Precios claros. Tiempo reservado para ti.</p></div>
+        <div id="publicServices" class="service-grid" aria-live="polite"><p class="loading-copy">Cargando servicios…</p></div>
+      </section>
+
+      <section class="section gallery-section" id="galeria" hidden>
+        <div class="section-heading"><div><p class="eyebrow">EL TRABAJO HABLA</p><h2>El estilo, en detalle</h2></div><p>Una muestra de nuestro trabajo.</p></div>
+        <div id="publicGallery" class="gallery-grid"></div>
+      </section>
+
+      <section class="section booking-section" id="reserva">
+        <div class="booking-intro"><p class="eyebrow">TU PRÓXIMA CITA</p><h2>Cuéntanos<br>qué buscas.</h2><p>Unas preguntas rápidas nos ayudan a preparar el servicio para ti. No necesitas crear una cuenta.</p>
+          <div class="booking-steps"><span><b>01</b> Servicio</span><span><b>02</b> Preferencias</span><span><b>03</b> Horario</span></div>
+        </div>
+        <div class="booking-card">
+          <div class="panel-switcher" role="group" aria-label="Opciones de reserva">
+            <button id="showBookBtn" type="button" class="switch active">Reservar</button>
+            <button id="showSupportBtn" type="button" class="switch">Ayuda</button>
+          </div>
+          <button id="retryShopBtn" type="button" class="secondary" hidden>Reintentar carga</button>
+          <div id="optionsContainer">
+            <section id="bookSection" class="booking-form" style="display:none">
+              <div class="form-heading"><span class="step-number">1</span><div><h3>Tu cita</h3><p>Elige quién te atiende y cuándo.</p></div></div>
+              <div class="form-grid">
+                <div class="field"><label for="clientName">¿Cómo te llamas?</label><input id="clientName" autocomplete="name" placeholder="Tu nombre" required></div>
+                <div class="field"><label for="clientPhone">Teléfono</label><input id="clientPhone" autocomplete="tel" inputmode="tel" placeholder="809 555 0000" required></div>
+              </div>
+              <div class="field"><label for="serviceSelect">Servicio elegido</label><select id="serviceSelect" required></select></div>
+              <div class="form-grid">
+                <div class="field"><label for="barberSelect">Barbero</label><select id="barberSelect"><option value="">Cualquier barbero</option></select></div>
+                <div class="field"><label for="scheduledTime">Horario disponible</label><select id="scheduledTime"></select></div>
+              </div>
+              <div class="consultation">
+                <div class="form-heading compact"><span class="step-number">2</span><div><h3>Tu estilo</h3><p>Así podemos preparar mejor tu servicio.</p></div></div>
+                <div class="field"><label for="stylePreference">¿Qué estilo tienes en mente?</label><select id="stylePreference"><option value="">Selecciona una opción</option><option>Degradado / fade</option><option>Clásico con tijera</option><option>Corte al ras</option><option>Texturizado</option><option>Quiero que me asesoren</option><option>Otro estilo</option></select></div>
+                <div class="form-grid">
+                  <div class="field"><label for="hairLength">¿Cómo llevas el cabello ahora?</label><select id="hairLength"><option value="">Selecciona</option><option>Corto</option><option>Medio</option><option>Largo</option><option>Es mi primera visita</option></select></div>
+                  <div class="field"><label for="finishPreference">¿Alguna preferencia?</label><select id="finishPreference"><option value="">Sin preferencia</option><option>Definir barba y contornos</option><option>Acabado natural</option><option>Peinado al finalizar</option><option>Conversar el resultado con el barbero</option></select></div>
                 </div>
-                <div class="field">
-                    <label for="clientPhone">Teléfono</label>
-                    <input id="clientPhone" placeholder="8095550000" />
-                </div>
-                <div class="field">
-                    <label for="serviceSelect">Servicio</label>
-                    <select id="serviceSelect"></select>
-                </div>
-                <div class="field">
-                    <label for="barberSelect">Barbero (opcional)</label>
-                    <select id="barberSelect"><option value="">Cualquier barbero</option></select>
-                </div>
-                <div class="field">
-                    <label for="scheduledTime">Turno disponible</label>
-                    <select id="scheduledTime"></select>
-                </div>
-                <button id="refreshSlotsBtn" type="button" class="secondary">Actualizar disponibilidad</button>
-                <div class="field">
-                    <label for="clientNotes">Notas (opcional)</label>
-                    <textarea id="clientNotes" placeholder="Ej: corte degradado"></textarea>
-                </div>
-                <button id="bookBtn">Confirmar cita</button>
-                <p id="bookResult" class="muted" style="margin-top:8px;"></p>
+                <div class="field"><label for="clientNotes">Referencias o algo que debamos saber <span class="optional">OPCIONAL</span></label><textarea id="clientNotes" maxlength="700" placeholder="Ej.: laterales bajos, mantener largo arriba. Puedes describir una foto de referencia."></textarea></div>
+                <p id="consultationSummary" class="consultation-summary" aria-live="polite">Tus preferencias se compartirán con el barbero para preparar la cita.</p>
+              </div>
+              <button id="refreshSlotsBtn" type="button" class="secondary refresh-button">↻ Actualizar horarios</button>
+              <button id="bookBtn" class="book-button" type="button">Confirmar cita <span>→</span></button>
+              <p id="bookResult" class="result-message" role="status"></p>
             </section>
-
-            <section class="card option-panel" id="trackSection" style="display:none;">
-                <h2 class="title">🔎 Ver estado de cita</h2>
-                <div class="field">
-                    <label for="trackToken">Código de seguimiento</label>
-                    <input id="trackToken" autocomplete="off" placeholder="Pega el código recibido al reservar" />
-                </div>
-                <button id="trackBtn">Consultar</button>
-                <div id="trackList" class="list"></div>
+            <section id="trackSection" class="booking-form" style="display:none">
+              <div class="form-heading"><span class="step-number">⌕</span><div><h3>Consulta tu cita</h3><p>El enlace privado recibido al reservar.</p></div></div>
+              <div class="field"><label for="trackToken">Código privado de seguimiento</label><input id="trackToken" autocomplete="off" placeholder="Pega aquí tu código"></div>
+              <button id="trackBtn" class="book-button" type="button">Ver mi cita <span>→</span></button><div id="trackList" class="track-list"></div>
             </section>
+          </div>
+          <section id="supportSection" class="booking-form" style="display:none">
+            <div class="form-heading"><span class="step-number">?</span><div><h3>¿En qué te ayudamos?</h3><p>Envíanos el detalle y guardaremos tu solicitud.</p></div></div>
+            <div class="field"><label for="supportName">Tu nombre</label><input id="supportName" placeholder="Tu nombre"></div>
+            <div class="form-grid"><div class="field"><label for="supportEmail">Correo (opcional)</label><input id="supportEmail" type="email" placeholder="tu@email.com"></div><div class="field"><label for="supportPhone">Teléfono (opcional)</label><input id="supportPhone" placeholder="809 555 0000"></div></div>
+            <div class="field"><label for="supportMessage">Mensaje</label><textarea id="supportMessage" placeholder="Cuéntanos qué necesitas"></textarea></div><button id="supportBtn" class="book-button" type="button">Enviar mensaje <span>→</span></button><p id="supportResult" class="result-message" role="status"></p>
+          </section>
         </div>
-
-        <section class="card option-panel" id="supportSection" style="display:none;">
-            <h2 class="title">🆘 Contactar soporte</h2>
-            <div class="field">
-                <label for="supportName">Tu nombre</label>
-                <input id="supportName" placeholder="Juan Pérez" />
-            </div>
-            <div class="grid">
-                <div class="field">
-                    <label for="supportEmail">Email (opcional)</label>
-                    <input id="supportEmail" placeholder="juan@email.com" />
-                </div>
-                <div class="field">
-                    <label for="supportPhone">Teléfono (opcional)</label>
-                    <input id="supportPhone" placeholder="8095550000" />
-                </div>
-            </div>
-            <div class="field">
-                <label for="supportMessage">Mensaje</label>
-                <textarea id="supportMessage" placeholder="Describe tu situación"></textarea>
-            </div>
-            <button id="supportBtn">Enviar soporte</button>
-            <p id="supportResult" class="muted" style="margin-top:8px;"></p>
-        </section>
-    </div>
-
-    <script src="js/config.js"></script>
-    <script src="js/pwa.js"></script>
-    <script src="js/ui-feedback.js"></script>
-    <script src="js/client.js"></script>
+      </section>
+    </main>
+    <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
+  </div>
+  <script src="js/config.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js"></script>
 </body>
 </html>

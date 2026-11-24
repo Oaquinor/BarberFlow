@@ -4,7 +4,7 @@ Barbershop model.
 Represents a barbershop (tenant in multi-tenant architecture).
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Time, ForeignKey
+from sqlalchemy import Column, String, Integer, Boolean, Time, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -40,6 +40,7 @@ class Barbershop(BaseModel):
     # Branding
     logo_url = Column(String(500), nullable=True)
     cover_image_url = Column(String(500), nullable=True)
+    gallery_images = Column(JSON, nullable=False, default=list)
 
     # Personalización (Onboarding)
     primary_color = Column(String(7), nullable=True, default="#667eea")  # Hex color

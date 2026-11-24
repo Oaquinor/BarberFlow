@@ -263,16 +263,16 @@ function applyBranding(profile) {
     }
 
     const brandColorPattern = /^#[0-9a-f]{6}$/i;
-    const automaticBranding = currentUser?.feature_flags?.branding_auto === true;
+    const automaticBranding = currentUser?.role === 'barbershop_owner' || currentUser?.feature_flags?.branding_auto === true;
     if (automaticBranding && brandColorPattern.test(profile?.primary_color || '')) {
         document.documentElement.style.setProperty('--brand-primary', profile.primary_color);
     } else {
-        document.documentElement.style.setProperty('--brand-primary', '#667eea');
+        document.documentElement.style.setProperty('--brand-primary', '#c7f36b');
     }
     if (automaticBranding && brandColorPattern.test(profile?.secondary_color || '')) {
         document.documentElement.style.setProperty('--brand-secondary', profile.secondary_color);
     } else {
-        document.documentElement.style.setProperty('--brand-secondary', '#764ba2');
+        document.documentElement.style.setProperty('--brand-secondary', '#71884a');
     }
 
     const authHeaderTitle = document.querySelector('.auth-header h2');
@@ -590,6 +590,7 @@ function renderAppointmentDay(businessDate, appointments) {
                     <span class="status-badge ${statusClassForStatus(appointment.status)}">${escapeHtml(labelStatus(appointment.status))}</span>
                 </div>
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
+                ${appointment.client_notes ? `<p class="appointment-notes"><strong>Preferencias del cliente:</strong><br>${escapeHtml(appointment.client_notes).replace(/\n/g, '<br>')}</p>` : ''}
                 <div class="appointment-meta">
                     <span>⏱️ ${Number(appointment.estimated_duration) || 0} min</span>
                     <span>💰 ${fmtMoneyFromCents(appointment.service_price || 0)}</span>
@@ -923,16 +924,153 @@ async function ownerFetch(path, options = {}) {
     return data;
 }
 
+function trustedBusinessImage(value) {
+    if (typeof value !== 'string' || !value.trim()) return '';
+    try {
+        const url = new URL(value, API_ROOT);
+        const apiOrigin = new URL(API_ROOT, window.location.origin).origin;
+        return url.origin === apiOrigin && ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+            ? url.href : '';
+    } catch (_) {
+        return '';
+    }
+}
+
+function renderBusinessGallery(images) {
+    const container = document.getElementById('businessGalleryPreview');
+    if (!container) return;
+    container.replaceChildren();
+    (Array.isArray(images) ? images : []).forEach((imageUrl) => {
+        const src = trustedBusinessImage(imageUrl);
+        if (!src) return;
+        const item = document.createElement('figure');
+        item.className = 'business-gallery-item';
+        const image = document.createElement('img');
+        image.src = src;
+        image.alt = 'Foto de la galería de cortes';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn-secondary';
+        remove.textContent = 'Quitar';
+        remove.dataset.galleryImage = imageUrl;
+        item.append(image, remove);
+        container.append(item);
+    });
+    const imageSelect = document.getElementById('serviceImageUrl');
+    if (imageSelect) {
+        const selected = imageSelect.value;
+        imageSelect.replaceChildren(new Option('Sin foto', ''));
+        (Array.isArray(images) ? images : []).forEach((imageUrl, index) => {
+            const option = new Option(`Foto de galería ${index + 1}`, imageUrl);
+            imageSelect.add(option);
+        });
+        if ([...imageSelect.options].some((option) => option.value === selected)) imageSelect.value = selected;
+    }
+}
+
+function renderBusinessLogo(logoUrl) {
+    const preview = document.getElementById('businessLogoPreview');
+    if (!preview) return;
+    preview.replaceChildren();
+    const src = trustedBusinessImage(logoUrl);
+    if (src) {
+        const image = document.createElement('img');
+        image.src = src;
+        image.alt = 'Logo actual de la barbería';
+        preview.append(image);
+    } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'logo-placeholder';
+        placeholder.textContent = barbershopProfile?.name?.trim()?.charAt(0)?.toUpperCase() || 'K';
+        preview.append(placeholder);
+    }
+}
+
+document.getElementById('businessLogoFile')?.addEventListener('change', async (event) => {
+    const input = event.currentTarget;
+    const result = document.getElementById('businessLogoResult');
+    const file = input.files?.[0];
+    if (!file || currentUser?.role !== 'barbershop_owner') return;
+    result.textContent = 'Subiendo logo…';
+    const body = new FormData();
+    body.append('file', file);
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/upload-logo`, {
+            method: 'POST', body,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar el logo.');
+        barbershopProfile.logo_url = data.logo_url;
+        renderBusinessLogo(data.logo_url);
+        result.textContent = 'Logo actualizado en tu página pública.';
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo actualizar el logo.';
+    } finally {
+        input.value = '';
+    }
+});
+
+document.getElementById('businessGalleryFiles')?.addEventListener('change', async (event) => {
+    const input = event.currentTarget;
+    const result = document.getElementById('businessGalleryResult');
+    const files = [...(input.files || [])];
+    if (!files.length || currentUser?.role !== 'barbershop_owner') return;
+    result.textContent = 'Subiendo fotos…';
+    try {
+        let gallery = [...(barbershopProfile?.gallery_images || [])];
+        for (const file of files) {
+            if (gallery.length >= 8) throw new Error('La galería admite hasta 8 fotos.');
+            const body = new FormData();
+            body.append('file', file);
+            const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/upload-gallery-image`, {
+                method: 'POST', body,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.detail || 'No se pudo subir una foto.');
+            gallery = data.gallery_images || gallery;
+        }
+        barbershopProfile.gallery_images = gallery;
+        renderBusinessGallery(gallery);
+        result.textContent = 'Fotos publicadas en tu página de reservas.';
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo subir la galería.';
+    } finally {
+        input.value = '';
+    }
+});
+
+document.getElementById('businessGalleryPreview')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-gallery-image]');
+    if (!button || currentUser?.role !== 'barbershop_owner') return;
+    const result = document.getElementById('businessGalleryResult');
+    button.disabled = true;
+    try {
+        const query = new URLSearchParams({ image_url: button.dataset.galleryImage });
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/gallery-image?${query}`, { method: 'DELETE' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo quitar la foto.');
+        barbershopProfile.gallery_images = data.gallery_images || [];
+        renderBusinessGallery(barbershopProfile.gallery_images);
+        result.textContent = 'Foto retirada de tu página pública.';
+    } catch (error) {
+        button.disabled = false;
+        result.textContent = error.message || 'No se pudo quitar la foto.';
+    }
+});
+
 async function loadOwnerManagement() {
     if (currentUser?.role !== 'barbershop_owner') return;
     const settingsForm = document.getElementById('businessSettingsForm');
     if (settingsForm && barbershopProfile) {
         document.getElementById('businessSettingsName').value = barbershopProfile.name || '';
+        document.getElementById('businessSettingsDescription').value = barbershopProfile.description || '';
         document.getElementById('businessSettingsOpening').value = barbershopProfile.opening_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsClosing').value = barbershopProfile.closing_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsTimezone').value = barbershopProfile.timezone || '';
-        document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#667eea';
-        document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#764ba2';
+        document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#c7f36b';
+        document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#71884a';
+        renderBusinessGallery(barbershopProfile.gallery_images || []);
+        renderBusinessLogo(barbershopProfile.logo_url);
         settingsForm.onsubmit = saveBusinessSettings;
     }
     const barberBody = document.getElementById('ownerBarbersBody');
@@ -1290,6 +1428,7 @@ async function saveBusinessSettings(event) {
     const result = document.getElementById('businessSettingsResult');
     const payload = {
         name: document.getElementById('businessSettingsName').value.trim(),
+        description: document.getElementById('businessSettingsDescription').value.trim() || null,
         opening_time: document.getElementById('businessSettingsOpening').value,
         closing_time: document.getElementById('businessSettingsClosing').value,
         timezone: document.getElementById('businessSettingsTimezone').value.trim(),
@@ -1362,6 +1501,17 @@ async function loadDemandForecast() {
 }
 
 document.getElementById('refreshDemandForecast')?.addEventListener('click', loadDemandForecast);
+
+document.getElementById('businessSettingsPrimary')?.addEventListener('input', (event) => {
+    if (/^#[0-9a-f]{6}$/i.test(event.currentTarget.value)) {
+        document.documentElement.style.setProperty('--brand-primary', event.currentTarget.value);
+    }
+});
+document.getElementById('businessSettingsSecondary')?.addEventListener('input', (event) => {
+    if (/^#[0-9a-f]{6}$/i.test(event.currentTarget.value)) {
+        document.documentElement.style.setProperty('--brand-secondary', event.currentTarget.value);
+    }
+});
 
 function renderOwnerCommissions(data) {
     const body = document.getElementById('ownerCommissionsBody');
@@ -2043,6 +2193,7 @@ serviceForm?.addEventListener('submit', async (event) => {
     const payload = {
         name: document.getElementById('serviceName').value.trim(),
         description: document.getElementById('serviceDescription').value.trim() || null,
+        image_url: document.getElementById('serviceImageUrl').value.trim() || null,
         duration_minutes: Number(document.getElementById('serviceDuration').value),
         price: Math.round(Number(document.getElementById('servicePrice').value) * 100),
         category: document.getElementById('serviceCategory').value.trim()
@@ -2072,6 +2223,7 @@ function editService(serviceId) {
     document.getElementById('serviceFormTitle').textContent = 'Editar servicio';
     document.getElementById('serviceName').value = item.name || '';
     document.getElementById('serviceDescription').value = item.description || '';
+    document.getElementById('serviceImageUrl').value = item.image_url || '';
     document.getElementById('serviceDuration').value = item.duration_minutes || 30;
     document.getElementById('servicePrice').value = (Number(item.price_cents) / 100).toFixed(2);
     document.getElementById('serviceCategory').value = item.category || 'haircut';

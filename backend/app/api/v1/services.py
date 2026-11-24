@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.constants.enums import MAX_SERVICE_DURATION_MINUTES
 from app.api.deps import get_current_user
 from app.services.audit_service import record_audit
-from app.models import Service, User
+from app.models import Barbershop, Service, User
 
 
 router = APIRouter(prefix="/services", tags=["Services"])
@@ -25,6 +25,7 @@ class ServiceCreateRequest(BaseModel):
     price: int = Field(..., gt=0, le=2_000_000_000, description="Precio en centavos")
     category: str = Field(..., min_length=2, max_length=50)
     icon: Optional[str] = Field(None, max_length=50)
+    image_url: Optional[str] = Field(None, max_length=500)
 
 
 class ServiceUpdateRequest(BaseModel):
@@ -36,6 +37,7 @@ class ServiceUpdateRequest(BaseModel):
     price: Optional[int] = Field(None, gt=0, le=2_000_000_000)
     category: Optional[str] = Field(None, min_length=2, max_length=50)
     icon: Optional[str] = Field(None, max_length=50)
+    image_url: Optional[str] = Field(None, max_length=500)
     is_active: Optional[bool] = None
     display_order: Optional[int] = Field(None, ge=0, le=100_000)
 
@@ -52,6 +54,17 @@ def _owner(user: User) -> int:
     return user.barbershop_id
 
 
+def _validate_gallery_image(db: Session, shop_id: int, image_url: Optional[str]) -> None:
+    if image_url is None:
+        return
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == shop_id,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop or image_url not in (shop.gallery_images or []):
+        raise HTTPException(status_code=422, detail="Selecciona una foto de la galería de esta barbería")
+
+
 def _serialize(service: Service) -> dict:
     return {
         "id": service.id,
@@ -65,6 +78,7 @@ def _serialize(service: Service) -> dict:
         "icon": service.icon,
         "is_active": service.is_active,
         "display_order": service.display_order,
+        "image_url": service.image_url,
     }
 
 
@@ -75,6 +89,7 @@ def create_service(
     current_user: User = Depends(get_current_user),
 ):
     shop_id = _owner(current_user)
+    _validate_gallery_image(db, shop_id, data.image_url)
     service = Service(barbershop_id=shop_id, **data.model_dump())
     db.add(service)
     db.flush()
@@ -135,6 +150,8 @@ def update_service(
     if not service:
         raise HTTPException(status_code=404, detail="Servicio no encontrado")
     changes = data.model_dump(exclude_unset=True)
+    if "image_url" in changes:
+        _validate_gallery_image(db, shop_id, changes["image_url"])
     for field in {"name", "duration_minutes", "price", "category"}:
         if changes.get(field) is None and field in changes:
             raise HTTPException(status_code=422, detail=f"{field} no puede ser nulo")

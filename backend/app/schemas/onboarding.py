@@ -93,6 +93,7 @@ class BusinessSettingsUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str = Field(..., min_length=2, max_length=200)
+    description: Optional[str] = Field(None, max_length=1000)
     opening_time: time
     closing_time: time
     timezone: str = Field(..., min_length=3, max_length=50)
@@ -124,6 +125,8 @@ class BarbershopProfile(BaseModel):
     opening_time: Optional[time] = None
     closing_time: Optional[time] = None
     logo_url: Optional[str]
+    description: Optional[str] = None
+    gallery_images: List[str] = Field(default_factory=list)
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     style: Optional[str]

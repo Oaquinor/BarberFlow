@@ -33,6 +33,7 @@ class Service(BaseModel):
     # Display
     display_order = Column(Integer, default=0)
     icon = Column(String(50), nullable=True)  # icon identifier
+    image_url = Column(String(500), nullable=True)
 
     # Relationships
     barbershop = relationship("Barbershop", back_populates="services")

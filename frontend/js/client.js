@@ -81,6 +81,82 @@ function formatMoney(cents) {
   }
 }
 
+function trustedShopImage(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const url = new URL(value, API_ROOT);
+    return url.origin === new URL(API_ROOT).origin && ['http:', 'https:'].includes(url.protocol) &&
+      !url.username && !url.password ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function renderServiceCards() {
+  const container = document.getElementById('publicServices');
+  if (!container) return;
+  if (!serviceCatalog.length) {
+    container.textContent = 'Esta barbería aún no ha publicado servicios.';
+    return;
+  }
+  container.replaceChildren();
+  serviceCatalog.forEach((service) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'service-card';
+    card.dataset.serviceId = String(Number(service.id));
+    const category = document.createElement('span');
+    category.className = 'service-category';
+    category.textContent = service.category || 'Servicio';
+    const title = document.createElement('h3');
+    title.textContent = service.name;
+    const description = document.createElement('p');
+    description.textContent = service.description || 'Un servicio preparado con atención al detalle.';
+    const bottom = document.createElement('span');
+    bottom.className = 'service-bottom';
+    const price = document.createElement('strong');
+    price.textContent = formatMoney(service.price_cents);
+    const duration = document.createElement('span');
+    duration.textContent = `${Number(service.duration_minutes)} min`;
+    bottom.append(price, duration);
+    const imageUrl = trustedShopImage(service.image_url);
+    if (imageUrl) {
+      const image = document.createElement('img');
+      image.src = imageUrl;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.className = 'service-photo';
+      card.append(image);
+    }
+    card.append(category, title, description, bottom);
+    card.addEventListener('click', () => {
+      serviceSelect.value = String(Number(service.id));
+      serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      container.querySelectorAll('.service-card').forEach((item) => item.classList.remove('selected'));
+      card.classList.add('selected');
+      document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    container.append(card);
+  });
+}
+
+function renderPublicGallery(images) {
+  const section = document.getElementById('galeria');
+  const container = document.getElementById('publicGallery');
+  const trustedImages = (Array.isArray(images) ? images : []).map(trustedShopImage).filter(Boolean).slice(0, 8);
+  if (!section || !container) return;
+  section.hidden = trustedImages.length === 0;
+  container.replaceChildren();
+  trustedImages.forEach((src, index) => {
+    const image = document.createElement('img');
+    image.src = src;
+    image.alt = `Trabajo de la barbería, imagen ${index + 1}`;
+    image.loading = 'lazy';
+    image.className = 'gallery-image';
+    container.append(image);
+  });
+}
+
 async function loadShop() {
   if (!shopSlug) {
     shopNameEl.textContent = '❌ Falta identificar la barbería';
@@ -99,7 +175,11 @@ async function loadShop() {
     const shop = await res.json();
     shopCurrency = shop.currency || 'USD';
     shopTimezone = shop.timezone || 'UTC';
-    shopNameEl.textContent = `💈 ${shop.name}`;
+    shopNameEl.textContent = shop.name;
+    const initial = document.getElementById('shopInitial');
+    if (initial) initial.textContent = String(shop.name || 'K').trim().charAt(0).toUpperCase() || 'K';
+    const description = document.getElementById('shopDescription');
+    if (description && shop.description) description.textContent = shop.description;
     document.title = `${shop.name} - Cliente`;
     if (retryButton) retryButton.hidden = true;
 
@@ -110,18 +190,15 @@ async function loadShop() {
     if (brandColorPattern.test(shop.secondary_color || '')) {
       document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
     }
-    if (shop.logo_url) {
-      try {
-        const logoUrl = new URL(shop.logo_url, API_ROOT);
-        if (logoUrl.origin === new URL(API_ROOT).origin && ['http:', 'https:'].includes(logoUrl.protocol)) {
-          const logo = document.getElementById('shopLogo');
-          logo.src = logoUrl.href;
-          logo.alt = `Logo de ${shop.name}`;
-          logo.referrerPolicy = 'no-referrer';
-          logo.hidden = false;
-        }
-      } catch (_) {
-        // Ignore an invalid legacy logo URL and keep the booking page usable.
+    const logoUrl = trustedShopImage(shop.logo_url);
+    if (logoUrl) {
+      const logo = document.getElementById('shopLogo');
+      if (logo) {
+        logo.src = logoUrl;
+        logo.alt = `Logo de ${shop.name}`;
+        logo.referrerPolicy = 'no-referrer';
+        logo.hidden = false;
+        if (initial) initial.hidden = true;
       }
     }
 
@@ -133,6 +210,11 @@ async function loadShop() {
     serviceSelect.innerHTML = serviceCatalog
       .map(s => `<option value="${Number(s.id)}">${escapeHtml(s.name)} - ${formatMoney(s.price_cents)} (${Number(s.duration_minutes)} min)</option>`)
       .join('');
+    renderServiceCards();
+    renderPublicGallery(shop.gallery_images);
+    if (serviceCatalog[0]) {
+      document.querySelector(`.service-card[data-service-id="${Number(serviceCatalog[0].id)}"]`)?.classList.add('selected');
+    }
 
     await loadSlots(selectedServiceDuration());
   } catch (_) {
@@ -204,6 +286,20 @@ function renderAvailableSlots() {
 
 serviceSelect.addEventListener('change', () => loadSlots(selectedServiceDuration()));
 barberSelect?.addEventListener('change', renderAvailableSlots);
+['stylePreference', 'hairLength', 'finishPreference', 'clientNotes'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    const summary = document.getElementById('consultationSummary');
+    if (!summary) return;
+    const selected = [
+      document.getElementById('stylePreference')?.value,
+      document.getElementById('hairLength')?.value,
+      document.getElementById('finishPreference')?.value,
+    ].filter(Boolean);
+    summary.textContent = selected.length
+      ? `Prepararemos la cita considerando: ${selected.join(' · ')}. Tus respuestas se compartirán con el barbero.`
+      : 'Tus preferencias se compartirán con el barbero para preparar la cita.';
+  });
+});
 document.getElementById('refreshSlotsBtn')?.addEventListener('click', async (event) => {
   const button = event.currentTarget;
   button.disabled = true;
@@ -222,6 +318,12 @@ async function bookAppointment() {
   const slot = availableSlots.find(item => Number(item.availability_id) === Number(scheduledTimeSelect.value));
   const dt = slot?.slot_start;
   const notes = document.getElementById('clientNotes').value.trim();
+  const preferences = [
+    ['Estilo buscado', document.getElementById('stylePreference')?.value],
+    ['Largo actual', document.getElementById('hairLength')?.value],
+    ['Acabado preferido', document.getElementById('finishPreference')?.value],
+    ['Referencia del cliente', notes],
+  ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
 
   if (!client_name || !phone || !service_id || !dt) {
     bookResult.textContent = 'Completa todos los campos requeridos.';
@@ -236,7 +338,7 @@ async function bookAppointment() {
     service_id,
     barber_id: slot.barber_id,
     scheduled_time: dt,
-    notes: notes || null,
+    notes: preferences.length ? preferences.join('\n').slice(0, 1000) : null,
   };
 
   bookBtn.disabled = true;

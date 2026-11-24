@@ -70,6 +70,8 @@ def public_barbershop(slug: str, db: Session = Depends(get_db)):
         currency=shop.currency,
         timezone=shop.timezone,
         logo_url=shop.logo_url,
+        description=shop.description,
+        gallery_images=shop.gallery_images or [],
         primary_color=shop.primary_color,
         secondary_color=shop.secondary_color,
         client_app_link=_build_client_link(shop.slug),
@@ -97,6 +99,7 @@ def public_services(slug: str, db: Session = Depends(get_db)):
             duration_minutes=s.duration_minutes,
             price_cents=s.price,
             category=s.category,
+            image_url=s.image_url,
         )
         for s in services
     ]

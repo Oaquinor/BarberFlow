@@ -1864,6 +1864,7 @@ def barber_dashboard(
                 "actual_start_time": _utc_aware(a.actual_start_time) if a.actual_start_time else None,
                 "progress_percent": _service_progress_percent(a, now) if a.status == "in_progress" else 0,
                 "service_price": a.service_price,
+                "client_notes": a.client_notes,
                 "status": a.status,
             }
             for a in appointments_today
@@ -1936,6 +1937,7 @@ def barber_appointments_for_date(
             "estimated_duration": item.estimated_duration,
             "progress_percent": _service_progress_percent(item, now) if item.status == "in_progress" else 0,
             "service_price": item.service_price,
+            "client_notes": item.client_notes,
             "status": item.status,
         } for item in appointments],
     }
@@ -1995,6 +1997,7 @@ def barber_appointments_calendar(
             "estimated_duration": item.estimated_duration,
             "progress_percent": _service_progress_percent(item, now) if item.status == "in_progress" else 0,
             "service_price": item.service_price,
+            "client_notes": item.client_notes,
             "status": item.status,
         })
     return {

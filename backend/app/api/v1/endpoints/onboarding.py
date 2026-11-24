@@ -18,6 +18,7 @@ from app.core import get_db
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models.barbershop import Barbershop
+from app.models.service import Service
 from app.schemas.onboarding import (
     BarbershopProfile,
     BusinessSettingsUpdate,
@@ -280,6 +281,81 @@ async def upload_logo(
     return {"success": True, "logo_url": logo_url, "message": "Logo subido correctamente"}
 
 
+@router.post("/upload-gallery-image")
+async def upload_gallery_image(
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
+):
+    """Add a sanitized portfolio photo to this owner's public barber shop page."""
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    extension = ALLOWED_LOGO_TYPES.get(file.content_type or "")
+    if not extension:
+        raise HTTPException(status_code=400, detail="Solo se permiten imágenes PNG o JPG")
+    contents = await file.read(MAX_LOGO_SIZE + 1)
+    if not contents or len(contents) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="La imagen debe pesar como máximo 5 MB")
+    contents = _sanitize_logo(contents, LOGO_IMAGE_FORMATS[file.content_type])
+    shop = _lock_barbershop(db, tenant_id)
+    gallery = list(shop.gallery_images or [])
+    if len(gallery) >= 8:
+        raise HTTPException(status_code=400, detail="La galería admite hasta 8 imágenes")
+    directory = UPLOAD_ROOT / str(tenant_id)
+    filename = f"gallery-{uuid4().hex}{extension}"
+    destination = directory / filename
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(contents)
+    except OSError as exc:
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="gallery write failure")
+        raise HTTPException(status_code=500, detail="No se pudo guardar la imagen") from exc
+    image_url = f"/uploads/barbershops/{tenant_id}/{filename}"
+    shop.gallery_images = [*gallery, image_url]
+    record_audit(db, current_user, "barbershop.gallery_image_added", "barbershop",
+                 shop.id, shop.id, {"image_url": image_url})
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="gallery rollback")
+        raise HTTPException(status_code=503, detail="No se pudo actualizar la galería") from exc
+    return {"success": True, "gallery_images": shop.gallery_images}
+
+
+@router.delete("/gallery-image")
+def delete_gallery_image(
+    current_user: CurrentUser,
+    image_url: str = Query(..., min_length=1, max_length=500),
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
+):
+    """Remove only a gallery image owned by the authenticated barber shop."""
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    gallery = list(shop.gallery_images or [])
+    if image_url not in gallery:
+        raise HTTPException(status_code=404, detail="La imagen no pertenece a esta galería")
+    shop.gallery_images = [item for item in gallery if item != image_url]
+    db.query(Service).filter(
+        Service.barbershop_id == tenant_id,
+        Service.image_url == image_url,
+    ).update({Service.image_url: None}, synchronize_session=False)
+    record_audit(db, current_user, "barbershop.gallery_image_removed", "barbershop",
+                 shop.id, shop.id, {"image_url": image_url})
+    db.commit()
+    prefix = f"/uploads/barbershops/{tenant_id}/gallery-"
+    if image_url.startswith(prefix):
+        image_name = image_url.removeprefix(f"/uploads/barbershops/{tenant_id}/")
+        directory = (UPLOAD_ROOT / str(tenant_id)).resolve()
+        image_path = (directory / image_name).resolve()
+        if image_path.parent == directory and image_path.name.startswith("gallery-"):
+            _remove_logo_file(image_path, tenant_id=tenant_id, purpose="gallery removal")
+    return {"success": True, "gallery_images": shop.gallery_images}
+
+
 @router.put("/brand-colors")
 def update_brand_colors(
     data: OnboardingStep3,
@@ -327,6 +403,7 @@ def update_business_settings(
 
     previous = {
         "name": shop.name,
+        "description": shop.description,
         "opening_time": shop.opening_time.isoformat() if shop.opening_time else None,
         "closing_time": shop.closing_time.isoformat() if shop.closing_time else None,
         "timezone": shop.timezone,
@@ -334,6 +411,7 @@ def update_business_settings(
         "secondary_color": shop.secondary_color,
     }
     shop.name = data.name
+    shop.description = data.description
     shop.opening_time = data.opening_time
     shop.closing_time = data.closing_time
     shop.timezone = data.timezone
@@ -341,6 +419,7 @@ def update_business_settings(
     shop.secondary_color = data.secondary_color
     record_audit(db, current_user, "business.settings_updated", "barbershop", shop.id,
                  shop.id, {"previous": previous, "name": data.name,
+                           "description": data.description,
                            "timezone": data.timezone,
                            "opening_time": data.opening_time.isoformat(),
                            "closing_time": data.closing_time.isoformat(),

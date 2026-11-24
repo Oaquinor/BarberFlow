@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import create_access_token
-from app.models import AuditLog, Barbershop, Subscription, User
+from app.models import AuditLog, Barbershop, Service, Subscription, User
 from app.utils.datetime import utc_now_naive
 
 PNG_HEADER = b"\x89PNG\r\n\x1a\n"
@@ -136,6 +136,56 @@ def test_logo_replacement_succeeds_when_old_file_cleanup_fails(
     assert shop.logo_url == response.json()["logo_url"]
     assert (tenant_dir / response.json()["logo_url"].rsplit("/", 1)[1]).is_file()
     assert previous_file.is_file()
+
+
+def test_owner_gallery_is_public_and_removing_a_photo_clears_service_reference(
+    client: TestClient, test_db: Session, monkeypatch, tmp_path,
+):
+    import app.api.v1.endpoints.onboarding as onboarding
+
+    shop, owner = _create_owner(test_db)
+    shop.description = "Cortes a tu medida"
+    test_db.commit()
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    upload_root = tmp_path / "barbershops"
+    monkeypatch.setattr(onboarding, "UPLOAD_ROOT", upload_root)
+
+    uploaded = client.post(
+        "/api/v1/onboarding/upload-gallery-image", headers=headers,
+        files={"file": ("fade.png", _image_bytes(), "image/png")},
+    )
+    assert uploaded.status_code == 200
+    image_url = uploaded.json()["gallery_images"][0]
+    image_path = upload_root / str(shop.id) / image_url.rsplit("/", 1)[1]
+    assert image_path.is_file()
+
+    public_profile = client.get(f"/api/v1/public/{shop.slug}")
+    assert public_profile.status_code == 200
+    assert public_profile.json()["description"] == "Cortes a tu medida"
+    assert public_profile.json()["gallery_images"] == [image_url]
+
+    service = Service(
+        barbershop_id=shop.id, name="Fade", duration_minutes=30,
+        price=2000, category="haircut", image_url=image_url,
+    )
+    test_db.add(service)
+    test_db.commit()
+    removed = client.delete(
+        "/api/v1/onboarding/gallery-image",
+        params={"image_url": image_url}, headers=headers,
+    )
+    assert removed.status_code == 200
+    assert removed.json()["gallery_images"] == []
+    test_db.refresh(service)
+    assert service.image_url is None
+    assert not image_path.exists()
+
+    foreign = client.delete(
+        "/api/v1/onboarding/gallery-image",
+        params={"barbershop_id": shop.id + 100, "image_url": image_url},
+        headers=headers,
+    )
+    assert foreign.status_code == 403
 
 
 def test_logo_upload_rejects_wrong_content_type_and_oversized_payload(

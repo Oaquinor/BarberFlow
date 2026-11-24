@@ -10,13 +10,13 @@ const frontend = path.join(__dirname, "..");
 
 test("registration and recovery use shared KingFlow auth-page styles", () => {
   const styles = fs.readFileSync(path.join(frontend, "css", "auth-pages.css"), "utf8");
-  assert.match(styles, /--brand-primary:\s*#667eea/i);
+  assert.match(styles, /--brand-primary:\s*#c7f36b/i);
   assert.match(styles, /input:focus-visible[\s\S]*border-color:\s*var\(--brand-primary\)/);
 
   for (const page of ["signup.html", "reset-password.html"]) {
     const html = fs.readFileSync(path.join(frontend, page), "utf8");
     assert.match(html, /href="\/css\/auth-pages\.css"/);
-    assert.match(html, /name="theme-color" content="#667eea"/);
+    assert.match(html, /name="theme-color" content="#141412"/);
   }
 });
 

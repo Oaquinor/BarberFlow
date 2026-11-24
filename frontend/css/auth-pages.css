@@ -1,17 +1,14 @@
 :root {
-  --brand-primary: #667eea;
-  --brand-secondary: #764ba2;
+  --brand-primary: #c7f36b;
+  --brand-secondary: #71884a;
   --text-primary: #18181b;
   --text-secondary: #52525b;
   --control-border: #d4d4d8;
-  --focus-ring: rgba(102, 126, 234, 0.2);
+  --focus-ring: rgba(199, 243, 107, 0.2);
 }
 
 body {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 35%),
-    radial-gradient(circle at 100% 100%, rgba(255, 255, 255, 0.15) 0%, transparent 30%),
-    linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  background: #141412;
   color: var(--text-primary);
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -25,7 +22,7 @@ body {
 }
 
 h1 {
-  color: var(--brand-primary);
+  color: var(--brand-secondary);
 }
 
 p {
@@ -52,17 +49,17 @@ textarea:focus-visible {
 }
 
 button {
-  color: #fff;
+  color: #161810;
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 8px 20px rgba(199, 243, 107, 0.25);
   font-family: inherit;
   transition: transform 150ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(102, 126, 234, 0.32);
+  box-shadow: 0 12px 24px rgba(199, 243, 107, 0.32);
 }
 
 button:focus-visible,
@@ -78,7 +75,7 @@ button:disabled {
 
 a,
 .foot a {
-  color: var(--brand-primary);
+  color: var(--brand-secondary);
 }
 
 @media (prefers-reduced-motion: reduce) {

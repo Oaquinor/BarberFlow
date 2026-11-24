@@ -98,6 +98,8 @@ class PublicBarbershopResponse(BaseModel):
     currency: str
     timezone: str
     logo_url: Optional[str]
+    description: Optional[str] = None
+    gallery_images: List[str] = Field(default_factory=list)
     primary_color: Optional[str]
     secondary_color: Optional[str]
     client_app_link: str
@@ -110,6 +112,7 @@ class PublicServiceResponse(BaseModel):
     duration_minutes: int
     price_cents: int
     category: str
+    image_url: Optional[str] = None
 
 
 class PublicCreateAppointmentRequest(BaseModel):

@@ -75,6 +75,32 @@ test('public booking lets a client choose a barber and submits the selected barb
   assert.match(clientScript, /value="\$\{Number\(s\.availability_id\)\}"/);
 });
 
+test('public experience shows the live catalog and sends consultation preferences with the booking', () => {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'client.html'), 'utf8');
+  for (const id of ['publicServices', 'publicGallery', 'stylePreference', 'hairLength', 'finishPreference', 'consultationSummary']) {
+    assert.match(page, new RegExp(`id="${id}"`));
+  }
+  assert.match(clientScript, /\['stylePreference', 'hairLength', 'finishPreference', 'clientNotes'\]/);
+  assert.match(clientScript, /\['Estilo buscado', document\.getElementById\('stylePreference'\)\?\.value\]/);
+  assert.match(clientScript, /notes: preferences\.length \? preferences\.join\('\\n'\)\.slice\(0, 1000\) : null/);
+  assert.match(clientScript, /gallery_images/);
+  const dashboardScript = fs.readFileSync(path.join(__dirname, '..', 'js', 'main.js'), 'utf8');
+  assert.match(dashboardScript, /appointment\.client_notes/);
+  assert.match(dashboardScript, /escapeHtml\(appointment\.client_notes\)/);
+});
+
+test('public gallery ignores missing and cross-origin image URLs', () => {
+  const start = clientScript.indexOf('function trustedShopImage(');
+  const end = clientScript.indexOf('\n}', start) + 2;
+  const sandbox = { URL, API_ROOT: 'https://api.kingflow.test' };
+  vm.runInNewContext(`${clientScript.slice(start, end)}\nthis.trustedShopImage = trustedShopImage;`, sandbox);
+  assert.equal(sandbox.trustedShopImage(undefined), '');
+  assert.equal(sandbox.trustedShopImage(null), '');
+  assert.equal(sandbox.trustedShopImage(''), '');
+  assert.equal(sandbox.trustedShopImage('https://untrusted.example/photo.png'), '');
+  assert.equal(sandbox.trustedShopImage('/uploads/barbershops/1/photo.png'), 'https://api.kingflow.test/uploads/barbershops/1/photo.png');
+});
+
 test('shop profile loading exposes a retry control after server and network failures', async () => {
   const start = clientScript.indexOf('async function loadShop()');
   const end = clientScript.indexOf('\nfunction selectedServiceDuration', start);
