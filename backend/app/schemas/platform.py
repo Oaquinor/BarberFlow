@@ -51,12 +51,16 @@ class TenantRegistrationRequest(BaseModel):
             raise ValueError("Select a valid IANA time zone") from exc
         return value
 
-    @field_validator("affiliate_code")
+    @field_validator("affiliate_code", mode="before")
     @classmethod
     def normalize_affiliate_code(cls, value: Optional[str]) -> Optional[str]:
-        if value is None or not value.strip():
+        if value is None:
             return None
+        if not isinstance(value, str):
+            return value
         code = value.strip().upper()
+        if not code:
+            return None
         if not code.isalnum():
             raise ValueError("El código de afiliado solo puede contener letras y números")
         return code
