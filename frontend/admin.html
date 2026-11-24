@@ -12,8 +12,9 @@
     <title>Admin - KingFlow Barber</title>
     <style>
         :root {
-            --brand-primary: #c7f36b;
-            --brand-secondary: #71884a;
+            --brand-primary: #b98752;
+            --brand-secondary: #5a4635;
+            --brand-readable: #76512d;
             --text-primary: #18181b;
             --text-secondary: #52525b;
             --surface: rgba(255, 255, 255, 0.92);
@@ -38,10 +39,10 @@
             margin-bottom: 20px;
         }
         .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .header h1 { color: var(--brand-primary); font-size: 1.8em; letter-spacing: .2px; }
+        .header h1 { color: var(--brand-readable); font-size: 1.8em; letter-spacing: .2px; }
         .header p { color: var(--text-secondary); margin-top: 4px; }
         .header-actions { display: flex; align-items: center; gap: 12px; }
-        .badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .85em; background: rgba(199, 243, 107, .12); color: var(--brand-primary); }
+        .badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .85em; background: rgba(185, 135, 82, .12); color: var(--brand-readable); }
         button.logout {
             border: none; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer;
             background: #f4f4f5; color: #27272a;
@@ -50,7 +51,7 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e4e4e7; font-size: .95em; }
         th { color: var(--text-secondary); text-transform: uppercase; font-size: .78em; letter-spacing: .05em; }
-        tr:hover td { background: rgba(199, 243, 107, .04); }
+        tr:hover td { background: rgba(185, 135, 82, .04); }
         .pill { padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: .78em; }
         .pill.active { background: #dcfce7; color: #166534; }
         .pill.inactive { background: #fee2e2; color: #991b1b; }
@@ -61,9 +62,9 @@
         }
         .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
         .toolbar button {
-            border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; color: #fff;
-            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-            box-shadow: 0 8px 20px rgba(199, 243, 107, .25);
+            border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; color: #161713;
+            background: var(--brand-primary);
+            box-shadow: 0 8px 20px rgba(185, 135, 82, .25);
         }
         .toggle-btn {
             border: none; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: .85em;
@@ -73,13 +74,13 @@
         .empty-state { text-align: center; padding: 30px; color: var(--text-secondary); }
         .overview-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
         .overview-stat { border:1px solid #e4e4e7; border-radius:14px; padding:16px; background:rgba(255,255,255,.65); }
-        .overview-value { display:block; font-size:1.7em; font-weight:800; color:var(--brand-primary); margin-top:5px; }
+        .overview-value { display:block; font-size:1.7em; font-weight:800; color:var(--brand-readable); margin-top:5px; }
         .overview-label { color:var(--text-secondary); font-weight:600; font-size:.9em; }
         .login-gate { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
         .login-card { max-width: 420px; width: 100%; text-align: center; }
-        .login-card h2 { margin-bottom: 10px; color: var(--brand-primary); }
+        .login-card h2 { margin-bottom: 10px; color: var(--brand-readable); }
         .login-card p { color: var(--text-secondary); margin-bottom: 18px; }
-        .login-card a { color: var(--brand-primary); font-weight: 700; text-decoration: none; }
+        .login-card a { color: var(--brand-readable); font-weight: 700; text-decoration: none; }
         @media (max-width: 700px) {
             table, thead, tbody, th, td, tr { display: block; }
             thead { display: none; }

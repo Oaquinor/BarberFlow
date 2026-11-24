@@ -13,8 +13,8 @@ let onboardingData = {
     barbershopName: '',
     logoFile: null,
     logoUrl: '',
-    primaryColor: '#c7f36b',
-    secondaryColor: '#71884a',
+    primaryColor: '#b98752',
+    secondaryColor: '#5a4635',
     style: '',
     primaryGoal: '',
     teamSize: 1,
@@ -228,6 +228,11 @@ function updateColorPreview() {
 
     document.getElementById('primaryPreview').style.background = primary;
     document.getElementById('secondaryPreview').style.background = secondary;
+    const rgb = primary.match(/[\da-f]{2}/gi).map(value => parseInt(value, 16));
+    const luminance = rgb.map(value => { const channel = value / 255; return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4; })
+        .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+    document.documentElement?.style?.setProperty('--onboarding-primary', primary);
+    document.documentElement?.style?.setProperty('--onboarding-on-primary', luminance > .1791 ? '#161713' : '#ffffff');
 }
 
 // Apply color preset

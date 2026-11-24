@@ -19,6 +19,7 @@
       </a>
       <nav class="header-nav" aria-label="Navegación principal">
         <a href="#servicios">Servicios</a><a href="#galeria">Galería</a>
+        <button id="themeToggle" type="button" class="nav-track" aria-label="Cambiar tema">☾ Tema oscuro</button>
         <button id="showTrackBtn" type="button" class="nav-track">Consultar cita</button>
       </nav>
     </header>
@@ -29,13 +30,13 @@
           <p class="eyebrow"><span class="live-dot"></span> RESERVAS ABIERTAS</p>
           <h1 id="heroTitle">Tu estilo.<br><em>En buenas manos.</em></h1>
           <p id="shopDescription" class="hero-description">Un buen corte empieza con una buena conversación. Elige el servicio y cuéntanos qué tienes en mente.</p>
-          <a class="hero-cta" href="#servicios">Explorar servicios <span>↓</span></a>
+          <div class="hero-actions"><a class="hero-primary-cta" href="#reserva">Reservar mi cita <span>↗</span></a><a class="hero-cta" href="#servicios">Ver servicios <span>↓</span></a></div>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="hero-art-glow"></div><div class="hero-art-word">KF<span>✳</span></div>
-          <div class="hero-art-caption">PRECISIÓN · ESTILO · DETALLE</div>
+        <div class="hero-art hero-photo-wrap">
+          <img id="shopCover" class="hero-photo" src="/images/barbershop-hero.png" alt="Barbero dominicano definiendo cuidadosamente un corte degradado" fetchpriority="high">
+          <span class="hero-photo-caption">PRECISIÓN · ESTILO · DETALLE</span>
         </div>
-        <div class="hero-rule"><span>01 / SERVICIOS</span><span>02 / TU ESTILO</span><span>03 / TU CITA</span></div>
+        <div class="hero-rule"><span>01 <i>ELIGE</i></span><span>02 <i>PERSONALIZA</i></span><span>03 <i>RESERVA</i></span></div>
       </section>
 
       <section class="section services-section" id="servicios">
@@ -101,6 +102,6 @@
     </main>
     <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
-  <script src="js/config.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js"></script>
+  <script src="js/config.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261124-public-booking"></script>
 </body>
 </html>

@@ -98,10 +98,12 @@ class PublicBarbershopResponse(BaseModel):
     currency: str
     timezone: str
     logo_url: Optional[str]
+    cover_image_url: Optional[str] = None
     description: Optional[str] = None
     gallery_images: List[str] = Field(default_factory=list)
     primary_color: Optional[str]
     secondary_color: Optional[str]
+    public_theme: str = "light"
     client_app_link: str
 
 

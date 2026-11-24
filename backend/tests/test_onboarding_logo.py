@@ -188,6 +188,35 @@ def test_owner_gallery_is_public_and_removing_a_photo_clears_service_reference(
     assert foreign.status_code == 403
 
 
+def test_owner_can_set_and_restore_public_cover_image(client: TestClient, test_db: Session,
+                                                       monkeypatch, tmp_path):
+    import app.api.v1.endpoints.onboarding as onboarding
+
+    shop, owner = _create_owner(test_db)
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id)})}"}
+    upload_root = tmp_path / "barbershops"
+    monkeypatch.setattr(onboarding, "UPLOAD_ROOT", upload_root)
+
+    uploaded = client.post(
+        "/api/v1/onboarding/upload-cover", headers=headers,
+        files={"file": ("cover.png", _image_bytes(), "image/png")},
+    )
+    assert uploaded.status_code == 200
+    cover_url = uploaded.json()["cover_image_url"]
+    cover_path = upload_root / str(shop.id) / cover_url.rsplit("/", 1)[1]
+    assert cover_path.is_file()
+    test_db.refresh(shop)
+    assert shop.cover_image_url == cover_url
+    assert client.get(f"/api/v1/public/{shop.slug}").json()["cover_image_url"] == cover_url
+
+    removed = client.delete("/api/v1/onboarding/cover-image", headers=headers)
+    assert removed.status_code == 200
+    assert removed.json()["cover_image_url"] is None
+    test_db.refresh(shop)
+    assert shop.cover_image_url is None
+    assert not cover_path.exists()
+
+
 def test_logo_upload_rejects_wrong_content_type_and_oversized_payload(
     client: TestClient, test_db: Session, monkeypatch, tmp_path,
 ):

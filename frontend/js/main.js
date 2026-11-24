@@ -263,16 +263,38 @@ function applyBranding(profile) {
     }
 
     const brandColorPattern = /^#[0-9a-f]{6}$/i;
+    const readableBrandText = hex => {
+        const rgb = hex.match(/[\da-f]{2}/gi).map(value => parseInt(value, 16));
+        const luminance = values => values.map(value => { const c = value / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; })
+            .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+        const ratio = value => 1.05 / (value + .05);
+        if (ratio(luminance(rgb)) >= 4.5) return hex;
+        for (let factor = .95; factor > 0; factor -= .01) {
+            const darker = rgb.map(value => Math.round(value * factor));
+            if (ratio(luminance(darker)) >= 4.5) return `#${darker.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+        }
+        return '#363831';
+    };
+    const brandForegroundText = hex => {
+        const rgb = hex.match(/[\da-f]{2}/gi).map(value => parseInt(value, 16));
+        const luminance = rgb.map(value => { const c = value / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; })
+            .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+        return luminance > .1791 ? '#161713' : '#ffffff';
+    };
     const automaticBranding = currentUser?.role === 'barbershop_owner' || currentUser?.feature_flags?.branding_auto === true;
     if (automaticBranding && brandColorPattern.test(profile?.primary_color || '')) {
         document.documentElement.style.setProperty('--brand-primary', profile.primary_color);
+        document.documentElement.style.setProperty('--brand-text-color', readableBrandText(profile.primary_color));
+        document.documentElement.style.setProperty('--brand-on-primary', brandForegroundText(profile.primary_color));
     } else {
-        document.documentElement.style.setProperty('--brand-primary', '#c7f36b');
+        document.documentElement.style.setProperty('--brand-primary', '#b98752');
+        document.documentElement.style.setProperty('--brand-text-color', readableBrandText('#b98752'));
+        document.documentElement.style.setProperty('--brand-on-primary', brandForegroundText('#b98752'));
     }
     if (automaticBranding && brandColorPattern.test(profile?.secondary_color || '')) {
         document.documentElement.style.setProperty('--brand-secondary', profile.secondary_color);
     } else {
-        document.documentElement.style.setProperty('--brand-secondary', '#71884a');
+        document.documentElement.style.setProperty('--brand-secondary', '#5a4635');
     }
 
     const authHeaderTitle = document.querySelector('.auth-header h2');
@@ -965,8 +987,57 @@ function renderBusinessGallery(images) {
             imageSelect.add(option);
         });
         if ([...imageSelect.options].some((option) => option.value === selected)) imageSelect.value = selected;
+        renderServiceImagePreview();
     }
 }
+
+function renderServiceImagePreview() {
+    const preview = document.getElementById('serviceImagePreview');
+    const imageUrl = document.getElementById('serviceImageUrl')?.value;
+    if (!preview) return;
+    preview.replaceChildren();
+    const src = trustedBusinessImage(imageUrl);
+    if (!src) {
+        preview.textContent = 'Sin foto seleccionada';
+        return;
+    }
+    const image = document.createElement('img');
+    image.src = src;
+    image.alt = 'Vista previa de la foto del servicio';
+    preview.append(image);
+}
+
+document.getElementById('serviceImageUrl')?.addEventListener('change', renderServiceImagePreview);
+document.getElementById('serviceImageFile')?.addEventListener('change', async (event) => {
+    const input = event.currentTarget;
+    const result = document.getElementById('serviceImageUploadResult');
+    const file = input.files?.[0];
+    if (!file || currentUser?.role !== 'barbershop_owner') return;
+    const gallery = barbershopProfile?.gallery_images || [];
+    if (gallery.length >= 8) {
+        result.textContent = 'La galería está llena. Quita una foto antes de añadir otra.';
+        input.value = '';
+        return;
+    }
+    result.textContent = 'Subiendo foto del servicio…';
+    const body = new FormData();
+    body.append('file', file);
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/upload-gallery-image`, { method: 'POST', body });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo subir la foto del servicio.');
+        barbershopProfile.gallery_images = data.gallery_images || gallery;
+        renderBusinessGallery(barbershopProfile.gallery_images);
+        const added = barbershopProfile.gallery_images.find(url => !gallery.includes(url));
+        if (added) document.getElementById('serviceImageUrl').value = added;
+        renderServiceImagePreview();
+        result.textContent = 'Foto subida y seleccionada para este servicio.';
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo subir la foto del servicio.';
+    } finally {
+        input.value = '';
+    }
+});
 
 function renderBusinessLogo(logoUrl) {
     const preview = document.getElementById('businessLogoPreview');
@@ -985,6 +1056,65 @@ function renderBusinessLogo(logoUrl) {
         preview.append(placeholder);
     }
 }
+
+function renderBusinessCover(coverUrl) {
+    const preview = document.getElementById('businessCoverPreview');
+    if (!preview) return;
+    preview.replaceChildren();
+    const src = trustedBusinessImage(coverUrl);
+    const image = document.createElement('img');
+    image.src = src || '/images/barbershop-hero.png';
+    image.alt = src ? 'Foto de portada actual' : 'Portada predeterminada';
+    preview.append(image);
+    if (src) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'btn-secondary';
+        remove.textContent = 'Restaurar portada predeterminada';
+        remove.id = 'removeBusinessCoverBtn';
+        preview.append(remove);
+    }
+}
+
+document.getElementById('businessCoverFile')?.addEventListener('change', async (event) => {
+    const input = event.currentTarget;
+    const result = document.getElementById('businessCoverResult');
+    const file = input.files?.[0];
+    if (!file || currentUser?.role !== 'barbershop_owner') return;
+    result.textContent = 'Subiendo portada…';
+    const body = new FormData();
+    body.append('file', file);
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/upload-cover`, { method: 'POST', body });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar la portada.');
+        barbershopProfile.cover_image_url = data.cover_image_url;
+        renderBusinessCover(data.cover_image_url);
+        result.textContent = 'Portada actualizada en tu página pública.';
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo actualizar la portada.';
+    } finally {
+        input.value = '';
+    }
+});
+
+document.getElementById('businessCoverPreview')?.addEventListener('click', async (event) => {
+    if (event.target.id !== 'removeBusinessCoverBtn' || currentUser?.role !== 'barbershop_owner') return;
+    const button = event.target;
+    const result = document.getElementById('businessCoverResult');
+    button.disabled = true;
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/onboarding/cover-image`, { method: 'DELETE' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo restaurar la portada.');
+        barbershopProfile.cover_image_url = null;
+        renderBusinessCover(null);
+        result.textContent = 'Portada predeterminada restaurada.';
+    } catch (error) {
+        button.disabled = false;
+        result.textContent = error.message || 'No se pudo restaurar la portada.';
+    }
+});
 
 document.getElementById('businessLogoFile')?.addEventListener('change', async (event) => {
     const input = event.currentTarget;
@@ -1067,11 +1197,17 @@ async function loadOwnerManagement() {
         document.getElementById('businessSettingsOpening').value = barbershopProfile.opening_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsClosing').value = barbershopProfile.closing_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsTimezone').value = barbershopProfile.timezone || '';
-        document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#c7f36b';
-        document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#71884a';
+        document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#b98752';
+        document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#5a4635';
+        document.getElementById('businessSettingsTheme').value = barbershopProfile.public_theme || 'light';
         renderBusinessGallery(barbershopProfile.gallery_images || []);
         renderBusinessLogo(barbershopProfile.logo_url);
+        renderBusinessCover(barbershopProfile.cover_image_url);
         settingsForm.onsubmit = saveBusinessSettings;
+        if (!settingsForm.dataset.brandPreviewReady) {
+            setupBrandPreview();
+            settingsForm.dataset.brandPreviewReady = 'true';
+        }
     }
     const barberBody = document.getElementById('ownerBarbersBody');
     try {
@@ -1108,6 +1244,32 @@ async function loadOwnerManagement() {
         const clientsResult = document.getElementById('ownerClientsResult');
         if (clientsResult) clientsResult.textContent = error.message || 'No se pudo cargar la administración.';
     }
+}
+
+function setupBrandPreview() {
+    const primary = document.getElementById('businessSettingsPrimary');
+    const secondary = document.getElementById('businessSettingsSecondary');
+    const theme = document.getElementById('businessSettingsTheme');
+    const preview = document.getElementById('brandPreview');
+    if (!primary || !secondary || !theme || !preview) return;
+    const update = () => {
+        preview.dataset.theme = theme.value;
+        preview.style.setProperty('--preview-primary', primary.value);
+        preview.style.setProperty('--preview-secondary', secondary.value);
+        const rgb = primary.value.match(/[\da-f]{2}/gi)?.map(v => parseInt(v, 16)) || [0, 0, 0];
+        const luminance = rgb.map(v => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+        const darkText = luminance > 0.1791;
+        const contrast = darkText ? (luminance + 0.05) / 0.05 : 1.05 / (luminance + 0.05);
+        preview.style.setProperty('--preview-button-text', darkText ? '#161713' : '#ffffff');
+        document.getElementById('brandContrastNote').textContent = `Contraste del botón: ${contrast.toFixed(1)}:1 · tema ${theme.value === 'light' ? 'claro' : 'oscuro'}`;
+    };
+    [primary, secondary, theme].forEach(input => input.addEventListener('input', update));
+    document.querySelectorAll('.brand-presets button').forEach(button => button.addEventListener('click', () => {
+        primary.value = button.dataset.primary;
+        secondary.value = button.dataset.secondary;
+        update();
+    }));
+    update();
 }
 
 async function loadOwnerClients() {
@@ -1434,6 +1596,7 @@ async function saveBusinessSettings(event) {
         timezone: document.getElementById('businessSettingsTimezone').value.trim(),
         primary_color: document.getElementById('businessSettingsPrimary').value,
         secondary_color: document.getElementById('businessSettingsSecondary').value,
+        public_theme: document.getElementById('businessSettingsTheme').value,
     };
     if (payload.timezone !== barbershopProfile?.timezone && !await showConfirmation(
         'Cambiar la zona horaria cambiará cómo se muestran las horas de todas las citas existentes. ¿Continuar?'
@@ -2179,6 +2342,8 @@ document.getElementById('newServiceBtn')?.addEventListener('click', () => {
     serviceForm.reset();
     document.getElementById('serviceFormTitle').textContent = 'Nuevo servicio';
     document.getElementById('serviceFormResult').textContent = '';
+    document.getElementById('serviceImageUploadResult').textContent = '';
+    renderServiceImagePreview();
     serviceForm.hidden = false;
 });
 document.getElementById('cancelServiceForm')?.addEventListener('click', () => { serviceForm.hidden = true; });
@@ -2228,6 +2393,8 @@ function editService(serviceId) {
     document.getElementById('servicePrice').value = (Number(item.price_cents) / 100).toFixed(2);
     document.getElementById('serviceCategory').value = item.category || 'haircut';
     document.getElementById('serviceFormResult').textContent = '';
+    document.getElementById('serviceImageUploadResult').textContent = '';
+    renderServiceImagePreview();
     serviceForm.hidden = false;
 }
 

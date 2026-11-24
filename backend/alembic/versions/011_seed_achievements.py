@@ -30,7 +30,13 @@ def upgrade():
         sa.column("requirement_value", sa.Integer), sa.column("points", sa.Integer),
         sa.column("rarity", sa.String), sa.column("is_active", sa.Boolean),
     )
-    op.bulk_insert(achievements, ACHIEVEMENTS)
+    connection = op.get_bind()
+    for achievement in ACHIEVEMENTS:
+        existing = connection.execute(
+            sa.select(achievements.c.code).where(achievements.c.code == achievement["code"])
+        ).first()
+        if not existing:
+            connection.execute(achievements.insert().values(**achievement))
 
 
 def downgrade():

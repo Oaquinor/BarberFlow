@@ -70,10 +70,12 @@ def public_barbershop(slug: str, db: Session = Depends(get_db)):
         currency=shop.currency,
         timezone=shop.timezone,
         logo_url=shop.logo_url,
+        cover_image_url=shop.cover_image_url,
         description=shop.description,
         gallery_images=shop.gallery_images or [],
         primary_color=shop.primary_color,
         secondary_color=shop.secondary_color,
+        public_theme=shop.public_theme or "light",
         client_app_link=_build_client_link(shop.slug),
     )
 

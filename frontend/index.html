@@ -16,8 +16,8 @@
     <title>KingFlow Barber - Sistema Operativo para Barberías</title>
     <style>
         :root {
-            --brand-primary: #c7f36b;
-            --brand-secondary: #71884a;
+            --brand-primary: #b98752;
+            --brand-secondary: #5a4635;
             --surface-glass: rgba(255, 255, 255, 0.88);
             --surface-border: rgba(255, 255, 255, 0.45);
         }
@@ -32,11 +32,11 @@
         }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { background: var(--surface-glass); border: 1px solid var(--surface-border); backdrop-filter: blur(10px); padding: 25px 35px; border-radius: 18px; margin-bottom: 30px; box-shadow: 0 12px 28px rgba(0,0,0,0.16); display: flex; justify-content: space-between; align-items: center; }
-        .logo h1 { color: #c7f36b; font-size: 2.2em; margin: 0; letter-spacing: .2px; }
+        .logo h1 { color: #b98752; font-size: 2.2em; margin: 0; letter-spacing: .2px; }
         .subtitle { color: #666; font-size: 0.95em; margin-top: 5px; }
         .header-actions { display: flex; align-items: center; gap: 12px; }
         .user-info { display: flex; align-items: center; gap: 15px; font-weight: 600; }
-        .btn-install { padding: 10px 16px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; display: none; box-shadow: 0 8px 20px rgba(199, 243, 107, .3); }
+        .btn-install { padding: 10px 16px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; display: none; box-shadow: 0 8px 20px rgba(185, 135, 82, .3); }
         .auth-section { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
         .auth-card { background: var(--surface-glass); border: 1px solid var(--surface-border); backdrop-filter: blur(10px); padding: 50px; border-radius: 24px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); width: 100%; max-width: 480px; }
         .auth-header { text-align: center; margin-bottom: 35px; }
@@ -46,19 +46,19 @@
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; margin-bottom: 10px; color: #333; font-weight: 600; }
         .form-group input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 15px; transition: all 0.3s; }
-        .form-group input:focus { outline: none; border-color: #c7f36b; box-shadow: 0 0 0 3px rgba(199, 243, 107, 0.1); }
+        .form-group input:focus { outline: none; border-color: #b98752; box-shadow: 0 0 0 3px rgba(185, 135, 82, 0.1); }
         .test-credentials { margin-top: 25px; padding: 20px; background: #fff3cd; border-radius: 12px; font-size: 14px; color: #856404; border-left: 4px solid #ffc107; }
         .test-credentials p { margin: 5px 0; } 
         .auth-footer { text-align: center; margin-top: 25px; color: #666; font-size: 0.9em; }
-        .auth-footer a, .auth-footer button { color: #c7f36b; text-decoration: none; font-weight: 700; background: none; border: none; cursor: pointer; }
+        .auth-footer a, .auth-footer button { color: #b98752; text-decoration: none; font-weight: 700; background: none; border: none; cursor: pointer; }
         .support-inline { margin-top: 14px; text-align: left; background: rgba(255,255,255,.65); border: 1px solid #e4e4e7; padding: 12px; border-radius: 12px; }
         .support-inline input, .support-inline textarea { width: 100%; padding: 10px 12px; border: 1px solid #d4d4d8; border-radius: 10px; font-size: 14px; margin-top: 8px; }
         .support-inline textarea { min-height: 86px; resize: vertical; }
         .support-inline .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
         .support-inline .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
-        .support-inline .send-btn { padding: 9px 14px; border-radius: 10px; color: #fff; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 6px 18px rgba(199, 243, 107, .28); }
-        .btn-primary { padding: 16px 32px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 22px rgba(199, 243, 107, 0.3); width: 100%; transition: transform .15s ease, box-shadow .2s ease; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 26px rgba(199, 243, 107, 0.42); }
+        .support-inline .send-btn { padding: 9px 14px; border-radius: 10px; color: #fff; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 6px 18px rgba(185, 135, 82, .28); }
+        .btn-primary { padding: 16px 32px; background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 22px rgba(185, 135, 82, 0.3); width: 100%; transition: transform .15s ease, box-shadow .2s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 26px rgba(185, 135, 82, 0.42); }
         .btn-secondary { padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
         .btn-success { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: white; padding: 14px 28px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3); flex: 1; }
         .btn-large { width: 100%; padding: 16px; font-size: 18px; }
@@ -66,10 +66,10 @@
         .tabs { display: flex; gap: 10px; margin-bottom: 35px; border-bottom: 3px solid #e0e0e0; flex-wrap: wrap; }
         .tab { padding: 14px 28px; background: none; border: none; border-bottom: 4px solid transparent; cursor: pointer; font-size: 15px; font-weight: 700; color: #666; border-radius: 10px 10px 0 0; transition: all .2s ease; }
         .tab:hover { color: #4f46e5; background: rgba(255,255,255,.55); }
-        .tab.active { color: #c7f36b; border-bottom-color: #c7f36b; background: linear-gradient(to top, rgba(199, 243, 107, 0.12), transparent); }
+        .tab.active { color: #b98752; border-bottom-color: #b98752; background: linear-gradient(to top, rgba(185, 135, 82, 0.12), transparent); }
         .tab-content { display: none; }
         .tab-content h2 { color: #333; margin-bottom: 30px; font-size: 2em; }
-        .service-card { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; padding: 35px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(199, 243, 107, 0.3); }
+        .service-card { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; padding: 35px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(185, 135, 82, 0.3); }
         .service-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .service-header h3 { font-size: 1.8em; margin: 0; }
         .status-badge { padding: 10px 20px; background: rgba(255,255,255,0.25); border-radius: 25px; font-size: 14px; font-weight: 600; }
@@ -97,7 +97,7 @@
         .time-detail { font-size: 0.9em; opacity: 0.9; margin-top: 5px; }
         .appointment-info h4 { color: #333; margin-bottom: 8px; font-size: 1.3em; }
         .appointment-info p { color: #666; margin: 5px 0; }
-        .duration { color: var(--brand-primary); font-weight: 600; }
+        .duration { color: var(--brand-text-color); font-weight: 600; }
         .quick-actions { background: #f8f9fa; padding: 25px; border-radius: 15px; }
         .quick-actions h3 { color: #333; margin-bottom: 20px; }
         .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
@@ -134,8 +134,8 @@
         .appointments-list { display: flex; flex-direction: column; gap: 15px; }
         .appointment-card { display: flex; gap: 20px; background: white; padding: 20px; border-radius: 15px; border-left: 5px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .appointment-card.completed { border-left-color: #22c55e; background: linear-gradient(to right, rgba(34, 197, 94, 0.05), white); }
-        .appointment-card.in-progress { border-left-color: var(--brand-primary); background: linear-gradient(to right, rgba(199, 243, 107, 0.1), white); animation: glow 2s infinite; }
-        @keyframes glow { 0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.08); } 50% { box-shadow: 0 4px 20px rgba(199, 243, 107, 0.3); } }
+        .appointment-card.in-progress { border-left-color: var(--brand-primary); background: linear-gradient(to right, rgba(185, 135, 82, 0.1), white); animation: glow 2s infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.08); } 50% { box-shadow: 0 4px 20px rgba(185, 135, 82, 0.3); } }
         .appointment-card.upcoming { border-left-color: #ffc107; }
         .appointment-time-badge { background: #f8f9fa; padding: 15px 20px; border-radius: 10px; font-weight: 800; font-size: 1.2em; color: #333; text-align: center; min-width: 100px; }
         .appointment-time-badge.current { background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); color: white; }
@@ -148,7 +148,7 @@
         .appointment-notes { margin: 10px 0; padding: 10px 12px; border-left: 3px solid var(--brand-primary); background: #f0f2e7; color: #46483f; border-radius: 0 8px 8px 0; font-size: .92em; line-height: 1.6; }
         .appointment-meta { display: flex; gap: 20px; margin-top: 12px; font-size: 0.95em; color: #666; flex-wrap: wrap; }
         .appointment-meta span { font-weight: 600; }
-        .pulse { animation: pulse 2s infinite; color: var(--brand-primary) !important; }
+        .pulse { animation: pulse 2s infinite; color: var(--brand-text-color) !important; }
         .btn-start { background: var(--brand-primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 10px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 35px; }
         .stat-card { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; }
@@ -187,13 +187,13 @@
         .stat-text { font-size: 1em; opacity: 0.95; }
         .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
         .achievement-card { background: white; padding: 25px; border-radius: 15px; text-align: center; border: 3px solid #e0e0e0; position: relative; }
-        .achievement-card.unlocked { background: linear-gradient(135deg, rgba(199, 243, 107, 0.1), rgba(118, 75, 162, 0.1)); border-color: var(--brand-primary); }
+        .achievement-card.unlocked { background: linear-gradient(135deg, rgba(185, 135, 82, 0.1), rgba(118, 75, 162, 0.1)); border-color: var(--brand-primary); }
         .achievement-card.locked { opacity: 0.7; }
         .achievement-icon { font-size: 3.5em; margin-bottom: 15px; }
         .locked-icon { filter: grayscale(100%); opacity: 0.5; }
         .achievement-card h4 { color: #333; margin: 15px 0 10px; font-size: 1.2em; }
         .achievement-card p { color: #666; font-size: 0.95em; line-height: 1.5; margin-bottom: 15px; }
-        .achievement-points { color: var(--brand-primary); font-weight: 800; font-size: 1.1em; margin: 15px 0; }
+        .achievement-points { color: var(--brand-text-color); font-weight: 800; font-size: 1.1em; margin: 15px 0; }
         .achievement-badge { background: #22c55e; color: white; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 700; display: inline-block; margin: 10px 0; }
         .achievement-progress { margin-top: 15px; }
         .achievement-progress span { display: block; margin-top: 8px; color: #666; font-size: 0.9em; font-weight: 600; }
@@ -207,18 +207,18 @@
         .search-input { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; width: 300px; }
         .services-categories { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
         .category-btn { padding: 10px 20px; background: white; border: 2px solid #e0e0e0; border-radius: 25px; cursor: pointer; font-weight: 600; }
-        .category-btn.active { background: #c7f36b; color: white; border-color: #c7f36b; }
+        .category-btn.active { background: #b98752; color: white; border-color: #b98752; }
         .services-list { display: flex; flex-direction: column; gap: 15px; }
         .service-item { display: flex; align-items: center; gap: 20px; background: white; padding: 20px; border-radius: 15px; border: 2px solid #e0e0e0; }
-        .service-item.featured { background: linear-gradient(to right, rgba(199, 243, 107, 0.05), white); border-color: #c7f36b; }
+        .service-item.featured { background: linear-gradient(to right, rgba(185, 135, 82, 0.05), white); border-color: #b98752; }
         .service-icon { font-size: 2.5em; min-width: 60px; text-align: center; }
         .service-info { flex: 1; }
         .service-info h4 { color: #333; margin-bottom: 8px; font-size: 1.2em; }
         .service-info p { color: #666; margin-bottom: 10px; }
         .service-meta { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .tag { background: #c7f36b; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
+        .tag { background: #b98752; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
         .popular { background: #ffc107; color: #333; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 700; }
-        .service-price { font-size: 1.8em; font-weight: 800; color: #c7f36b; min-width: 100px; text-align: right; }
+        .service-price { font-size: 1.8em; font-weight: 800; color: #b98752; min-width: 100px; text-align: right; }
 
         html { font-size: clamp(14px, 1vw, 16px); }
 
@@ -319,6 +319,24 @@
             .service-item { padding: 12px; }
             .logo h1 { font-size: 1.2rem; }
         }
+
+        :root { --brand-text-color: #76512d; --brand-on-primary: #161713; }
+        .logo h1, .auth-footer a, .auth-footer button { color: var(--brand-text-color); }
+        .category-btn.active, .tag { color: var(--brand-on-primary); background: var(--brand-primary); border-color: var(--brand-primary); }
+        .service-price, .duration, .achievement-points { color: var(--brand-text-color); }
+        .pulse { color: var(--brand-text-color) !important; }
+        .tab.active { color: var(--brand-text-color); border-bottom-color: var(--brand-primary); background: linear-gradient(to top, rgba(185, 135, 82, .1), transparent); }
+        .tab:hover { color: var(--brand-text-color); }
+        .btn-primary, .btn-start, .btn-install { color: var(--brand-on-primary); background: var(--brand-primary); }
+        .support-inline .send-btn { color: var(--brand-on-primary); background: var(--brand-primary); }
+        .service-card, .stat-card, .summary-item, .appointment-time, .appointment-time-badge.current, .achievements-summary { background: var(--brand-primary); color: var(--brand-on-primary); box-shadow: 0 8px 24px rgba(31, 27, 20, .12); }
+        .tab-content .card, .tab-content .demand-forecast-card { background: #fff; border: 1px solid #e5e2da; border-radius: 16px; padding: 22px; margin: 16px 0; box-shadow: 0 6px 20px rgba(35, 31, 24, .06); }
+        .tab-content .card h3, .tab-content .demand-forecast-card h3 { color: #292a26; letter-spacing: -.02em; }
+        .tab-content .card > p { color: #55574f; line-height: 1.6; }
+        .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), .tab-content select, .tab-content textarea { border: 1px solid #d8d6cf; border-radius: 8px; min-height: 42px; color: #292a26; background: #fff; }
+        .tab-content input:focus-visible, .tab-content select:focus-visible, .tab-content textarea:focus-visible { outline: 3px solid #59763b; outline-offset: 2px; }
+        .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
+        .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
 </head>
 <body>
@@ -692,7 +710,11 @@
                     <h3 id="serviceFormTitle">Nuevo servicio</h3>
                     <label for="serviceName">Nombre</label><input id="serviceName" required minlength="2" maxlength="100">
                     <label for="serviceDescription">Descripción</label><textarea id="serviceDescription" maxlength="2000"></textarea>
-                    <label for="serviceImageUrl">Foto del servicio (opcional)</label><select id="serviceImageUrl"><option value="">Sin foto</option></select>
+                    <label for="serviceImageUrl">Foto de este servicio</label><select id="serviceImageUrl"><option value="">Sin foto</option></select>
+                    <p>Elige una foto de tu galería o sube una nueva. La imagen aparecerá en la página de reservas.</p>
+                    <div id="serviceImagePreview" class="service-image-preview" aria-live="polite"></div>
+                    <label for="serviceImageFile">Subir foto para el servicio</label><input id="serviceImageFile" type="file" accept="image/png,image/jpeg">
+                    <p id="serviceImageUploadResult" role="status" aria-live="polite"></p>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
                         <div><label for="serviceDuration">Duración (minutos)</label><input id="serviceDuration" type="number" required min="10" max="180" value="30"></div>
                         <div><label for="servicePrice">Precio</label><input id="servicePrice" type="number" required min="0.01" step="0.01"></div>
@@ -729,6 +751,10 @@
                         <div class="field"><label for="businessSettingsTimezone">Zona horaria IANA</label><input id="businessSettingsTimezone" required minlength="3" maxlength="50" placeholder="America/Santo_Domingo"></div>
                         <div class="field"><label for="businessSettingsPrimary">Color principal</label><input id="businessSettingsPrimary" type="color" required></div>
                         <div class="field"><label for="businessSettingsSecondary">Color secundario</label><input id="businessSettingsSecondary" type="color" required></div>
+                        <div class="field"><label for="businessSettingsTheme">Tema de la página para clientes</label><select id="businessSettingsTheme"><option value="light">Claro</option><option value="dark">Oscuro</option></select></div>
+                        <div class="field" style="grid-column:1/-1"><span>Paletas recomendadas (puedes personalizar los dos colores después)</span><div class="brand-presets" role="group" aria-label="Paletas de colores recomendadas">
+                            <button type="button" data-primary="#b98752" data-secondary="#5a4635">Madera y cobre</button><button type="button" data-primary="#d7b45a" data-secondary="#876728">Negro y dorado</button><button type="button" data-primary="#8aa6c8" data-secondary="#526b88">Azul y acero</button><button type="button" data-primary="#b98752" data-secondary="#5a4635">Oliva y lima</button>
+                        </div><div id="brandPreview" class="brand-preview" aria-live="polite"><strong>Vista previa</strong><span>Tu barbería · Corte clásico</span><button type="button" tabindex="-1">Reservar cita</button><small id="brandContrastNote">Texto optimizado para leer bien</small></div></div>
                         <div class="field"><button class="btn-primary" type="submit">Guardar configuración</button></div>
                     </form>
                     <p id="businessSettingsResult" role="status" aria-live="polite"></p>
@@ -738,6 +764,13 @@
                         <div id="businessLogoPreview" class="business-logo-preview"></div>
                         <div class="field"><label for="businessLogoFile">Subir logo (JPG o PNG, hasta 5 MB)</label><input id="businessLogoFile" type="file" accept="image/png,image/jpeg"></div>
                         <p id="businessLogoResult" role="status" aria-live="polite"></p>
+                    </section>
+                    <section class="public-cover-editor" aria-labelledby="publicCoverEditorTitle">
+                        <h4 id="publicCoverEditorTitle">Foto de portada</h4>
+                        <p>Elige la imagen grande que da la bienvenida en tu página de reservas. Si la quitas, volverá la foto editorial predeterminada.</p>
+                        <div id="businessCoverPreview" class="business-cover-preview"></div>
+                        <div class="field"><label for="businessCoverFile">Subir portada (JPG o PNG, hasta 5 MB)</label><input id="businessCoverFile" type="file" accept="image/png,image/jpeg"></div>
+                        <p id="businessCoverResult" role="status" aria-live="polite"></p>
                     </section>
                     <section class="public-gallery-editor" aria-labelledby="publicGalleryEditorTitle">
                         <div class="services-header"><div><h4 id="publicGalleryEditorTitle">Galería de cortes</h4><p>Sube hasta 8 fotos de tu trabajo. Se muestran en tu página pública.</p></div></div>
@@ -900,7 +933,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261122-manual-renewal-request"></script>
+    <script src="js/main.js?v=20261124-accessible-branding"></script>
     <script src="js/pwa.js"></script>
 </body>
-</html>
+</html>\n

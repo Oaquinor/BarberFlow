@@ -45,6 +45,7 @@ class Barbershop(BaseModel):
     # Personalización (Onboarding)
     primary_color = Column(String(7), nullable=True, default="#667eea")  # Hex color
     secondary_color = Column(String(7), nullable=True, default="#764ba2")  # Hex color
+    public_theme = Column(String(10), nullable=False, default="light")
     style = Column(String(50), nullable=True)  # classic, modern, urban, premium, family, custom
     primary_goal = Column(String(50), nullable=True)  # more_clients, organization, reduce_cancellations, save_time, better_service, productivity
     team_size = Column(Integer, nullable=True)  # Number of barbers

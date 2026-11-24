@@ -136,15 +136,45 @@ test("registro y recuperación comparten la identidad visual de KingFlow", async
       bodyBackground: getComputedStyle(document.body).backgroundColor,
       cardRadius: getComputedStyle(document.querySelector(".card")).borderRadius,
       fieldRadius: getComputedStyle(document.querySelector("input")).borderRadius,
-      buttonBackground: getComputedStyle(document.querySelector("button")).backgroundImage,
+      buttonBackground: getComputedStyle(document.querySelector("button")).backgroundColor,
+      buttonColor: getComputedStyle(document.querySelector("button")).color,
     }));
 
     expect(design.themeColor).toBe("#141412");
     expect(design.bodyBackground).toBe("rgb(20, 20, 18)");
     expect(design.cardRadius).toBe("20px");
     expect(design.fieldRadius).toBe("12px");
-    expect(design.buttonBackground).toContain("linear-gradient");
+    expect(design.buttonBackground).toBe("rgb(185, 135, 82)");
+    expect(design.buttonColor).toBe("rgb(22, 23, 19)");
   }
+});
+
+test("tema público cambia, recuerda la preferencia y mantiene contraste en el botón", async ({ page }) => {
+  await page.route("**/api/v1/public/theme-test**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/services")) return route.fulfill({ json: [] });
+    if (path.endsWith("/slots")) return route.fulfill({ json: [] });
+    return route.fulfill({ json: {
+      id: 1, name: "Barbería de prueba", slug: "theme-test", currency: "USD",
+      timezone: "America/Santo_Domingo", primary_color: "#c7f36b",
+      secondary_color: "#71884a", public_theme: "light", gallery_images: [],
+    } });
+  });
+  await page.goto("/client.html?shop=theme-test", { waitUntil: "networkidle" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  const ratio = await page.locator("#bookBtn").evaluate((button) => {
+    const rgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number).map((n) => {
+      const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+    }).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0);
+    const foreground = rgb(getComputedStyle(button).color);
+    const background = rgb(getComputedStyle(button).backgroundColor);
+    return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+  });
+  expect(ratio).toBeGreaterThanOrEqual(4.5);
+  await page.getByRole("button", { name: "Cambiar a tema oscuro" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("button", { name: "Cambiar a tema claro" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("kingflow-theme:theme-test"))).toBe("dark");
 });
 
 test("registro muestra el periodo gratuito configurado, en singular y plural", async ({ page }) => {

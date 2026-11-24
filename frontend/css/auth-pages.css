@@ -1,10 +1,11 @@
 :root {
-  --brand-primary: #c7f36b;
-  --brand-secondary: #71884a;
+  --brand-primary: #b98752;
+  --brand-secondary: #5a4635;
+  --brand-on-primary: #161713;
   --text-primary: #18181b;
   --text-secondary: #52525b;
   --control-border: #d4d4d8;
-  --focus-ring: rgba(199, 243, 107, 0.2);
+  --focus-ring: rgba(185, 135, 82, 0.2);
 }
 
 body {
@@ -49,17 +50,17 @@ textarea:focus-visible {
 }
 
 button {
-  color: #161810;
-  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: var(--brand-on-primary);
+  background: var(--brand-primary);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(199, 243, 107, 0.25);
+  box-shadow: 0 8px 20px rgba(185, 135, 82, 0.25);
   font-family: inherit;
   transition: transform 150ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(199, 243, 107, 0.32);
+  box-shadow: 0 12px 24px rgba(185, 135, 82, 0.32);
 }
 
 button:focus-visible,

@@ -176,10 +176,18 @@ async function loadShop() {
     shopCurrency = shop.currency || 'USD';
     shopTimezone = shop.timezone || 'UTC';
     shopNameEl.textContent = shop.name;
+    const savedTheme = localStorage.getItem(`kingflow-theme:${shop.slug}`);
+    applyPublicTheme(savedTheme || shop.public_theme || 'light');
     const initial = document.getElementById('shopInitial');
     if (initial) initial.textContent = String(shop.name || 'K').trim().charAt(0).toUpperCase() || 'K';
     const description = document.getElementById('shopDescription');
     if (description && shop.description) description.textContent = shop.description;
+    const coverUrl = trustedShopImage(shop.cover_image_url);
+    const coverImage = document.getElementById('shopCover');
+    if (coverImage && coverUrl) {
+      coverImage.src = coverUrl;
+      coverImage.alt = `Foto de portada de ${shop.name}`;
+    }
     document.title = `${shop.name} - Cliente`;
     if (retryButton) retryButton.hidden = true;
 
@@ -190,6 +198,7 @@ async function loadShop() {
     if (brandColorPattern.test(shop.secondary_color || '')) {
       document.documentElement.style.setProperty('--brand-secondary', shop.secondary_color);
     }
+    updateBrandForeground(shop.primary_color);
     const logoUrl = trustedShopImage(shop.logo_url);
     if (logoUrl) {
       const logo = document.getElementById('shopLogo');
@@ -224,6 +233,34 @@ async function loadShop() {
     if (retryButton) retryButton.disabled = false;
   }
 }
+
+function applyPublicTheme(theme) {
+  if (!document.documentElement) return;
+  const normalized = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = normalized;
+  const button = document.getElementById('themeToggle');
+  if (button) {
+    button.textContent = normalized === 'dark' ? '☀ Tema claro' : '☾ Tema oscuro';
+    button.setAttribute('aria-label', normalized === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+  }
+}
+
+applyPublicTheme('light');
+
+function updateBrandForeground(color) {
+  if (!/^#[0-9a-f]{6}$/i.test(color || '')) return;
+  const values = color.slice(1).match(/../g).map(value => parseInt(value, 16) / 255);
+  const luminance = values.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+  document.documentElement.style.setProperty('--brand-on-primary', luminance > 0.1791 ? '#161713' : '#ffffff');
+}
+
+const themeToggle = document.getElementById('themeToggle');
+if (themeToggle?.addEventListener) themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyPublicTheme(next);
+  if (shopSlug) localStorage.setItem(`kingflow-theme:${shopSlug}`, next);
+});
 
 function selectedServiceDuration() {
   const service = serviceCatalog.find(item => Number(item.id) === Number(serviceSelect.value));

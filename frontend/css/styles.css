@@ -1,5 +1,5 @@
 /* KINGFLOW BARBER - MINIMAL CSS (See inline styles in index.html for complete design) */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #c7f36b 0%, #71884a 100%); min-height: 100vh; padding: 20px; }
+body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #b98752 0%, #5a4635 100%); min-height: 100vh; padding: 20px; }
 .container { max-width: 1400px; margin: 0 auto; }
     canvas 

@@ -141,6 +141,7 @@ def complete_onboarding(
         "name": shop.name,
         "primary_color": shop.primary_color,
         "secondary_color": shop.secondary_color,
+        "public_theme": shop.public_theme,
         "style": shop.style,
         "primary_goal": shop.primary_goal,
         "team_size": shop.team_size,
@@ -324,6 +325,79 @@ async def upload_gallery_image(
     return {"success": True, "gallery_images": shop.gallery_images}
 
 
+@router.post("/upload-cover")
+async def upload_cover(
+    current_user: CurrentUser,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
+):
+    """Set the owner's sanitized photo as the hero cover on its public page."""
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    extension = ALLOWED_LOGO_TYPES.get(file.content_type or "")
+    if not extension:
+        raise HTTPException(status_code=400, detail="Solo se permiten imágenes PNG o JPG")
+    contents = await file.read(MAX_LOGO_SIZE + 1)
+    if not contents or len(contents) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="La portada debe pesar como máximo 5 MB")
+    contents = _sanitize_logo(contents, LOGO_IMAGE_FORMATS[file.content_type])
+    shop = _lock_barbershop(db, tenant_id)
+    directory = UPLOAD_ROOT / str(tenant_id)
+    filename = f"cover-{uuid4().hex}{extension}"
+    destination = directory / filename
+    previous_url = shop.cover_image_url
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(contents)
+    except OSError as exc:
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="cover write failure")
+        raise HTTPException(status_code=500, detail="No se pudo guardar la portada") from exc
+
+    cover_url = f"/uploads/barbershops/{tenant_id}/{filename}"
+    shop.cover_image_url = cover_url
+    record_audit(db, current_user, "barbershop.cover_updated", "barbershop",
+                 shop.id, shop.id, {"previous_cover_url": previous_url, "cover_image_url": cover_url})
+    try:
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        _remove_logo_file(destination, tenant_id=tenant_id, purpose="cover rollback")
+        raise HTTPException(status_code=503, detail="No se pudo actualizar la portada") from exc
+    tenant_prefix = f"/uploads/barbershops/{tenant_id}/"
+    if previous_url and previous_url.startswith(tenant_prefix):
+        previous_path = (directory / previous_url[len(tenant_prefix):]).resolve()
+        if previous_path.parent == directory.resolve() and previous_path != destination.resolve():
+            _remove_logo_file(previous_path, tenant_id=tenant_id, purpose="cover replacement")
+    return {"success": True, "cover_image_url": cover_url}
+
+
+@router.delete("/cover-image")
+def delete_cover_image(
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    barbershop_id: Optional[int] = Query(default=None),
+):
+    """Restore the default hero image and remove only a tenant-owned uploaded cover."""
+    _require_owner(current_user)
+    tenant_id = _get_tenant_id(current_user, barbershop_id)
+    shop = _lock_barbershop(db, tenant_id)
+    previous_url = shop.cover_image_url
+    if not previous_url:
+        return {"success": True, "cover_image_url": None}
+    shop.cover_image_url = None
+    record_audit(db, current_user, "barbershop.cover_removed", "barbershop",
+                 shop.id, shop.id, {"previous_cover_url": previous_url})
+    db.commit()
+    tenant_prefix = f"/uploads/barbershops/{tenant_id}/"
+    if previous_url.startswith(tenant_prefix):
+        directory = (UPLOAD_ROOT / str(tenant_id)).resolve()
+        image_path = (directory / previous_url[len(tenant_prefix):]).resolve()
+        if image_path.parent == directory and image_path.name.startswith("cover-"):
+            _remove_logo_file(image_path, tenant_id=tenant_id, purpose="cover removal")
+    return {"success": True, "cover_image_url": None}
+
+
 @router.delete("/gallery-image")
 def delete_gallery_image(
     current_user: CurrentUser,
@@ -417,6 +491,7 @@ def update_business_settings(
     shop.timezone = data.timezone
     shop.primary_color = data.primary_color
     shop.secondary_color = data.secondary_color
+    shop.public_theme = data.public_theme
     record_audit(db, current_user, "business.settings_updated", "barbershop", shop.id,
                  shop.id, {"previous": previous, "name": data.name,
                            "description": data.description,
@@ -424,7 +499,8 @@ def update_business_settings(
                            "opening_time": data.opening_time.isoformat(),
                            "closing_time": data.closing_time.isoformat(),
                            "primary_color": data.primary_color,
-                           "secondary_color": data.secondary_color})
+                           "secondary_color": data.secondary_color,
+                           "public_theme": data.public_theme})
     db.commit()
     db.refresh(shop)
     return BarbershopProfile.model_validate(shop)

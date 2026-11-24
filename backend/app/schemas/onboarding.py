@@ -99,6 +99,7 @@ class BusinessSettingsUpdate(BaseModel):
     timezone: str = Field(..., min_length=3, max_length=50)
     primary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
+    public_theme: str = Field(default="light", pattern=r"^(light|dark)$")
 
     @model_validator(mode="after")
     def validate_hours(self):
@@ -125,10 +126,12 @@ class BarbershopProfile(BaseModel):
     opening_time: Optional[time] = None
     closing_time: Optional[time] = None
     logo_url: Optional[str]
+    cover_image_url: Optional[str] = None
     description: Optional[str] = None
     gallery_images: List[str] = Field(default_factory=list)
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
+    public_theme: str = "light"
     style: Optional[str]
     primary_goal: Optional[str]
     team_size: Optional[int]
