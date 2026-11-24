@@ -28,6 +28,7 @@ def test_saas_registration_onboarding_setup_and_public_booking(
             "country": "DO",
             "timezone": "America/Santo_Domingo",
             "currency": "DOP",
+            "affiliate_code": "",
         },
     )
     assert registration.status_code == 201

@@ -34,6 +34,7 @@ form.addEventListener("submit", async (event) => {
   button.disabled = true;
   const fields = ["owner_first_name", "owner_last_name", "owner_email", "owner_password", "owner_phone", "barbershop_name", "barbershop_email", "barbershop_phone", "address_line1", "city", "state", "postal_code", "country", "timezone", "currency", "affiliate_code"];
   const payload = Object.fromEntries(fields.map((name) => [name, document.getElementById(name).value.trim()]));
+  if (!payload.affiliate_code) delete payload.affiliate_code;
   try {
     const response = await fetch(`${apiRoot}/api/v1/saas/register`, {
       method: "POST",
