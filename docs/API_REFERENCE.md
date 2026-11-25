@@ -56,8 +56,8 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
 | `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
 | `POST` | `/public/{slug}/waitlist` | Registra una solicitud sin compromiso para que la barbería contacte al cliente; limita por negocio/IP y conserva snapshots del servicio/profesional en MySQL |
-| `GET` | `/public/{slug}/waitlist-offers/{token}` | Muestra al titular del enlace el detalle mínimo de una oferta privada y su vencimiento |
-| `POST` | `/public/{slug}/waitlist-offers/{token}/accept` | Acepta una oferta vigente una sola vez; reclama el turno y crea cita pendiente en una transacción MySQL; reintentos devuelven la misma cita |
+| `GET` | `/public/{slug}/waitlist-offers/{token}` | Muestra al titular del enlace el detalle mínimo de una oferta privada y su vencimiento; respuesta `no-store` |
+| `POST` | `/public/{slug}/waitlist-offers/{token}/accept` | Acepta una oferta vigente una sola vez; reclama el turno y crea cita pendiente en una transacción MySQL; reintentos devuelven la misma cita y la respuesta es `no-store` |
 | `POST` | `/public/{slug}/track` | Consulta con token privado; la espera aproximada se omite durante el descanso del barbero |
 | `POST` | `/public/{slug}/appointments/check-in` | Confirma llegada con token privado desde 60 min antes hasta 30 min después de la cita |
 | `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado o sesión autenticada de la cuenta propietaria |
