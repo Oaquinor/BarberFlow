@@ -7,6 +7,7 @@ test("owner sees a live, readable storefront preview from their settings", async
     document.getElementById("loginSection").style.display = "none";
     document.getElementById("dashboardSection").style.display = "grid";
     document.getElementById("ownerManagementTab").style.display = "block";
+    document.getElementById("ownerManagementTab").style.display = "block";
     document.getElementById("ownerManagementTabButton").hidden = false;
     currentUser = { role: "barbershop_owner" };
     serviceCache = [{
@@ -19,6 +20,11 @@ test("owner sees a live, readable storefront preview from their settings", async
     document.getElementById("businessSettingsDescription").value = "Cortes precisos y atención cercana.";
     document.getElementById("businessCancellationWindow").value = "12";
     setupBrandPreview();
+    const coverPreview = document.getElementById("businessCoverPreview");
+    const cover = document.createElement("img");
+    cover.src = "/images/barbershop-hero.png";
+    cover.alt = "Vista previa de portada para la barbería";
+    coverPreview.append(cover);
   });
 
   const preview = page.locator("#brandPreview");
@@ -39,15 +45,20 @@ test("owner sees a live, readable storefront preview from their settings", async
     await page.setViewportSize({ width, height: 1000 });
     const geometry = await page.evaluate(() => {
       const submit = document.querySelector("#businessSettingsForm .settings-submit button").getBoundingClientRect();
+      const cover = document.querySelector("#businessCoverPreview img").getBoundingClientRect();
       return {
         viewport: document.documentElement.clientWidth,
         document: document.documentElement.scrollWidth,
         submitLeft: submit.left,
         submitRight: submit.right,
+        coverLeft: cover.left,
+        coverRight: cover.right,
       };
     });
     expect(geometry.document, `horizontal overflow at ${width}px`).toBeLessThanOrEqual(width + 1);
     expect(geometry.submitLeft, `submit starts outside viewport at ${width}px`).toBeGreaterThanOrEqual(-1);
     expect(geometry.submitRight, `submit ends outside viewport at ${width}px`).toBeLessThanOrEqual(width + 1);
+    expect(geometry.coverLeft, `cover starts outside viewport at ${width}px`).toBeGreaterThanOrEqual(-1);
+    expect(geometry.coverRight, `cover ends outside viewport at ${width}px`).toBeLessThanOrEqual(width + 1);
   }
 });

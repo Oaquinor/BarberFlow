@@ -90,6 +90,7 @@ test("customer cancels an upcoming appointment only after an in-page confirmatio
 test("verified customer can reschedule an appointment from account history", async ({ page }) => {
   let rescheduleRequest;
   let listCalls = 0;
+  await page.clock.setFixedTime(new Date("2026-11-25T15:00:00Z"));
   await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
     access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
     user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },

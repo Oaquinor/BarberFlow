@@ -44,7 +44,7 @@ def seed_database() -> int:
             )
             return 1
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         subscription = Subscription(
             plan="professional", status="active", current_period_start=now,
             current_period_end=now + timedelta(days=30), max_barbers=10,
