@@ -269,6 +269,8 @@ def public_create_appointment(
         account_user = _get_current_user(db, authorization)
         if account_user.role != "client" or account_user.barbershop_id is not None or not account_user.is_verified:
             raise HTTPException(status_code=403, detail="Se requiere una cuenta de cliente verificada")
+    elif not data.client_name or not data.phone:
+        raise HTTPException(status_code=422, detail="El nombre y el teléfono son necesarios para reservar como invitado")
 
     service = (
         db.query(Service)
@@ -360,6 +362,9 @@ def public_create_appointment(
         client = get_or_create_shop_client(db, account_user, shop, subscription)
         phone = client.phone or ""
     else:
+        # The request schema allows identity-free bookings for authenticated customers;
+        # the guest branch is guarded above and keeps both values mandatory.
+        assert data.client_name is not None and data.phone is not None
         phone = _normalize_phone(data.phone)
         client = (
             db.query(User)

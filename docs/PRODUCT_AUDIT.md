@@ -11,8 +11,8 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Capacidad | Estado observado | Evidencia / brecha |
 |---|---|---|
 | Registro de barbería, acceso owner/barbero, sesiones y recuperación | Implementado | API `/auth/*`, `/saas/register`; JWT con refresh persistido/revocable |
-| Catálogo público, disponibilidad, reserva de invitado y gestión con token | Implementado | API de booking; no requiere cuenta cliente |
-| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial; cuenta verificada inicial integrada | Registro y login cliente con verificación SMTP, historial multi-barbería y reclamación de citas con token privado. Aún faltan control de citas reclamadas desde la cuenta, cartera, pagos, beneficios, favoritos y perfil/privacidad |
+| Catálogo público, disponibilidad, reserva de invitado y gestión con token | Implementado | API de booking admite invitados y cuentas verificadas; no requiere cuenta para reserva, y da seguimiento/cambio con token privado |
+| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial; cuenta verificada inicial integrada | Registro y login cliente con verificación SMTP, historial multi-barbería, reserva autenticada sin repetir datos y reclamación con token privado. Aún faltan control de citas reclamadas desde la cuenta, cartera, pagos, beneficios, favoritos y perfil/privacidad |
 | Agenda, atención, turnos presenciales, cobro y conciliación | Implementado | Flujo de cita/pago y caja; el pago de servicio se registra manualmente |
 | Política por barbería para anticipación de cancelación/reprogramación | Implementado en este incremento | Columna MySQL versionada, rango 0–168h, aviso público y validación en ambos cambios |
 | Perfil público: marca, horarios, zona, tema, logo, portada, galería, preguntas | Implementado | Onboarding y opciones públicas; la calidad visual requiere revisión continua en varios anchos |
@@ -53,7 +53,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Validación local y límites
 
-- `python -m pytest backend/tests -q`: 69 passed, 101 skipped. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; no había instancia configurada. No se modificó la base de datos de desarrollo.
+- `python -m pytest backend/tests -q`: 69 passed, 102 skipped en el último intento completo. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; no había instancia configurada. No se modificó la base de datos de desarrollo.
 - `frontend`: `npm test` 110 passed; `npm run test:browser` 29 passed, incluidas las pruebas del portal de cliente y revisión responsive disponible en el proyecto.
 - Alembic reconoce `033_client_accounts` como head y `python -m alembic upgrade 032_cancellation_window:033_client_accounts --sql` generó el SQL MySQL esperado. No se aplicó la migración a una base de datos real en este entorno.
 - `pip-audit` forma parte de CI; no se ejecutó aquí. Las pruebas del servicio WhatsApp tampoco se volvieron a ejecutar en este incremento.

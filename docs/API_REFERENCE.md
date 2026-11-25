@@ -36,12 +36,14 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `GET` | `/public/{slug}` | Perfil público, moneda y zona horaria |
 | `GET` | `/public/{slug}/services` | Catálogo activo |
 | `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
-| `POST` | `/public/{slug}/appointments` | Crea reserva sin cuenta |
+| `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
 | `POST` | `/public/{slug}/track` | Consulta con token privado |
 | `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado |
 | `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
 
 Reserva:
+
+La reserva autenticada acepta `Authorization: Bearer <access_token>` y no requiere repetir `client_name` ni `phone`; la identidad se toma de la cuenta y se vincula a un perfil CRM separado de la barbería. Sin token, ambos campos siguen siendo obligatorios para una reserva de invitado. La respuesta incluye `saved_to_account`.
 
 ```json
 {

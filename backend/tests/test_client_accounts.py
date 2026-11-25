@@ -1,6 +1,6 @@
 """Customer account verification and tracking-token CRM claims (MySQL integration)."""
 
-from datetime import timedelta
+from datetime import timedelta, timezone
 from hashlib import sha256
 from urllib.parse import urlparse, parse_qs
 
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.v1 import client_accounts as accounts_api
 from app.core.security import create_access_token
 from app.models import (
-    Appointment, Barbershop, ClientAccountShopLink, Service, Subscription, User,
+    Appointment, BarberAvailability, Barbershop, ClientAccountShopLink, Service, Subscription, User,
 )
 from app.utils.datetime import utc_now_naive
 
@@ -100,5 +100,78 @@ def test_client_claims_only_a_private_token_and_sees_only_linked_shop_history(
     assert link.crm_client_user_id == appointment.client_id
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert history.status_code == 200
+    assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
+
+
+def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_account(
+    client: TestClient, test_db: Session, monkeypatch,
+):
+    import app.api.v1.endpoints.booking as booking_api
+    import app.api.v1.endpoints.common as common_api
+
+    now = utc_now_naive().replace(second=0, microsecond=0)
+    monkeypatch.setattr(booking_api, "utc_now_naive", lambda: now)
+    monkeypatch.setattr(common_api, "utc_now_naive", lambda: now)
+    subscription = Subscription(
+        plan="free", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=2,
+        max_appointments_per_month=100, max_clients=100, auto_renew=False,
+    )
+    shop = Barbershop(
+        name="Reserva de Cuenta", slug="verified-account-booking",
+        email="verified-booking-shop@example.com", phone="8095550402",
+        address_line1="Calle 9", city="Santo Domingo", state="DN", postal_code="10102",
+        country="DO", timezone="America/Santo_Domingo", subscription=subscription,
+    )
+    barber = User(
+        email="verified-booking-barber@example.com", password_hash="unused",
+        first_name="Luis", last_name="Barbero", role="barber", is_active=True,
+        barbershop=shop,
+    )
+    account = User(
+        email="verified-booking-customer@example.com", password_hash="unused",
+        first_name="Ana", last_name="Cliente", phone="18095551213", role="client",
+        is_active=True, is_verified=True, barbershop_id=None,
+    )
+    service = Service(
+        barbershop=shop, name="Corte clásico", duration_minutes=30, price=25000,
+        category="haircut", is_active=True,
+    )
+    test_db.add_all([shop, barber, account, service])
+    test_db.flush()
+    slot_start = now + timedelta(days=2)
+    slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id, slot_start=slot_start,
+        slot_end=slot_start + timedelta(minutes=30), is_active=True, is_booked=False,
+    )
+    test_db.add(slot)
+    test_db.commit()
+
+    monkeypatch.setattr(booking_api, "_notify_appointment_staff", lambda *args, **kwargs: None)
+    monkeypatch.setattr(booking_api, "_queue_appointment_email", lambda *args, **kwargs: None)
+    monkeypatch.setattr(booking_api, "_queue_appointment_whatsapp", lambda *args, **kwargs: None)
+    payload = {
+        "service_id": service.id,
+        "barber_id": barber.id,
+        "scheduled_time": slot_start.replace(tzinfo=timezone.utc).isoformat(),
+    }
+    guest_without_identity = client.post(
+        f"/api/v1/public/{shop.slug}/appointments", json=payload,
+    )
+    assert guest_without_identity.status_code == 422
+    headers = {
+        "Authorization": f"Bearer {create_access_token({'sub': str(account.id), 'role': 'client'})}",
+    }
+    response = client.post(
+        f"/api/v1/public/{shop.slug}/appointments", headers=headers, json=payload,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["saved_to_account"] is True
+    appointment = test_db.get(Appointment, response.json()["appointment_id"])
+    link = test_db.query(ClientAccountShopLink).filter_by(account_user_id=account.id).one()
+    assert appointment.client_id == link.crm_client_user_id
+    assert appointment.client_id != account.id
+    history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
 

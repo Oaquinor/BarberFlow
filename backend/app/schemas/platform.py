@@ -136,8 +136,8 @@ class PublicServiceResponse(BaseModel):
 
 
 class PublicCreateAppointmentRequest(BaseModel):
-    client_name: str = Field(..., min_length=2, max_length=120)
-    phone: str = Field(..., min_length=6, max_length=30)
+    client_name: Optional[str] = Field(None, min_length=2, max_length=120)
+    phone: Optional[str] = Field(None, min_length=6, max_length=30)
     service_id: int = Field(..., gt=0)
     barber_id: Optional[int] = Field(None, gt=0)
     scheduled_time: datetime
@@ -145,7 +145,9 @@ class PublicCreateAppointmentRequest(BaseModel):
 
     @field_validator("client_name")
     @classmethod
-    def validate_client_name(cls, value: str) -> str:
+    def validate_client_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
         value = value.strip()
         if len(value) < 2:
             raise ValueError("Client name must contain at least two non-space characters")
@@ -153,7 +155,9 @@ class PublicCreateAppointmentRequest(BaseModel):
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, value: str) -> str:
+    def validate_phone(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
         if sum(character.isdigit() for character in value) < 6:
             raise ValueError("Phone number must contain at least six digits")
         return value
