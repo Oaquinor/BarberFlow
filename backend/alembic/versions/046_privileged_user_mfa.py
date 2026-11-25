@@ -45,8 +45,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("uq_user_mfa_recovery_codes_user_hash", table_name="user_mfa_recovery_codes")
-    op.drop_index("ix_user_mfa_recovery_codes_user_unused", table_name="user_mfa_recovery_codes")
+    # Dropping the table releases its foreign-key support indexes atomically;
+    # MySQL may otherwise keep the secondary index bound to the FK.
     op.drop_table("user_mfa_recovery_codes")
     op.drop_column("users", "mfa_last_counter")
     op.drop_column("users", "mfa_pending_expires_at")
