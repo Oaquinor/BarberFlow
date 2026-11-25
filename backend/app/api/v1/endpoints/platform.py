@@ -978,17 +978,9 @@ def _slot_available_for_duration(
     appointments: list[Appointment],
     duration_minutes: int,
 ) -> bool:
-    duration = timedelta(minutes=duration_minutes)
-    if slot.slot_end - slot.slot_start < duration:
-        return False
-    service_end = slot.slot_start + duration
-    if any(block.starts_at < service_end and block.ends_at > slot.slot_start for block in blocks):
-        return False
-    return not any(
-        appointment.scheduled_time < service_end
-        and appointment.scheduled_time + timedelta(minutes=appointment.estimated_duration) > slot.slot_start
-        for appointment in appointments
-    )
+    from app.services.booking_availability import slot_available_for_duration
+
+    return slot_available_for_duration(slot, blocks, appointments, duration_minutes)
 
 
 

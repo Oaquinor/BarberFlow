@@ -21,6 +21,7 @@ from app.models import (
     Subscription,
     User,
 )
+from app.services.waitlist_offer_service import enqueue_automatic_waitlist_offers
 from app.utils.datetime import utc_now_naive
 
 
@@ -435,3 +436,63 @@ def test_expired_waitlist_offer_cannot_claim_its_slot(client: TestClient, test_d
     assert response.status_code == 410
     assert test_db.get(BookingWaitlistOffer, offer.id).status == "expired"
     assert test_db.get(BarberAvailability, slot.id).is_booked is False
+
+
+def test_worker_automatically_offers_a_matching_open_slot_once(
+    client: TestClient,
+    test_db: Session,
+):
+    shop, _owner, barber, service = _create_shop(test_db, "automatic")
+    response = client.post(
+        f"/api/v1/public/{shop.slug}/waitlist",
+        json={
+            "client_name": "Cliente Automático",
+            "phone": "8095554123",
+            "service_id": service.id,
+            "idempotency_key": str(uuid4()),
+        },
+    )
+    assert response.status_code == 202
+    entry = test_db.query(BookingWaitlistEntry).filter_by(barbershop_id=shop.id).one()
+    start = (utc_now_naive() + timedelta(days=4)).replace(second=0, microsecond=0)
+    slot = BarberAvailability(
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=start,
+        slot_end=start + timedelta(minutes=service.duration_minutes),
+        is_active=True,
+        is_booked=False,
+    )
+    test_db.add(slot)
+    test_db.commit()
+
+    now = utc_now_naive()
+    assert enqueue_automatic_waitlist_offers(test_db, now) == 1
+    assert enqueue_automatic_waitlist_offers(test_db, now) == 0
+
+    offer = test_db.query(BookingWaitlistOffer).filter_by(barbershop_id=shop.id).one()
+    assert offer.waitlist_entry_id == entry.id
+    assert offer.availability_id == slot.id
+    assert offer.status == "pending"
+    assert offer.expires_at == now.replace(microsecond=0) + timedelta(minutes=120)
+    assert test_db.get(BookingWaitlistEntry, entry.id).status == "contacted"
+    delivery = (
+        test_db.query(NotificationDelivery)
+        .filter_by(
+            barbershop_id=shop.id,
+            event_type="waitlist_offer",
+        )
+        .one()
+    )
+    assert delivery.status == "pending"
+    assert (
+        test_db.query(AuditLog)
+        .filter_by(
+            action="booking.waitlist_offer_created",
+            entity_id=offer.id,
+            barbershop_id=shop.id,
+        )
+        .one()
+        .details["source"]
+        == "automatic"
+    )

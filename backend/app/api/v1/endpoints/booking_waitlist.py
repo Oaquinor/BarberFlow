@@ -28,8 +28,8 @@ from app.schemas.booking_waitlist import (
     WaitlistStatusUpdate,
 )
 from app.core.security.password import hash_password
-from app.services.notification_outbox import enqueue_delivery
 from app.services.subscription_service import count_monthly_appointments
+from app.services.waitlist_offer_service import create_waitlist_offer
 from app.utils.datetime import utc_now_naive
 from app.api.v1.endpoints.common import (
     _audit,
@@ -524,65 +524,21 @@ def owner_create_waitlist_offer(
     ):
         raise HTTPException(status_code=409, detail="El turno dejó de estar disponible")
 
-    existing_offers = (
-        db.query(BookingWaitlistOffer)
-        .filter(
-            BookingWaitlistOffer.barbershop_id == shop.id,
-            BookingWaitlistOffer.availability_id == slot.id,
-            BookingWaitlistOffer.status == "pending",
-            BookingWaitlistOffer.is_deleted == False,
+    try:
+        offer = create_waitlist_offer(
+            db,
+            shop=shop,
+            entry=entry,
+            slot=slot,
+            expires_in_minutes=data.expires_in_minutes,
+            actor=owner,
+            source="owner",
+            now=now,
         )
-        .with_for_update()
-        .all()
-    )
-    for old_offer in existing_offers:
-        if old_offer.expires_at > now:
-            raise HTTPException(status_code=409, detail="Este turno ya tiene una oferta vigente")
-        old_offer.status = "expired"
-
-    token = secrets.token_urlsafe(32)
-    expires_at = now + timedelta(minutes=data.expires_in_minutes)
-    local_expiry = _utc_aware(expires_at).astimezone(_get_timezone(shop))
-    offer = BookingWaitlistOffer(
-        barbershop_id=shop.id,
-        waitlist_entry_id=entry.id,
-        availability_id=slot.id,
-        token_hash=_offer_hash(token),
-        status="pending",
-        expires_at=expires_at,
-    )
-    db.add(offer)
-    db.flush()
-    entry.status = "contacted"
-    entry.contacted_at = now
-    local_start = _utc_aware(slot.slot_start).astimezone(_get_timezone(shop))
-    offer_url = f"{_build_client_link(shop.slug)}&{urlencode({'waitlist_offer': token})}"
-    message = (
-        f"💈 {shop.name}: Hola {entry.client_name}, se liberó un horario para {service.name}: "
-        f"{local_start.strftime('%d/%m/%Y %H:%M')} con {slot.barber.full_name if slot.barber else 'tu barbero'}. "
-        f"Puedes aceptarlo hasta {local_expiry.strftime('%d/%m/%Y %H:%M')} "
-        f"(hora de la barbería) aquí: {offer_url}. "
-        "El horario se confirma solo cuando completes la aceptación."
-    )
-    enqueue_delivery(
-        db,
-        barbershop_id=shop.id,
-        dedupe_key=f"waitlist-offer:{_offer_hash(token)}:whatsapp",
-        channel="whatsapp",
-        event_type="waitlist_offer",
-        recipient=entry.phone,
-        body=message,
-    )
-    _audit(
-        db,
-        owner,
-        "booking.waitlist_offer_created",
-        "booking_waitlist_offer",
-        offer.id,
-        shop.id,
-        {"entry_id": entry.id, "availability_id": slot.id, "expires_at": expires_at.isoformat()},
-    )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.commit()
+    expires_at = offer.expires_at
     return {
         "id": offer.id,
         "status": offer.status,

@@ -33,7 +33,7 @@ La revisión de repositorio y estas páginas converge en que los sistemas compet
 ## Prioridades derivadas
 
 1. Terminar la página pública con imágenes propias y una jerarquía que presente negocio, equipo, trabajos y servicios, y verificar SEO/compartición desde el perfil real.
-2. Evolucionar la waitlist desde coincidencia a oferta con token de un uso, expiración, consentimiento de contacto y reserva MySQL atómica; invalidar ofertas competidoras al aceptar. No mandar ofertas automáticas hasta resolver el canal y las preferencias de contacto.
+2. Evolucionar la waitlist desde coincidencia a oferta con token de un uso, expiración, consentimiento de contacto y reserva MySQL atómica; invalidar ofertas competidoras al aceptar. La solicitud de waitlist expresa consentimiento a avisos por WhatsApp; la entrega sigue condicionada a la configuración del proveedor y queda auditable en el outbox.
 3. Completar continuidad de visita: repetir una configuración autorizada del Style Passport, rebooking rápido y estados de atención del barbero que alimenten una cola aproximada, sin divulgar clientes ajenos.
 4. Diseñar fidelidad y pagos junto con los registros de reverso/expiración y conciliación. No introducir puntos, depósitos o montos que puedan quedar sin compensación.
 5. Definir unidad de sucursal, recursos, permisos y modelo contractual antes de extender reportes y comisión a múltiples sedes o renta de silla.
