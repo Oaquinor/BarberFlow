@@ -202,6 +202,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .category-btn.active { border-color:#cbb091; color:#684b2d; background:#f3e9dc; }
 .service-item { padding:17px; box-shadow:none; }
 .service-item.featured { border-color:#d6c1a5; background:#fdfaf5; }
+.service-catalog-photo { width:64px; height:64px; flex:0 0 64px; object-fit:cover; border:1px solid var(--line,#deded5); border-radius:10px; background:#efeee9; }
+@media (max-width:560px) { .service-catalog-photo { width:54px; height:54px; flex-basis:54px; } }
 .service-price, .achievement-points { color:#805a35; }
 .btn-icon { border:1px solid var(--kf-line); color:var(--kf-ink); background:#faf8f4; }
 .table-wrap th { color:#6b655b; background:#f4f1eb; font-size:.75rem; letter-spacing:.03em; }

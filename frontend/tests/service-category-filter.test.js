@@ -11,7 +11,7 @@ const source = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf
 const filterStart = source.indexOf("function filterServices(");
 const dashboardStart = source.indexOf("async function loadBarberDashboardData()", filterStart);
 assert.ok(filterStart >= 0 && dashboardStart > filterStart, "could not isolate service catalog functions");
-const catalogSource = source.slice(filterStart, dashboardStart);
+const catalogSource = `${source.slice(filterStart, dashboardStart)}\n${source.slice(source.indexOf("function trustedBusinessImage(", dashboardStart), source.indexOf("function renderBusinessGallery(", dashboardStart))}`;
 const clickStart = source.indexOf("function handleServiceCategoryClick(", filterStart);
 const clickEnd = source.indexOf("\nasync function loadBarberDashboardData()", clickStart);
 assert.ok(clickStart >= 0 && clickEnd > clickStart, "could not isolate category click handler");
@@ -39,6 +39,9 @@ function createCatalogSandbox() {
     currentUser: { role: "barbershop_owner" },
     escapeHtml: (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]),
     fmtMoneyFromCents: (value) => String(value),
+    API_ROOT: "https://api.kingflow.example",
+    URL,
+    window: { location: { origin: "https://api.kingflow.example" } },
     elements,
   };
   vm.runInNewContext(catalogSource, sandbox);
@@ -97,6 +100,19 @@ test("rendered catalog applies the selected category and escapes service data", 
   assert.match(sandbox.elements.servicesList.innerHTML, /&lt;img src=x onerror=alert\(1\)&gt;/);
   assert.doesNotMatch(sandbox.elements.servicesList.innerHTML, /Barba premium/);
   assert.doesNotMatch(sandbox.elements.servicesList.innerHTML, /<img src=x/);
+});
+
+test("service photos appear in the owner catalog only from the trusted API origin", () => {
+  const sandbox = createCatalogSandbox();
+  sandbox.renderServiceCatalog([
+    { ...services[0], image_url: "/uploads/barbershops/8/gallery-cut.jpg" },
+    { ...services[1], image_url: "https://untrusted.example/cut.jpg" },
+  ]);
+
+  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-catalog-photo"/);
+  assert.match(sandbox.elements.servicesList.innerHTML, /Foto de Corte clásico/);
+  assert.doesNotMatch(sandbox.elements.servicesList.innerHTML, /untrusted\.example/);
+  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-icon"/);
 });
 
 test("category button clicks update selection and rerender the current service list", () => {

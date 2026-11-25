@@ -5,7 +5,7 @@ test("owner service catalog filters live categories together with search", async
   await page.evaluate(() => {
     currentUser = { role: "barbershop_owner" };
     serviceCache = [
-      { id: 1, name: "Corte clásico", description: "Cabello", category: "haircut", duration_minutes: 30, price_cents: 1000 },
+      { id: 1, name: "Corte clásico", description: "Cabello", category: "haircut", duration_minutes: 30, price_cents: 1000, image_url: "/images/barbershop-hero.png" },
       { id: 2, name: "Barba premium", description: "Perfilado", category: "beard", duration_minutes: 20, price_cents: 800 },
     ];
     renderServiceCatalog(serviceCache);
@@ -26,4 +26,6 @@ test("owner service catalog filters live categories together with search", async
   await categories.getByRole("button", { name: "Todos" }).click();
   await expect(list).toContainText("Corte clásico");
   await expect(list).toContainText("Barba premium");
+  await expect(list.getByRole("img", { name: "Foto de Corte clásico" })).toBeVisible();
+  await expect(list.locator(".service-icon")).toHaveCount(1);
 });

@@ -914,9 +914,14 @@ function renderServiceCatalog(services) {
         return;
     }
 
-    list.innerHTML = visibleServices.map((service) => `
+    list.innerHTML = visibleServices.map((service) => {
+        const imageUrl = trustedBusinessImage(service.image_url);
+        const visual = imageUrl
+            ? `<img class="service-catalog-photo" src="${escapeHtml(imageUrl)}" alt="Foto de ${escapeHtml(service.name)}" loading="lazy">`
+            : '<div class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg></div>';
+        return `
         <div class="service-item ${service.category === 'combo' ? 'featured' : ''}">
-            <div class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg></div>
+            ${visual}
             <div class="service-info">
                 <h4>${escapeHtml(service.name)}</h4>
                 <p>${escapeHtml(service.description || 'Servicio personalizado de la barbería')}</p>
@@ -928,7 +933,8 @@ function renderServiceCatalog(services) {
             <div class="service-price">${fmtMoneyFromCents(service.price_cents || 0)}</div>
             ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l11.9-11.9a2.5 2.5 0 0 0-3.5-3.5L4 16Z"/><path d="m14.5 6.5 3.5 3.5"/></svg></button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-13 0 .7 13h8.6L17 7M9 7V4h6v3m-4 4v5m2-5v5"/></svg></button>` : ''}
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function handleServiceCategoryClick(event) {
