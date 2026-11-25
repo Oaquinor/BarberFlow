@@ -54,8 +54,9 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 ## Validación local y límites
 
 - `python -m pytest backend/tests -q`: 69 passed, 102 skipped en el último intento completo. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; no había instancia configurada. No se modificó la base de datos de desarrollo.
-- `frontend`: `npm test` 110 passed; `npm run test:browser` 29 passed, incluidas las pruebas del portal de cliente y revisión responsive disponible en el proyecto.
-- GitHub Actions en MySQL 8.4 confirmó migración limpia, downgrade y recuperación, y ejecutó `python -m pytest backend/tests -q`: **171 passed**, incluyendo la suite de integración y la reserva autenticada. Los tres jobs del workflow terminaron exitosamente en el commit `ed2520f`.
+- `frontend`: `npm test` 110 passed; 65 flujos pasaron localmente en cada uno de Chromium, Firefox y WebKit. Las páginas iniciales se verificaron a 320, 375, 390, 430, 768, 1024, 1366 y 1920 px; incluye cuenta y cancelación.
+- GitHub Actions en MySQL 8.4 confirmó migración limpia, downgrade y recuperación, y ejecutó `python -m pytest backend/tests -q`: **171 passed**, incluyendo integración de reserva y cancelación autenticadas y el caso de acceso cruzado rechazado. Los tres jobs terminaron exitosamente en `f5b9114`.
+- En `f5b9114`, la suite Chromium de CI ejecutó 30 casos, anteriores al aumento de 3 a 8 anchos. Se actualizó el workflow para ejecutar 65 casos por motor; la evidencia CI de esos cambios se verificará en la siguiente ejecución del commit que los incorpora.
 - Alembic reconoce `033_client_accounts` como head y `python -m alembic upgrade 032_cancellation_window:033_client_accounts --sql` generó el SQL MySQL esperado. No se aplicó la migración a una base local en este entorno.
 - `pip-audit` y `npm audit` están en CI; las verificaciones de dependencias del workflow pasaron en `ed2520f`. No se ejecutó aquí una prueba de penetración ni de carga.
 - No se hizo prueba de penetración, prueba de carga, despliegue productivo ni verificación de entrega real con SMTP/WhatsApp.

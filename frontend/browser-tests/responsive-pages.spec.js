@@ -15,7 +15,12 @@ const pages = [
 const viewports = [
   { name: "small-phone", width: 320, height: 640, isMobile: true, hasTouch: true },
   { name: "phone", width: 375, height: 667, isMobile: true, hasTouch: true },
+  { name: "large-phone", width: 390, height: 844, isMobile: true, hasTouch: true },
+  { name: "wide-phone", width: 430, height: 932, isMobile: true, hasTouch: true },
   { name: "tablet", width: 768, height: 1024, isMobile: false, hasTouch: true },
+  { name: "small-desktop", width: 1024, height: 768, isMobile: false, hasTouch: false },
+  { name: "desktop", width: 1366, height: 900, isMobile: false, hasTouch: false },
+  { name: "wide-desktop", width: 1920, height: 1080, isMobile: false, hasTouch: false },
 ];
 
 for (const viewport of viewports) {

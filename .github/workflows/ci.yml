@@ -138,15 +138,21 @@ jobs:
       - name: Audit frontend dependencies
         working-directory: frontend
         run: npm audit
-      - name: Install Chromium for responsive browser tests
+      - name: Install Chromium, Firefox and WebKit for browser tests
         working-directory: frontend
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium firefox webkit
       - name: Test frontend
         working-directory: frontend
         run: npm test
-      - name: Test responsive pages in Chromium
+      - name: Test browser flows in Chromium
         working-directory: frontend
-        run: npm run test:browser -- --reporter=line
+        run: npx playwright test --browser chromium --reporter=line
+      - name: Test browser flows in Firefox
+        working-directory: frontend
+        run: npx playwright test --browser firefox --reporter=line
+      - name: Test browser flows in WebKit
+        working-directory: frontend
+        run: npx playwright test --browser webkit --reporter=line
       - name: Install WhatsApp dependencies
         working-directory: whatsapp-service
         run: npm ci

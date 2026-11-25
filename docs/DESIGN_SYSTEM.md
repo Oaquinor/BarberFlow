@@ -26,7 +26,7 @@ El portal público define tokens homónimos en su propia hoja y aplica variantes
 - Diseñar primero el orden de lectura y acciones primarias; alinear etiquetas, campos y botones en una cuadrícula consistente.
 - Mantener contraste legible en tema claro y oscuro, estados de foco visibles, etiquetas persistentes y mensajes asociados a campos.
 - No comunicar estado únicamente por color; conservar texto/etiqueta y nombre accesible en controles con icono.
-- Para móvil, verificar 320, 375, 768 y escritorio; prevenir desbordamiento horizontal y objetivos táctiles pequeños.
+- Para responsive, verificar 320, 375, 390, 430, 768, 1024, 1366 y 1920 px; prevenir desbordamiento horizontal y objetivos táctiles pequeños.
 - Usar fotografía de negocio y servicios solo si el recurso está cargado; contemplar estados vacíos útiles y fallos de carga.
 - Respetar `prefers-reduced-motion`; evitar animaciones decorativas que distraigan en tareas de agenda/cobro.
 
