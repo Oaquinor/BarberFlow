@@ -21,7 +21,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Reclamar cita guest en el historial | No sin autenticación + token privado | No | No | Sí, únicamente con su token privado | No por defecto |
 | Cancelar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta; respeta anticipación y libera turno | No por defecto |
 | Reprogramar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta verificada; respeta anticipación y disponibilidad | No por defecto |
-| Guardar/quitar favoritos | No | No | No | Solo barberías activas; objetivos validados dentro del tenant; el titular administra sus propios registros | No por defecto |
+| Guardar/quitar favoritos | No | No | No | Puede guardar barberías activas y sus servicios/barberos; solo administra sus registros | No por defecto |
 
 ## Reglas para cambios
 

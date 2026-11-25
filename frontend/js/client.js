@@ -93,6 +93,13 @@ function trustedShopImage(value) {
   }
 }
 
+function shopCoverImage(shop) {
+  const savedCover = trustedShopImage(shop?.cover_image_url);
+  if (savedCover) return savedCover;
+  return (Array.isArray(shop?.gallery_images) ? shop.gallery_images : [])
+    .map(trustedShopImage).find(Boolean) || '';
+}
+
 function renderServiceCards() {
   const container = document.getElementById('publicServices');
   if (!container) return;
@@ -216,10 +223,23 @@ async function loadPublicFavorites() {
     const data = await response.json();
     publicFavorites = new Map((data.items || []).filter(item => item.barbershop_slug === shopSlug)
       .map(item => [`${item.target_type}:${Number(item.target_id)}`, Number(item.favorite_id)]));
+    syncShopFavoriteButton();
     renderServiceCards();
     const shop = window.__kingflowLoadedShop;
     if (shop) renderPublicTeam(shop.team);
   } catch (_) { /* Favorites are optional; keep public booking available. */ }
+}
+
+function syncShopFavoriteButton() {
+  const button = document.getElementById('shopFavoriteButton');
+  const shop = window.__kingflowLoadedShop;
+  if (!button || !shop) return;
+  const saved = publicFavorites.has(`barbershop:${Number(shop.id)}`);
+  button.dataset.favoriteType = 'barbershop';
+  button.dataset.favoriteId = String(Number(shop.id));
+  button.setAttribute('aria-label', `${saved ? 'Quitar' : 'Guardar'} ${shop.name} ${saved ? 'de' : 'en'} favoritos`);
+  button.setAttribute('aria-pressed', saved ? 'true' : 'false');
+  button.textContent = saved ? '♥ Barbería guardada' : '♡ Guardar barbería';
 }
 
 document.getElementById('publicServices')?.addEventListener('click', async (event) => {
@@ -229,6 +249,9 @@ document.getElementById('publicServices')?.addEventListener('click', async (even
 document.getElementById('publicTeam')?.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-favorite-type]');
   if (button) { event.stopPropagation(); await togglePublicFavorite(button); }
+});
+document.getElementById('shopFavoriteButton')?.addEventListener('click', async (event) => {
+  await togglePublicFavorite(event.currentTarget);
 });
 
 async function togglePublicFavorite(button) {
@@ -261,6 +284,7 @@ async function togglePublicFavorite(button) {
     }
     if (type === 'service') renderServiceCards();
     else renderPublicTeam(window.__kingflowLoadedShop?.team);
+    if (type === 'barbershop') syncShopFavoriteButton();
     bookResult.textContent = publicFavorites.has(key) ? 'Guardado en tus favoritos.' : 'Eliminado de tus favoritos.';
   } catch (error) { bookResult.textContent = error.message; }
   finally { button.disabled = false; }
@@ -332,11 +356,33 @@ async function loadShop() {
     }
     const description = document.getElementById('shopDescription');
     if (description && shop.description) description.textContent = shop.description;
-    const coverUrl = trustedShopImage(shop.cover_image_url);
+    const coverUrl = shopCoverImage(shop);
     const coverImage = document.getElementById('shopCover');
+    const coverFallback = document.getElementById('shopCoverFallback');
+    const coverCaption = document.getElementById('shopCoverCaption');
+    const coverFrame = document.querySelector('.hero-photo-wrap');
     if (coverImage && coverUrl) {
       coverImage.src = coverUrl;
-      coverImage.alt = `Foto de portada de ${shop.name}`;
+      coverImage.alt = `Imagen de ${shop.name}`;
+      coverImage.hidden = false;
+      if (coverFallback) coverFallback.hidden = true;
+      if (coverCaption) coverCaption.hidden = false;
+      coverFrame?.classList.add('has-cover-image');
+      coverImage.addEventListener('error', () => {
+        coverImage.hidden = true;
+        if (coverFallback) coverFallback.hidden = false;
+        if (coverCaption) coverCaption.hidden = true;
+        coverFrame?.classList.remove('has-cover-image');
+      }, { once: true });
+    } else {
+      const initial = document.getElementById('shopCoverInitial');
+      const name = document.getElementById('shopCoverName');
+      if (initial) initial.textContent = Array.from(String(shop.name || 'KF').trim())[0].toUpperCase();
+      if (name) name.textContent = shop.name || 'Barbería';
+      if (coverImage) coverImage.hidden = true;
+      if (coverFallback) coverFallback.hidden = false;
+      if (coverCaption) coverCaption.hidden = true;
+      coverFrame?.classList.remove('has-cover-image');
     }
     document.title = `${shop.name} - Cliente`;
     if (retryButton) retryButton.hidden = true;
@@ -372,6 +418,7 @@ async function loadShop() {
     renderServiceCards();
     renderPublicGallery(shop.gallery_images);
     renderPublicTeam(shop.team);
+    syncShopFavoriteButton();
     await loadPublicFavorites();
     renderCustomBookingQuestions(shop.booking_questions);
     if (serviceCatalog[0]) {

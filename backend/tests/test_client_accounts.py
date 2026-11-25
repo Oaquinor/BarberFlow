@@ -164,19 +164,27 @@ def test_client_favorites_are_persisted_tenant_scoped_and_private(
         "barbershop_slug": shop.slug, "target_type": "barber", "target_id": barber.id,
     })
     assert barber_save.status_code == 200
+    shop_save = client.post("/api/v1/client-account/favorites", headers=headers, json={
+        "barbershop_slug": shop.slug, "target_type": "barbershop", "target_id": shop.id,
+    })
+    assert shop_save.status_code == 200
 
     listing = client.get("/api/v1/client-account/favorites", headers=headers)
     assert listing.status_code == 200 and listing.headers["cache-control"] == "no-store"
     assert {(item["target_type"], item["name"]) for item in listing.json()["items"]} == {
         ("service", "Corte favorito"), ("barber", "Luis Barbero"),
+        ("barbershop", "Favoritos Test"),
     }
     denied = client.delete(f"/api/v1/client-account/favorites/{favorite_id}", headers=other_headers)
     assert denied.status_code == 404
     assert client.delete(f"/api/v1/client-account/favorites/{favorite_id}", headers=headers).status_code == 200
-    assert client.get("/api/v1/client-account/favorites", headers=headers).json()["items"][0]["target_type"] == "barber"
+    remaining_types = {item["target_type"] for item in client.get(
+        "/api/v1/client-account/favorites", headers=headers,
+    ).json()["items"]}
+    assert remaining_types == {"barber", "barbershop"}
     restored = client.post("/api/v1/client-account/favorites", headers=headers, json=payload)
     assert restored.status_code == 200 and restored.json()["favorite_id"] == favorite_id
-    assert test_db.query(ClientAccountFavorite).filter_by(account_user_id=account.id, is_deleted=False).count() == 2
+    assert test_db.query(ClientAccountFavorite).filter_by(account_user_id=account.id, is_deleted=False).count() == 3
 
 
 def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_account(

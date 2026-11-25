@@ -33,6 +33,15 @@
     return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`);
   }
 
+  function trustedFavoriteImage(value) {
+    if (typeof value !== "string" || !value.trim()) return "";
+    try {
+      const url = new URL(value, apiRoot);
+      return url.origin === new URL(apiRoot).origin && ["http:", "https:"].includes(url.protocol) &&
+        !url.username && !url.password ? url.href : "";
+    } catch (_) { return ""; }
+  }
+
   function renderNextAppointment(items) {
     const container = document.getElementById("nextAppointmentContent");
     container.replaceChildren();
@@ -182,8 +191,18 @@
       card.className = "favorite-card";
       const title = document.createElement("h3");
       title.textContent = item.name;
+      const imageUrl = trustedFavoriteImage(item.image_url);
+      if (imageUrl) {
+        const image = document.createElement("img");
+        image.className = "favorite-image";
+        image.src = imageUrl;
+        image.alt = item.name;
+        image.loading = "lazy";
+        card.append(image);
+      }
       const description = document.createElement("p");
-      description.textContent = `${item.target_type === "service" ? "Servicio" : "Barbero"} · ${item.barbershop}`;
+      const targetLabel = { service: "Servicio", barber: "Barbero", barbershop: "Barbería" }[item.target_type] || "Favorito";
+      description.textContent = item.target_type === "barbershop" ? targetLabel : `${targetLabel} · ${item.barbershop}`;
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "account-action";
@@ -199,7 +218,7 @@
       const visit = document.createElement("a");
       visit.className = "button-secondary favorite-visit";
       visit.href = `/client.html?shop=${encodeURIComponent(item.barbershop_slug)}`;
-      visit.textContent = "Ver barbería";
+      visit.textContent = item.target_type === "barbershop" ? "Volver a esta barbería" : "Ver barbería";
       card.append(title, description, remove, visit);
       favoritesList.append(card);
     });

@@ -46,6 +46,10 @@ La migración `033_client_accounts` guarda hashes SHA-256 de enlaces de verifica
 
 La migración `033_client_accounts` vincula una identidad global de cliente verificada con un registro CRM independiente por barbería. Hay unicidad por `(account_user_id, barbershop_id)` y por `crm_client_user_id`. No se deduce pertenencia a partir del teléfono; las citas antiguas se añaden mediante su token privado de seguimiento.
 
+La migración `034_client_account_favorites` almacena favoritos de barberos y servicios por cuenta y barbería. La unicidad por `(account_user_id, barbershop_id, target_type, target_id)` hace idempotentes las altas y permite restaurar una baja lógica. Como el objetivo es polimórfico, los endpoints comprueban en cada lectura y escritura que el barbero o servicio exista, esté activo y pertenezca a la barbería indicada.
+
+La migración `035_client_account_barbershop_favorites` permite guardar también la barbería. Al bajar a `034`, el `CHECK` permanece como superconjunto compatible para no borrar favoritos nuevos; la migración siguiente que baja a `033` elimina la tabla completa.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

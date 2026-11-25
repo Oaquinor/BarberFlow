@@ -213,3 +213,50 @@ test("customer can review and remove a saved service from account favorites", as
   await expect(page.getByText("Aún no guardas servicios ni barberos.")).toBeVisible();
   expect(deletedFavorite).toContain("/client-account/favorites/71");
 });
+
+test("customer can save and unsave a barbershop from its public page", async ({ page }) => {
+  let savedPayload;
+  let favoriteIsSaved = false;
+  await page.addInitScript(() => {
+    sessionStorage.setItem("token", "client-access");
+    sessionStorage.setItem("refresh_token", "client-refresh");
+  });
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: {
+    id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client",
+    barbershop_id: null, is_verified: true, phone: "18095551213",
+  } }));
+  await page.route("**/api/v1/public/favorite-shop", (route) => route.fulfill({ json: {
+    id: 25, name: "Barbería Favorita", slug: "favorite-shop", currency: "DOP",
+    timezone: "America/Santo_Domingo", cancellation_window_hours: 12,
+    opening_time: "09:00:00", closing_time: "19:00:00", team: [],
+    gallery_images: [], booking_questions: [], public_theme: "light",
+  } }));
+  await page.route("**/api/v1/public/favorite-shop/services", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/public/favorite-shop/slots**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/client-account/favorites**", async (route) => {
+    const method = route.request().method();
+    if (method === "GET") {
+      await route.fulfill({ json: { items: favoriteIsSaved ? [{
+        favorite_id: 84, barbershop: "Barbería Favorita", barbershop_slug: "favorite-shop",
+        target_type: "barbershop", target_id: 25, name: "Barbería Favorita", image_url: null,
+      }] : [] } });
+    } else if (method === "POST") {
+      savedPayload = route.request().postDataJSON();
+      favoriteIsSaved = true;
+      await route.fulfill({ json: { success: true, favorite_id: 84 } });
+    } else {
+      favoriteIsSaved = false;
+      await route.fulfill({ json: { success: true } });
+    }
+  });
+
+  await page.goto("/client.html?shop=favorite-shop");
+  const favoriteButton = page.locator("#shopFavoriteButton");
+  await page.screenshot({ path: "../docs/evidence/client-barbershop-favorite-before.png", fullPage: true });
+  await favoriteButton.click();
+  await expect(favoriteButton).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({ path: "../docs/evidence/client-barbershop-favorite-after.png", fullPage: true });
+  expect(savedPayload).toEqual({ barbershop_slug: "favorite-shop", target_type: "barbershop", target_id: 25 });
+  await favoriteButton.click();
+  await expect(favoriteButton).toHaveAttribute("aria-pressed", "false");
+});

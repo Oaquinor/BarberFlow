@@ -202,7 +202,12 @@ def list_client_favorites(response: Response, user: CurrentUser, db: Session = D
     ).order_by(ClientAccountFavorite.created_at.desc()).all()
     items = []
     for favorite, shop in favorites:
-        if favorite.target_type == "service":
+        if favorite.target_type == "barbershop":
+            target = shop
+            name = shop.name
+            image_url = shop.logo_url or shop.cover_image_url
+            details = {}
+        elif favorite.target_type == "service":
             target = db.query(Service).filter(
                 Service.id == favorite.target_id,
                 Service.barbershop_id == shop.id,
@@ -210,6 +215,8 @@ def list_client_favorites(response: Response, user: CurrentUser, db: Session = D
                 Service.is_deleted == False,
             ).first()
             details = {"price_cents": target.price, "duration_minutes": target.duration_minutes} if target else {}
+            name = target.name if target else None
+            image_url = target.image_url if target else None
         else:
             target = db.query(User).filter(
                 User.id == favorite.target_id,
@@ -219,14 +226,16 @@ def list_client_favorites(response: Response, user: CurrentUser, db: Session = D
                 User.is_deleted == False,
             ).first()
             details = {}
+            name = target.full_name if target else None
+            image_url = target.avatar_url if target else None
         if not target:
             continue
         items.append({
             "favorite_id": favorite.id, "barbershop": shop.name,
             "barbershop_slug": shop.slug, "target_type": favorite.target_type,
             "target_id": target.id,
-            "name": target.name if favorite.target_type == "service" else target.full_name,
-            "image_url": target.image_url if favorite.target_type == "service" else target.avatar_url,
+            "name": name,
+            "image_url": image_url,
             **details,
         })
     return {"items": items}
@@ -244,7 +253,10 @@ def save_client_favorite(
     ).first()
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no disponible")
-    if data.target_type == "service":
+    target_id = shop.id if data.target_type == "barbershop" else data.target_id
+    if data.target_type == "barbershop":
+        target = shop
+    elif data.target_type == "service":
         target = db.query(Service).filter(
             Service.id == data.target_id, Service.barbershop_id == shop.id,
             Service.is_active == True, Service.is_deleted == False,
@@ -255,12 +267,12 @@ def save_client_favorite(
             User.role == "barber", User.is_active == True, User.is_deleted == False,
         ).first()
     if not target:
-        raise HTTPException(status_code=404, detail="El servicio o barbero no está disponible")
+        raise HTTPException(status_code=404, detail="La barbería, servicio o barbero no está disponible")
     favorite = db.query(ClientAccountFavorite).filter(
         ClientAccountFavorite.account_user_id == user.id,
         ClientAccountFavorite.barbershop_id == shop.id,
         ClientAccountFavorite.target_type == data.target_type,
-        ClientAccountFavorite.target_id == data.target_id,
+        ClientAccountFavorite.target_id == target_id,
     ).with_for_update().first()
     changed = False
     if favorite and favorite.is_deleted:
@@ -270,7 +282,7 @@ def save_client_favorite(
     elif not favorite:
         favorite = ClientAccountFavorite(
             account_user_id=user.id, barbershop_id=shop.id,
-            target_type=data.target_type, target_id=data.target_id,
+            target_type=data.target_type, target_id=target_id,
         )
         db.add(favorite)
         changed = True
@@ -278,7 +290,7 @@ def save_client_favorite(
         db.flush()
         record_audit(db, user, "client_account.favorite_saved", "client_account_favorite",
                      favorite.id, shop.id,
-                     {"target_type": data.target_type, "target_id": data.target_id})
+                     {"target_type": data.target_type, "target_id": target_id})
     db.commit()
     return {"success": True, "favorite_id": favorite.id}
 

@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="stylesheet" href="/css/ui-feedback.css">
-  <link rel="stylesheet" href="/css/client.css?v=20261125-account-4">
+  <link rel="stylesheet" href="/css/client.css?v=20261125-account-6">
   <title>Reserva - KingFlow Barber</title>
 </head>
 <body>
@@ -32,11 +32,16 @@
           <p class="eyebrow"><span class="live-dot"></span> RESERVAS ABIERTAS</p>
           <h1 id="heroTitle">Tu estilo.<br><em>En buenas manos.</em></h1>
           <p id="shopDescription" class="hero-description">Un buen corte empieza con una buena conversación. Elige el servicio y cuéntanos qué tienes en mente.</p>
-          <div class="hero-actions"><a class="hero-primary-cta" href="#reserva">Reservar mi cita <span>↗</span></a><a class="hero-cta" href="#servicios">Ver servicios <span>↓</span></a></div>
+          <div class="hero-actions"><a class="hero-primary-cta" href="#reserva">Reservar mi cita <span>↗</span></a><a class="hero-cta" href="#servicios">Ver servicios <span>↓</span></a><button id="shopFavoriteButton" class="public-favorite-button shop-favorite-button" type="button" aria-pressed="false">♡ Guardar barbería</button></div>
         </div>
         <div class="hero-art hero-photo-wrap">
-          <img id="shopCover" class="hero-photo" src="/images/barbershop-hero.png" alt="Barbero dominicano definiendo cuidadosamente un corte degradado" fetchpriority="high">
-          <span class="hero-photo-caption">PRECISIÓN · ESTILO · DETALLE</span>
+          <img id="shopCover" class="hero-photo" alt="" hidden fetchpriority="high">
+          <div id="shopCoverFallback" class="shop-cover-fallback" aria-hidden="true">
+            <span id="shopCoverInitial" class="shop-cover-initial">KF</span>
+            <span id="shopCoverName" class="shop-cover-name">KingFlow Barber</span>
+            <span class="shop-cover-caption">EL ESPACIO · EL ESTILO · EL EQUIPO</span>
+          </div>
+          <span id="shopCoverCaption" class="hero-photo-caption" hidden>EL ESPACIO · EL ESTILO · EL EQUIPO</span>
         </div>
         <div class="hero-rule"><span>01 <i>ELIGE</i></span><span>02 <i>PERSONALIZA</i></span><span>03 <i>RESERVA</i></span></div>
       </section>
@@ -117,6 +122,6 @@
     </main>
     <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
-  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-account-4"></script>
+  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-account-6"></script>
 </body>
 </html>

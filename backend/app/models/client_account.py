@@ -39,11 +39,14 @@ class ClientAccountShopLink(BaseModel):
 
 
 class ClientAccountFavorite(BaseModel):
-    """A customer's saved barber or service within one tenant."""
+    """A customer's saved barbershop, barber, or service within one tenant."""
 
     __tablename__ = "client_account_favorites"
     __table_args__ = (
-        CheckConstraint("target_type IN ('barber', 'service')", name="ck_client_account_favorites_type"),
+        CheckConstraint(
+            "target_type IN ('barber', 'service', 'barbershop')",
+            name="ck_client_account_favorites_type",
+        ),
         UniqueConstraint(
             "account_user_id", "barbershop_id", "target_type", "target_id",
             name="uq_client_account_favorite_target",

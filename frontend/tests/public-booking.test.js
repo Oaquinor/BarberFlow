@@ -101,6 +101,23 @@ test('public gallery ignores missing and cross-origin image URLs', () => {
   assert.equal(sandbox.trustedShopImage('/uploads/barbershops/1/photo.png'), 'https://api.kingflow.test/uploads/barbershops/1/photo.png');
 });
 
+test('public hero uses the tenant cover or an image from its own gallery', () => {
+  const start = clientScript.indexOf('function trustedShopImage(');
+  const end = clientScript.indexOf('\nfunction renderServiceCards', start);
+  const helperSource = clientScript.slice(start, end);
+  const sandbox = { URL, API_ROOT: 'https://api.kingflow.test' };
+  vm.runInNewContext(`${helperSource}\nthis.shopCoverImage = shopCoverImage;`, sandbox);
+  assert.equal(sandbox.shopCoverImage({
+    cover_image_url: '/uploads/tenant-cover.jpg',
+    gallery_images: ['/uploads/work-1.jpg'],
+  }), 'https://api.kingflow.test/uploads/tenant-cover.jpg');
+  assert.equal(sandbox.shopCoverImage({
+    cover_image_url: 'https://untrusted.example/cover.jpg',
+    gallery_images: ['javascript:alert(1)', '/uploads/work-1.jpg'],
+  }), 'https://api.kingflow.test/uploads/work-1.jpg');
+  assert.equal(sandbox.shopCoverImage({ gallery_images: [] }), '');
+});
+
 test('shop profile loading exposes a retry control after server and network failures', async () => {
   const start = clientScript.indexOf('async function loadShop()');
   const end = clientScript.indexOf('\nfunction selectedServiceDuration', start);

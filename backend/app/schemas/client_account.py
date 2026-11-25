@@ -78,5 +78,5 @@ class ClientAccountProfileUpdateRequest(BaseModel):
 
 class ClientAccountFavoriteRequest(BaseModel):
     barbershop_slug: str = Field(..., min_length=1, max_length=100)
-    target_type: Literal["barber", "service"]
+    target_type: Literal["barber", "service", "barbershop"]
     target_id: int = Field(..., gt=0)

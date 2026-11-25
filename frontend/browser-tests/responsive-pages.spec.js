@@ -55,6 +55,7 @@ for (const viewport of viewports) {
                 name: "Barbería de prueba",
                 currency: "DOP",
                 timezone: "America/Santo_Domingo",
+                gallery_images: [],
               } });
             }
           });
@@ -120,6 +121,8 @@ for (const viewport of viewports) {
         expect(outOfBounds, `${label} visible controls outside viewport`).toEqual([]);
 
         if (route === "/client.html") {
+          await expect(page.locator("#shopCoverFallback")).toBeVisible();
+          await expect(page.locator("#shopCover")).toBeHidden();
           await expect(
             page.locator("#showBookBtn"),
             `Client page errors: ${pageErrors.join(" | ") || "none"}`,
