@@ -82,10 +82,10 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_inventory_movement_retail_sale", table_name="inventory_movements")
     op.drop_constraint(
         "fk_inventory_movement_retail_sale", "inventory_movements", type_="foreignkey"
     )
+    op.drop_index("ix_inventory_movement_retail_sale", table_name="inventory_movements")
     op.drop_column("inventory_movements", "retail_sale_id")
     op.drop_table("retail_sale_lines")
     op.drop_table("retail_sales")
