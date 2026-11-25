@@ -19,3 +19,9 @@
 ## D-004: comunicar estado por evidencia
 
 **Decisión:** nombres del mandato (marketplace, Style Passport, Live Chair, Smart Match, Coach, Studio) permanecen como pendientes hasta tener código conectado, permisos, UX, migración y pruebas.
+
+## D-005: la lista de espera es una petición, no una reserva
+
+**Decisión:** guardar solicitudes públicas de contacto de forma independiente a `appointments`; nunca bloquear disponibilidad, consumir límites de citas del plan ni mostrarlas como turno confirmado. La barbería debe contactar manualmente y crear la cita por el flujo existente. Cada intento incluye UUID idempotente, guardado únicamente como hash único por tenant.
+
+**Motivo:** una solicitud sin horario confirmado no representa una obligación del negocio ni ingreso. El perfil público limita su captura con rate limiting; el owner ve los datos dentro del tenant, los estados quedan auditados y los nombres de servicio/profesional se guardan como snapshot.

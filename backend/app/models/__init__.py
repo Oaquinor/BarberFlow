@@ -26,6 +26,7 @@ from app.models.support_ticket import SupportTicket
 from app.models.client_account import (
     ClientAccountFavorite, ClientAccountShopLink, ClientAccountVerification,
 )
+from app.models.booking_waitlist_entry import BookingWaitlistEntry
 
 __all__ = [
     "BaseModel",
@@ -59,4 +60,5 @@ __all__ = [
     "ClientAccountShopLink",
     "ClientAccountVerification",
     "ClientAccountFavorite",
+    "BookingWaitlistEntry",
 ]

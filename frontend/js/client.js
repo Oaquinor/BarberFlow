@@ -7,6 +7,7 @@ let availableSlots = [];
 let serviceCatalog = [];
 let publicFavorites = new Map();
 let slotsRequestSequence = 0;
+let waitlistRequestKey = null;
 
 function q(name) {
   return new URLSearchParams(window.location.search).get(name);
@@ -36,6 +37,9 @@ const barberSelect = document.getElementById('barberSelect');
 const scheduledTimeSelect = document.getElementById('scheduledTime');
 const bookBtn = document.getElementById('bookBtn');
 const bookResult = document.getElementById('bookResult');
+const waitlistForm = document.getElementById('waitlistForm');
+const waitlistToggleBtn = document.getElementById('waitlistToggleBtn');
+const waitlistSubmitBtn = document.getElementById('waitlistSubmitBtn');
 const trackBtn = document.getElementById('trackBtn');
 const trackList = document.getElementById('trackList');
 const supportBtn = document.getElementById('supportBtn');
@@ -530,7 +534,14 @@ async function loadSlots(durationMinutes = selectedServiceDuration()) {
   availableSlots = slots;
 
   const selectedBarberId = barberSelect?.value || '';
-  const barbers = new Map(availableSlots.map(slot => [Number(slot.barber_id), slot.barber_name]));
+  const barbers = new Map((window.__kingflowLoadedShop?.team || []).map((barber) => [
+    Number(barber.id), barber.name,
+  ]));
+  availableSlots.forEach((slot) => {
+    if (!barbers.has(Number(slot.barber_id))) {
+      barbers.set(Number(slot.barber_id), slot.barber_name);
+    }
+  });
   if (barberSelect) {
     barberSelect.innerHTML = '<option value="">Cualquier barbero</option>' +
       [...barbers.entries()].map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('');
@@ -546,14 +557,75 @@ function renderAvailableSlots() {
 
   if (!slots.length) {
     scheduledTimeSelect.innerHTML = '<option value="">Sin turnos disponibles</option>';
+    if (waitlistToggleBtn) waitlistToggleBtn.hidden = false;
     return;
   }
 
+  if (waitlistToggleBtn) waitlistToggleBtn.hidden = true;
   scheduledTimeSelect.innerHTML = slots.map(s => {
     const label = `${new Date(s.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(s.barber_name)}`;
     return `<option value="${Number(s.availability_id)}">${label}</option>`;
   }).join('');
 }
+
+waitlistToggleBtn?.addEventListener('click', () => {
+  waitlistForm.hidden = !waitlistForm.hidden;
+  if (!waitlistForm.hidden) document.getElementById('waitlistDateStart')?.focus();
+});
+
+waitlistForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const result = document.getElementById('waitlistResult');
+  const startDate = document.getElementById('waitlistDateStart').value || null;
+  const endDate = document.getElementById('waitlistDateEnd').value || null;
+  if (startDate && endDate && endDate < startDate) {
+    result.textContent = 'La fecha “hasta” debe ser igual o posterior a la fecha “desde”.';
+    return;
+  }
+  const payload = {
+    client_name: document.getElementById('clientName').value.trim(),
+    phone: document.getElementById('clientPhone').value.trim(),
+    service_id: Number(serviceSelect.value),
+    barber_id: Number(barberSelect?.value) || null,
+    preferred_date_start: startDate,
+    preferred_date_end: endDate,
+    notes: document.getElementById('waitlistNotes').value.trim() || null,
+  };
+  if (!payload.client_name || !payload.phone || !payload.service_id) {
+    result.textContent = 'Completa tu nombre, teléfono y servicio antes de solicitar el aviso.';
+    return;
+  }
+  if (!waitlistRequestKey) {
+    if (!window.crypto?.randomUUID) {
+      result.textContent = 'Este navegador no permite enviar una solicitud segura. Actualízalo e inténtalo de nuevo.';
+      return;
+    }
+    waitlistRequestKey = window.crypto.randomUUID();
+  }
+  payload.idempotency_key = waitlistRequestKey;
+  waitlistSubmitBtn.disabled = true;
+  result.textContent = 'Guardando tu solicitud…';
+  let accepted = false;
+  try {
+    const response = await fetch(`${API_BASE}/public/${encodeURIComponent(shopSlug)}/waitlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'No se pudo guardar la solicitud.');
+    accepted = true;
+    result.textContent = data.message || 'Tu solicitud quedó registrada.';
+    waitlistForm.reset();
+    document.getElementById('waitlistFields').hidden = true;
+    waitlistSubmitBtn.disabled = true;
+    if (waitlistToggleBtn) waitlistToggleBtn.hidden = true;
+  } catch (error) {
+    result.textContent = error.message || 'No se pudo confirmar el envío. Intenta nuevamente.';
+  } finally {
+    waitlistSubmitBtn.disabled = accepted;
+  }
+});
 
 serviceSelect.addEventListener('change', () => loadSlots(selectedServiceDuration()));
 barberSelect?.addEventListener('change', renderAvailableSlots);

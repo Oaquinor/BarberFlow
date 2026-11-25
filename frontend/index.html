@@ -843,6 +843,12 @@
                     <p id="ownerCommissionsResult" role="status"></p>
                 </section>
                 <section class="card">
+                    <div class="services-header"><div><h3>Lista de espera</h3><p>Solicitudes reales pendientes de contacto; no representan citas.</p></div><button id="refreshOwnerWaitlist" class="btn-secondary" type="button">Actualizar</button></div>
+                    <div class="field"><label for="ownerWaitlistStatus">Estado</label><select id="ownerWaitlistStatus"><option value="">Todos</option><option value="new">Pendientes</option><option value="contacted">Contactados</option><option value="closed">Cerrados</option></select></div>
+                    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Servicio</th><th>Barbero</th><th>Fechas preferidas</th><th>Detalle</th><th>Recibida</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerWaitlistBody"></tbody></table></div>
+                    <p id="ownerWaitlistResult" role="status" aria-live="polite"></p>
+                </section>
+                <section class="card">
                     <div class="services-header"><h3>Clientes registrados</h3><button id="showOwnerClientCreate" class="btn-primary" type="button">Agregar cliente</button></div>
                     <div class="field"><label for="ownerClientSearch">Buscar por nombre, teléfono o correo</label><input id="ownerClientSearch" type="search" maxlength="100" autocomplete="off"></div>
                     <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Citas</th><th>Completadas</th><th>Última visita</th><th>Total pagado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerClientsBody"></tbody></table></div>
@@ -956,7 +962,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-booking-answers-2"></script>
+    <script src="js/main.js?v=20261125-waitlist-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

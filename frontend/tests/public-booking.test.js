@@ -46,6 +46,7 @@ test('a slower old availability response cannot replace the selected service slo
   const source = `let slotsRequestSequence = 0;\n${clientScript.slice(start, end)}`;
   const pending = new Map();
   const sandbox = {
+    window: { __kingflowLoadedShop: { team: [] } },
     barberSelect: { value: '', innerHTML: '' },
     scheduledTimeSelect: { innerHTML: '' },
     selectedServiceDuration: () => 30,

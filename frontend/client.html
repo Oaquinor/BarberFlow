@@ -104,6 +104,19 @@
               <button id="refreshSlotsBtn" type="button" class="secondary refresh-button">↻ Actualizar horarios</button>
               <button id="bookBtn" class="book-button" type="button">Confirmar cita <span>→</span></button>
               <p id="bookResult" class="result-message" role="status"></p>
+              <button id="waitlistToggleBtn" class="secondary" type="button" hidden>Avísenme si se libera un horario</button>
+              <form id="waitlistForm" class="consultation" hidden>
+                <div class="form-heading compact"><span class="step-number">+</span><div><h3>Lista de espera</h3><p>Deja tu preferencia. Esta solicitud no crea una cita ni garantiza un horario.</p></div></div>
+                <div id="waitlistFields">
+                  <div class="form-grid">
+                    <div class="field"><label for="waitlistDateStart">Desde (opcional)</label><input id="waitlistDateStart" type="date"></div>
+                    <div class="field"><label for="waitlistDateEnd">Hasta (opcional)</label><input id="waitlistDateEnd" type="date"></div>
+                  </div>
+                  <div class="field"><label for="waitlistNotes">Preferencia de horario o detalle (opcional)</label><textarea id="waitlistNotes" maxlength="500" placeholder="Ej.: tardes después de las 5"></textarea></div>
+                  <button id="waitlistSubmitBtn" class="book-button" type="submit">Solicitar aviso <span>→</span></button>
+                </div>
+                <p id="waitlistResult" class="result-message" role="status"></p>
+              </form>
             </section>
             <section id="trackSection" class="booking-form" style="display:none">
               <div class="form-heading"><span class="step-number">⌕</span><div><h3>Consulta tu cita</h3><p>El enlace privado recibido al reservar.</p></div></div>
@@ -122,6 +135,6 @@
     </main>
     <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
-  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-booking-answers-2"></script>
+  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-waitlist-1"></script>
 </body>
 </html>

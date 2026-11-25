@@ -44,6 +44,7 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `GET` | `/public/{slug}/services` | Catálogo activo |
 | `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
 | `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
+| `POST` | `/public/{slug}/waitlist` | Registra una solicitud sin compromiso para que la barbería contacte al cliente; limita por negocio/IP y conserva snapshots del servicio/profesional en MySQL |
 | `POST` | `/public/{slug}/track` | Consulta con token privado |
 | `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado o sesión autenticada de la cuenta propietaria |
 | `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
@@ -66,6 +67,8 @@ La cuenta cliente puede actualizar nombre/teléfono, descargar perfil e historia
 ```
 
 `barber_id` es opcional para integraciones anteriores. La página pública permite elegir un barbero entre los que tienen disponibilidad y envía su ID junto con la hora; el backend valida que el turno siga disponible para ese barbero y esa barbería.
+
+La solicitud de lista de espera admite `client_name`, `phone`, `service_id`, un `idempotency_key` UUID y opciones `barber_id`, `preferred_date_start`, `preferred_date_end` y `notes`. La clave se conserva únicamente como hash, tiene unicidad por barbería y permite reintentar una solicitud si se pierde la respuesta. El teléfono se guarda solo con dígitos; las fechas deben formar un rango dentro del límite de anticipación de reservas configurado. Recibir una solicitud no crea una cita, no reserva un turno y no garantiza disponibilidad. El endpoint aplica el límite MySQL/IP utilizado para reservas.
 
 Las solicitudes de reserva para barberías con suscripción activa se limitan por IP y barbería a 10 por hora, con un límite adicional de 60 por IP por hora entre todas las barberías. El backend guarda únicamente hashes con clave secreta para aplicar la cuota y responde `429` con `Retry-After` al superarla.
 
@@ -119,8 +122,12 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `POST` | `/owner/clients` | Registra un cliente manual en el tenant, aplica el límite del plan y audita el alta |
 | `PUT` | `/owner/clients/{client_id}` | Actualiza nombre y teléfono de un cliente del tenant, con auditoría |
 | `PUT` | `/owner/clients/{client_id}/status` | Activa o desactiva el acceso del cliente sin borrar su historial |
+| `GET` | `/owner/waitlist?status=new&limit=50&offset=0` | Consulta solicitudes de espera del tenant autenticado; permite filtrar `new`, `contacted` o `closed` |
+| `PUT` | `/owner/waitlist/{entry_id}/status` | Marca la solicitud `new`, `contacted` o `closed`; registra hora del contacto y auditoría |
 
 El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y rechaza duplicados del mismo tenant. Crea una ficha sin acceso de cuenta ni cita asociada.
+
+La cola de espera solo la consulta el owner del negocio correspondiente; barberos y otros tenants no tienen acceso. Incluye el teléfono necesario para el seguimiento comercial, pero no devuelve ningún contacto a la API pública.
 | `GET` | `/onboarding/profile` | Lee el perfil, horario y zona horaria de la barbería autenticada |
 | `PUT` | `/onboarding/business-settings` | Actualiza perfil público, horario, zona, tema, preguntas y anticipación de cancelación; registra auditoría |
 | `PUT` | `/onboarding/brand-colors` | Guarda los colores de marca del tenant |

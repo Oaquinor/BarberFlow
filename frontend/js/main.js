@@ -1365,6 +1365,7 @@ async function loadOwnerManagement() {
             }
         }
         await loadOwnerClients();
+        await loadOwnerWaitlist();
         await loadDemandForecast();
     } catch (error) {
         barberBody.textContent = '';
@@ -1372,6 +1373,65 @@ async function loadOwnerManagement() {
         if (clientsResult) clientsResult.textContent = error.message || 'No se pudo cargar la administración.';
     }
 }
+
+async function loadOwnerWaitlist() {
+    const body = document.getElementById('ownerWaitlistBody');
+    const result = document.getElementById('ownerWaitlistResult');
+    if (!body || !result || currentUser?.role !== 'barbershop_owner') return;
+    result.textContent = 'Cargando solicitudes…';
+    body.replaceChildren();
+    const status = document.getElementById('ownerWaitlistStatus')?.value || '';
+    const query = new URLSearchParams({ limit: '100' });
+    if (status) query.set('status', status);
+    try {
+        const data = await ownerFetch(`/owner/waitlist?${query.toString()}`);
+        const items = data.items || [];
+        body.innerHTML = items.map(entry => {
+            const phone = String(entry.phone || '').replace(/\D/g, '');
+            const waUrl = phone.length >= 6 && phone.length <= 20
+                ? `https://wa.me/${phone}?text=${encodeURIComponent(`Hola ${entry.client_name}, recibimos tu solicitud para ${entry.service_name}. ¿Aún deseas que te contactemos cuando haya disponibilidad?`)}`
+                : '';
+            const dateRange = [entry.preferred_date_start, entry.preferred_date_end].filter(Boolean);
+            const dateLabel = dateRange.length === 2 ? `${dateRange[0]} – ${dateRange[1]}` : dateRange[0] || 'Flexible';
+            const statusLabel = { new: 'Pendiente', contacted: 'Contactado', closed: 'Cerrado' }[entry.status] || 'Desconocido';
+            const nextStatus = entry.status === 'new' ? 'contacted' : entry.status === 'contacted' ? 'closed' : 'new';
+            const actionLabel = nextStatus === 'contacted' ? 'Marcar contactado' : nextStatus === 'closed' ? 'Cerrar solicitud' : 'Reabrir';
+            return `<tr><td data-label="Cliente">${escapeHtml(entry.client_name)}<br><a href="tel:${phone}">${escapeHtml(entry.phone)}</a></td>
+                <td data-label="Servicio">${escapeHtml(entry.service_name)}</td><td data-label="Barbero">${escapeHtml(entry.barber_name || 'Cualquiera')}</td>
+                <td data-label="Fechas preferidas">${escapeHtml(dateLabel)}</td><td data-label="Detalle">${escapeHtml(entry.notes || '—')}</td>
+                <td data-label="Recibida">${escapeHtml(new Date(entry.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
+                <td data-label="Estado">${escapeHtml(statusLabel)}</td><td data-label="Acciones">${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
+                <button class="btn-secondary owner-waitlist-status" data-id="${Number(entry.id)}" data-next-status="${nextStatus}" type="button">${actionLabel}</button></td></tr>`;
+        }).join('');
+        result.textContent = items.length ? `${items.length} solicitud(es) · ${Number(data.total)} en este filtro` : 'No hay solicitudes para mostrar.';
+    } catch (error) {
+        body.replaceChildren();
+        result.textContent = error.message || 'No se pudo cargar la lista de espera.';
+    }
+}
+
+document.getElementById('refreshOwnerWaitlist')?.addEventListener('click', loadOwnerWaitlist);
+document.getElementById('ownerWaitlistStatus')?.addEventListener('change', loadOwnerWaitlist);
+document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('.owner-waitlist-status');
+    if (!button) return;
+    const id = Number(button.dataset.id);
+    const status = button.dataset.nextStatus;
+    if (!Number.isInteger(id) || id <= 0 || !['new', 'contacted', 'closed'].includes(status)) return;
+    if (status === 'closed' && !await showConfirmation('¿Cerrar esta solicitud de lista de espera?', {
+        title: 'Cerrar solicitud', confirmLabel: 'Cerrar', danger: true,
+    })) return;
+    button.disabled = true;
+    try {
+        await ownerFetch(`/owner/waitlist/${id}/status`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+        });
+        await loadOwnerWaitlist();
+    } catch (error) {
+        button.disabled = false;
+        document.getElementById('ownerWaitlistResult').textContent = error.message || 'No se pudo actualizar la solicitud.';
+    }
+});
 
 function setupBrandPreview() {
     const primary = document.getElementById('businessSettingsPrimary');
