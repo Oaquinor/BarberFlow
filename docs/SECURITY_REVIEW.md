@@ -1,6 +1,6 @@
 # Revisión defensiva de seguridad
 
-**Alcance:** revisión defensiva del código local al 25-11-2026. La migración `046_privileged_user_mfa` añade MFA opcional para owner/superadmin. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
+**Alcance:** revisión defensiva del código local al 25-11-2026. `046_privileged_user_mfa` añade MFA opcional para owner/superadmin; GitHub Actions `45722084213` aprobó migración MySQL limpia, downgrade/recuperación, 204 pruebas backend, tres motores de navegador y contenedores. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
 
 ## Controles observados
 
