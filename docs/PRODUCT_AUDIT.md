@@ -53,10 +53,10 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Validación local y límites
 
-- `python -m pytest backend/tests -q`: 69 passed, 99 skipped. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; la URL/base de prueba no estuvo disponible. No se modificó la base de datos de desarrollo.
-- `frontend`: suite unitaria del corte anterior 108 passed; el test nuevo del catálogo comprueba origen confiable y fallback visual. `npm run test:browser -- --reporter=line` 24 passed en el corte anterior; el último cambio de catálogo aún requiere repetir navegador.
-- `whatsapp-service`: `npm test` 8 passed. `npm audit` en ambos paquetes: cero vulnerabilidades reportadas.
-- `pip-audit` forma parte de CI; no está instalado localmente en este entorno, por lo que el análisis de dependencias Python no se considera validado aquí.
+- `python -m pytest backend/tests -q`: 69 passed, 101 skipped. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; no había instancia configurada. No se modificó la base de datos de desarrollo.
+- `frontend`: `npm test` 110 passed; `npm run test:browser` 29 passed, incluidas las pruebas del portal de cliente y revisión responsive disponible en el proyecto.
+- Alembic reconoce `033_client_accounts` como head y `python -m alembic upgrade 032_cancellation_window:033_client_accounts --sql` generó el SQL MySQL esperado. No se aplicó la migración a una base de datos real en este entorno.
+- `pip-audit` forma parte de CI; no se ejecutó aquí. Las pruebas del servicio WhatsApp tampoco se volvieron a ejecutar en este incremento.
 - No se hizo prueba de penetración, prueba de carga, despliegue productivo ni verificación de entrega real con SMTP/WhatsApp.
 
 ## Siguiente orden de entrega
