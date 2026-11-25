@@ -63,3 +63,4 @@ Los módulos antiguos de rutas async de citas y modo en servicio, que no estaban
 - `docs/API_REFERENCE.md`: rutas activas, permisos y contratos principales.
 - `docs/DATABASE.md`: configuración y operaciones de base de datos.
 - `docs/STANDARDS.md`: convenciones de contribución; cualquier ejemplo debe mantenerse alineado con MySQL y los patrones realmente usados.
+- `docs/PRODUCT_AUDIT.md`, `docs/PERMISSION_MATRIX.md`, `docs/DESIGN_SYSTEM.md`, `docs/DEVELOPMENT_STANDARD.md`, `docs/DECISIONS.md` y `docs/SECURITY_REVIEW.md`: corte de estado, permisos, tokens visuales, estándar y riesgos conocidos.

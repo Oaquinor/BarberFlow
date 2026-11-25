@@ -30,7 +30,8 @@ test('barber calendar defaults use the shop date when UTC is already on the next
 });
 
 test('slot date defaults to the backend business date after the dashboard loads', () => {
-  const dashboardLoad = source.indexOf('await loadBarberDashboardData();', source.indexOf("document.getElementById('loginForm')"));
+  const dashboardInit = source.indexOf('async function initializeAuthenticatedDashboard(');
+  const dashboardLoad = source.indexOf('await loadBarberDashboardData();', dashboardInit);
   const slotDefault = source.indexOf('slotDate.value = dashboardBusinessDate || businessTodayDate();');
 
   assert.notEqual(dashboardLoad, -1);

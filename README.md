@@ -27,4 +27,6 @@ See [QUICKSTART.md](QUICKSTART.md) for full commands and [docs/DEPLOYMENT.md](do
 
 Current implementation status and verified limits are summarized in [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). API access and routes are documented in [docs/API_REFERENCE.md](docs/API_REFERENCE.md).
 
+The product audit, permission map, visual system, development standard, product decisions and defensive security review are in [docs/PRODUCT_AUDIT.md](docs/PRODUCT_AUDIT.md), [docs/PERMISSION_MATRIX.md](docs/PERMISSION_MATRIX.md), [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md), [docs/DEVELOPMENT_STANDARD.md](docs/DEVELOPMENT_STANDARD.md), [docs/DECISIONS.md](docs/DECISIONS.md) and [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md).
+
 The current branch is under active implementation. External email and WhatsApp delivery require provider configuration; subscription charges are recorded after an external payment and are not processed by a payment gateway.

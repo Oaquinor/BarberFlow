@@ -44,7 +44,7 @@ test('expired sessions hide private dashboard data and return to login', () => {
   sandbox.resetSessionInterface('Tu sesión expiró. Inicia sesión nuevamente para continuar.');
 
   assert.equal(nodeFor('dashboardSection').style.display, 'none');
-  assert.equal(nodeFor('loginSection').style.display, 'flex');
+  assert.equal(nodeFor('loginSection').style.display, 'grid');
   assert.equal(nodeFor('userInfo').style.display, 'none');
   assert.equal(nodeFor('loginEmail').value, '');
   assert.equal(nodeFor('loginPassword').value, '');

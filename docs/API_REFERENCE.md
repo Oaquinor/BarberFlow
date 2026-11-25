@@ -105,6 +105,10 @@ El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y r
 | `PUT` | `/onboarding/business-settings` | Actualiza nombre, horario, zona horaria y colores; registra auditoría |
 | `PUT` | `/onboarding/brand-colors` | Guarda los colores de marca del tenant |
 | `POST` | `/onboarding/upload-logo` | Valida y guarda un logo PNG/JPG de hasta 5 MB |
+| `POST` | `/onboarding/upload-cover` | Valida y guarda la imagen de portada PNG/JPG del tenant |
+| `DELETE` | `/onboarding/cover-image` | Quita la portada personalizada y vuelve a la portada editorial predeterminada |
+| `POST` | `/onboarding/upload-gallery-image` | Valida, guarda y registra una imagen de galería para el perfil público |
+| `DELETE` | `/onboarding/gallery-image` | Quita una imagen de la galería, desvincula la imagen del servicio y registra auditoría |
 | `POST` | `/onboarding/step/1` | Guarda el nombre de la barbería |
 | `POST` | `/onboarding/step/3` | Guarda los colores de marca |
 | `POST` | `/onboarding/step/4` | Guarda el estilo elegido |
@@ -185,7 +189,7 @@ La fecha predeterminada de rendimiento usa la zona horaria de la barbería. En `
 
 ## Onboarding y personalización
 
-Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `GET /greeting`; `POST /complete`, `/motivational-message`, `/step/1`, `/step/3` a `/step/9`, `/upload-logo`; `PUT /brand-colors`. El tenant se deriva del usuario autenticado. `/dashboard-layout` devuelve `layout_type`, `greeting_message` e `insights` para orientar el uso del panel existente; no anuncia widgets o métricas inexistentes. El mensaje motivacional calcula el conteo de citas de los últimos 30 días y no confía en el contexto enviado por el cliente.
+Rutas protegidas bajo `/onboarding`: `GET /profile`, `GET /dashboard-layout`, `GET /greeting`; `POST /complete`, `/motivational-message`, `/step/1`, `/step/3` a `/step/9`, `/upload-logo`, `/upload-cover`, `/upload-gallery-image`; `DELETE /cover-image`, `/gallery-image`; `PUT /brand-colors`. El tenant se deriva del usuario autenticado. `/dashboard-layout` devuelve `layout_type`, `greeting_message` e `insights` para orientar el uso del panel existente; no anuncia widgets o métricas inexistentes. El mensaje motivacional calcula el conteo de citas de los últimos 30 días y no confía en el contexto enviado por el cliente.
 
 ## Equipo y clientes del negocio
 
