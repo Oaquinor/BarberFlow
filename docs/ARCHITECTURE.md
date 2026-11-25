@@ -49,6 +49,8 @@ Los cobros de servicios se guardan junto al cambio de estado de la cita. Las ven
 
 ## Autenticación y controles
 
+Las cuentas owner y superadmin pueden habilitar TOTP opcional desde el control de seguridad de cuenta. Login valida contraseña y, si MFA está activo, exige un segundo envío con TOTP/código de recuperación antes de crear la sesión refresh. El secreto provisional y activo se cifra con AES-GCM; los códigos de recuperación se almacenan como SHA-256 y son de un uso. La clave estable `MFA_ENCRYPTION_KEY` se configura por entorno.
+
 La API emite JWT de acceso y refresh; las sesiones refresh se guardan y revocan en MySQL. La rotación y la versión de autenticación invalidan sesiones anteriores al cambiar o recuperar la contraseña. Las dependencias de API validan identidad y rol; la pertenencia al tenant se verifica en las consultas y operaciones.
 
 Las cuentas autenticadas de cliente son globales (`users.barbershop_id=NULL`) y solo se activan después de verificar correo. `client_account_shop_links` une cada cuenta con un perfil CRM nuevo y tenant-scoped. Una cita guest se puede reclamar únicamente mediante su token privado aleatorio, cuyo hash ya está asociado a la cita; el teléfono no autoriza acceso ni fusiona historiales. El portal incluye login verificado, historial, reserva autenticada, reclamación por token, cancelación/reprogramación de citas futuras vinculadas y favoritos de barberías, barberos y servicios. Los favoritos se guardan en `client_account_favorites` con control de propietario y validación tenant-scoped; el contenido histórico se elimina lógicamente. La migración `035_shop_favorites` amplía de forma compatible el conjunto de tipos permitidos.

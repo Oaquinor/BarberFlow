@@ -326,6 +326,18 @@ El listado de usuarios acepta `barbershop_id`, `search` (nombre o correo), `limi
 
 La bandera disponible `branding_auto` controla si el portal autenticado aplica los colores de marca de la barbería. Solo se activa para un usuario owner/barbero con onboarding completado; su estado forma parte de `/auth/me` y del listado de usuarios. Los cambios se reflejan al volver a iniciar sesión.
 
+## MFA de cuentas privilegiadas
+
+| Método | Ruta | Acceso | Función |
+|---|---|---|---|
+| `GET` | `/auth/mfa/status` | Owner/superadmin, propia cuenta | Estado de MFA y cantidad de códigos disponibles |
+| `POST` | `/auth/mfa/setup` | Owner/superadmin, propia cuenta + contraseña | Genera secreto provisional cifrado, válido diez minutos; respuesta `no-store` |
+| `POST` | `/auth/mfa/enable` | Owner/superadmin, propia cuenta | Confirma TOTP y devuelve diez códigos de recuperación una sola vez |
+| `POST` | `/auth/mfa/disable` | Owner/superadmin, propia cuenta + contraseña + TOTP/código de recuperación | Desactiva y revoca códigos |
+| `POST` | `/auth/mfa/recovery-codes` | Owner/superadmin, propia cuenta + TOTP/código de recuperación | Revoca los anteriores y devuelve un conjunto nuevo una sola vez |
+
+Cuando una cuenta con MFA inicia sesión, `POST /auth/login` responde `{ "mfa_required": true, "message": "..." }` sin tokens si solo se validó la contraseña. Repetir con `otp_code` (TOTP o recuperación) entrega los tokens al verificar. Los intentos usan los mismos límites de login. `MFA_ENCRYPTION_KEY` cifra las semillas; debe configurarse con un valor aleatorio independiente de `SECRET_KEY` y respaldarse de forma segura.
+
 ## Soporte y errores
 
 | Método | Ruta | Acceso | Función |

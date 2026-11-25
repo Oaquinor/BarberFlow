@@ -1,7 +1,7 @@
 """Models package."""
 
 from app.models.base import BaseModel, TimestampMixin, SoftDeleteMixin
-from app.models.user import User, UserFeatureFlag
+from app.models.user import User, UserFeatureFlag, UserMfaRecoveryCode
 from app.models.barbershop import Barbershop
 from app.models.appointment import Appointment
 from app.models.subscription import Subscription
@@ -41,6 +41,7 @@ __all__ = [
     "SoftDeleteMixin",
     "User",
     "UserFeatureFlag",
+    "UserMfaRecoveryCode",
     "Barbershop",
     "Appointment",
     "Subscription",

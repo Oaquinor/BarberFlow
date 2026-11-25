@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 class AuthLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1, max_length=72)
+    otp_code: Optional[str] = Field(None, min_length=6, max_length=32)
 
     @field_validator("password")
     @classmethod
@@ -87,10 +88,24 @@ class AuthUserResponse(BaseModel):
 
 
 class AuthLoginResponse(BaseModel):
-    access_token: str
-    refresh_token: str
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
-    user: AuthUserResponse
+    user: Optional[AuthUserResponse] = None
+    mfa_required: bool = False
+    message: Optional[str] = None
+
+
+class MfaSetupRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=72)
+
+
+class MfaCodeRequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=32)
+
+
+class MfaDisableRequest(MfaCodeRequest):
+    password: str = Field(..., min_length=1, max_length=72)
 
 
 class PublicBarberCard(BaseModel):

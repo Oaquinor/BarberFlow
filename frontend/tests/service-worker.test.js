@@ -48,7 +48,7 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v78");
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v79");
   assert.ok(worker.addedAssets[0].assets.includes("/css/owner-dashboard.css?v=20261125-break-return-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261125-break-return-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-style-retention-1"));
@@ -59,9 +59,11 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/auth-pages.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/ui-feedback.css"));
+  assert.ok(worker.addedAssets[0].assets.includes("/css/mfa-settings.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/client.css?v=20261125-waitlist-offer-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/business-gallery.css?v=20261125-cover-preview-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/ui-feedback.js"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/mfa-settings.js"));
   for (const asset of worker.addedAssets[0].assets) {
     const relativePath = asset === "/" ? "index.html" : asset.slice(1).split("?", 1)[0];
     assert.ok(fs.existsSync(path.join(__dirname, "..", relativePath)), `${asset} must exist`);

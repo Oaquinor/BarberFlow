@@ -3030,6 +3030,7 @@ document.getElementById('notificationInboxItems')?.addEventListener('click', asy
 });
 
 function resetSessionInterface(message = '') {
+    globalThis.KingFlowMfaSettings?.unmount();
     if (notificationRefreshTimer) clearInterval(notificationRefreshTimer);
     notificationRefreshTimer = null;
     if (serviceTimerInterval) clearInterval(serviceTimerInterval);
@@ -3065,6 +3066,15 @@ function resetSessionInterface(message = '') {
     if (email) email.value = '';
     const password = document.getElementById('loginPassword');
     if (password) password.value = '';
+    const loginMfaGroup = document.getElementById('loginMfaGroup');
+    if (loginMfaGroup) loginMfaGroup.hidden = true;
+    const loginMfaCode = document.getElementById('loginMfaCode');
+    if (loginMfaCode) {
+        loginMfaCode.value = '';
+        loginMfaCode.required = false;
+    }
+    const loginMfaStatus = document.getElementById('loginMfaStatus');
+    if (loginMfaStatus) loginMfaStatus.textContent = '';
     const notice = document.getElementById('sessionExpiredNotice');
     if (notice) {
         notice.textContent = message;
@@ -3588,6 +3598,7 @@ async function restoreAuthenticatedSession() {
             return;
         }
         await initializeAuthenticatedDashboard(await response.json());
+        window.KingFlowMfaSettings?.mount();
     } catch (error) {
         console.warn('Could not restore the existing session:', error);
     }
@@ -3597,21 +3608,38 @@ document.getElementById('loginForm').addEventListener('submit', async function (
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
+    const mfaInput = document.getElementById('loginMfaCode');
+    const mfaGroup = document.getElementById('loginMfaGroup');
+    const mfaStatus = document.getElementById('loginMfaStatus');
+    const payload = { email, password };
+    if (!mfaGroup.hidden && mfaInput.value.trim()) payload.otp_code = mfaInput.value.trim();
 
     try {
         const response = await fetch(`${API_ROOT}/api/v1/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify(payload)
         });
         const data = await response.json();
         if (!response.ok) {
             showToast(data.detail || 'Credenciales inválidas');
             return;
         }
+        if (data.mfa_required) {
+            mfaGroup.hidden = false;
+            mfaInput.required = true;
+            mfaStatus.textContent = data.message || 'Ingresa tu segundo factor para continuar.';
+            mfaInput.focus();
+            return;
+        }
         accessToken = data.access_token;
         KingFlowAuth.setTokens(data.access_token, data.refresh_token);
+        mfaInput.value = '';
+        mfaGroup.hidden = true;
+        mfaInput.required = false;
+        mfaStatus.textContent = '';
         await initializeAuthenticatedDashboard(data.user, { showWelcome: true });
+        window.KingFlowMfaSettings?.mount();
     } catch (error) {
         console.error(error);
         showToast('No fue posible conectar con el backend de autenticación');

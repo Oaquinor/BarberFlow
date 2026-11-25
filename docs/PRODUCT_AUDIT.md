@@ -46,6 +46,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 - Lista de espera: el owner emite manualmente o el worker asigna automáticamente una oferta compatible con vencimiento (120 minutos por defecto para automática). Un token aleatorio cuyo hash se persiste permite consultar y aceptar desde el portal público; el WhatsApp queda en la cola durable. La aceptación revalida negocio/plan, límites, servicio, barbero, disponibilidad, bloqueos, citas y caja; reclama el slot con compare-and-set, crea la cita pendiente, cierra la solicitud y cancela ofertas hermanas en la misma transacción. Reintentos regresan la cita creada. La entrega depende del worker/proveedor configurado.
 - Live Chair: migración `045_live_chair_break_return` y controles del barbero para indicar descanso previsto de 5 a 120 minutos (15 por defecto). El API owner y el seguimiento privado incorporan el tiempo restante del descanso en la espera aproximada; reanudar disponibilidad limpia la previsión. Sin una hora prevista o cuando la hora ya pasó, el sistema evita mostrar una cuenta regresiva engañosa.
+- MFA para `barbershop_owner` y `super_admin`: TOTP opcional con login en dos pasos, semilla cifrada y ligada al usuario, protección de repetición, recuperación de un solo uso, reautenticación para administración y límite de intentos MySQL. `046_privileged_user_mfa` queda sujeto a la validación de integración CI en MySQL 8.4 antes de cerrar esta entrega.
 - Verificación local y CI de `91ccc2a`: frontend **125/125**, flujo Playwright de descanso/retorno en Chromium y suite backend local **80 passed** (las integraciones requieren `TEST_DATABASE_URL`); CI confirmó migraciones limpias/reversión/recuperación y pruebas backend en MySQL 8.4, frontend en Chromium/Firefox/WebKit, WhatsApp y contenedores de producción: [run 45716413144](https://github.com/Oaquinor/BarberFlow/actions/runs/45716413144).
 - Validación de las ofertas (`4ca51e6`): migración 044 limpia, reversión a `base` y recuperación verificadas en MySQL 8.4; **198 pruebas backend** pasaron. Frontend **125/125** y el flujo de solicitud/aceptación pasó en Chromium a 320 px. GitHub Actions aprobó **77 flujos por motor** en Chromium, Firefox y WebKit, pruebas WhatsApp y contenedores de producción: [run 45704034620](https://github.com/Oaquinor/BarberFlow/actions/runs/45704034620). En esta máquina, la suite backend local dio **80 passed y 118 skipped** porque no hay `TEST_DATABASE_URL`; los casos MySQL sí se ejecutaron en CI.
 
@@ -111,7 +112,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Siguiente orden de entrega
 
-1. Añadir avisos oportunos y canal de actualización en tiempo real para Live Chair; hoy cliente consulta por solicitud y el owner refresca por polling cada 30 segundos.
-2. Seguimiento de lista de espera: configurar preferencias y controles de consentimiento/canal más granulares y visibilidad del estado de entrega; la emisión compatible ya corre en el worker.
-3. Definir país, proveedor y modelo comercial antes de diseñar cobros online; decidir fidelidad/sucursales antes de esos dominios.
+- Añadir avisos oportunos y canal de actualización en tiempo real para Live Chair; hoy cliente consulta por solicitud y el owner refresca por polling cada 30 segundos.
+- Seguimiento de lista de espera: configurar preferencias y controles de consentimiento/canal más granulares y visibilidad del estado de entrega; la emisión compatible ya corre en el worker.
+- Definir país, proveedor y modelo comercial antes de diseñar cobros online; decidir fidelidad/sucursales antes de esos dominios.
 4. Completar threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.

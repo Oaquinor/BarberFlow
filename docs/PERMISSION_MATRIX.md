@@ -4,6 +4,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 
 | Función | Público/visitante | Owner | Barber | Cuenta cliente | Super admin |
 |---|---|---|---|---|---|
+| Configurar TOTP, desactivar con reautenticación y rotar códigos de recuperación | No | Solo su cuenta | No | No | Solo su cuenta |
 | Registro/login/reset | Sí | Sí | Sí | Sí | Sí |
 | Ver perfil, catálogo y disponibilidad pública | Sí | Sí | Sí | Sí | Sí |
 | Crear reserva como invitado | Sí | Sí | Sí | Sí; además se guarda en su historial | Sí |
@@ -50,3 +51,4 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 - La cuenta cliente sigue siendo parcial: favoritos, perfil e historial están integrados; pagos y beneficios no están implementados.
 - Mantener pruebas negativas de acceso cruzado entre tenants para cada endpoint nuevo.
 - Las fotos del Style Passport nunca se sirven desde `/uploads` público; preservar autenticación, consentimiento, `no-store` y aislamiento de tenant en lecturas.
+- MFA TOTP es voluntario por cuenta para owner/superadmin; al activarlo el login exige el código antes de crear tokens. Las semillas se cifran y los códigos de recuperación se consumen una sola vez.

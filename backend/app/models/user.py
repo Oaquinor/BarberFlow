@@ -4,7 +4,7 @@ User model.
 Represents system users (super admin, barbershop owners, barbers, clients).
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Index
+from sqlalchemy import BigInteger, Column, DateTime, String, Integer, ForeignKey, Boolean, Index, Text
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -33,6 +33,11 @@ class User(BaseModel):
     support_contact_enabled = Column(Boolean, default=False, nullable=False)
     commission_rate_basis_points = Column(Integer, nullable=False, default=0)
     auth_version = Column(Integer, nullable=False, default=0, server_default="0")
+    mfa_enabled = Column(Boolean, nullable=False, default=False, server_default="0")
+    mfa_secret_encrypted = Column(Text, nullable=True)
+    mfa_pending_secret_encrypted = Column(Text, nullable=True)
+    mfa_pending_expires_at = Column(DateTime, nullable=True)
+    mfa_last_counter = Column(BigInteger, nullable=True)
 
     # Multi-tenant
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=True)
@@ -71,3 +76,17 @@ class UserFeatureFlag(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     feature_key = Column(String(100), nullable=False, index=True)
     enabled = Column(Boolean, nullable=False, default=True)
+
+
+class UserMfaRecoveryCode(BaseModel):
+    """One-time recovery codes stored only as SHA-256 hashes."""
+
+    __tablename__ = "user_mfa_recovery_codes"
+    __table_args__ = (
+        Index("ix_user_mfa_recovery_codes_user_unused", "user_id", "used_at", "is_deleted"),
+        Index("uq_user_mfa_recovery_codes_user_hash", "user_id", "code_hash", unique=True),
+    )
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    code_hash = Column(String(64), nullable=False)
+    used_at = Column(DateTime, nullable=True)

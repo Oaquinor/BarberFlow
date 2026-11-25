@@ -18,7 +18,7 @@ import unicodedata
 from typing import Optional
 from time import sleep as sleep_seconds
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, Response
 from sqlalchemy import and_, func, or_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -38,6 +38,7 @@ from app.models.barber_availability import BarberAvailability
 from app.models.barber_availability_block import BarberAvailabilityBlock
 from app.models.barber_live_state import BarberLiveState
 from app.models.user import UserFeatureFlag
+from app.models.user import UserMfaRecoveryCode
 from app.models.refresh_session import RefreshSession
 from app.models.payment import Payment, CashRegisterClose
 from app.models.retail_sale import RetailSale
@@ -60,6 +61,19 @@ from app.schemas.platform import (
     BarberAppointmentStatusUpdateRequest,
     AppointmentPaymentRequest,
     CashRegisterCloseRequest,
+    MfaSetupRequest,
+    MfaCodeRequest,
+    MfaDisableRequest,
+)
+from app.services.mfa_service import (
+    decrypt_secret,
+    encrypt_secret,
+    generate_recovery_codes,
+    generate_secret,
+    hash_recovery_code,
+    provisioning_uri,
+    verify_totp,
+    verify_user_totp,
 )
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.utils.client_ip import get_client_ip
@@ -607,7 +621,10 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
     prune_expired_auth_records(db, now)
     _check_login_throttle(db, buckets, now)
     normalized_email = str(data.email).strip().lower()
-    user = db.query(User).filter(User.email == normalized_email, User.is_deleted == False).first()
+    user = db.query(User).filter(
+        User.email == normalized_email,
+        User.is_deleted == False,
+    ).with_for_update().first()
     password_hash = user.password_hash if user else DUMMY_LOGIN_PASSWORD_HASH
     password_valid = verify_password(data.password, password_hash)
     if (
@@ -626,6 +643,47 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
         ).first()
         if not active_shop:
             raise HTTPException(status_code=403, detail="La barbería está desactivada")
+
+    if user.mfa_enabled:
+        if not data.otp_code:
+            return AuthLoginResponse(
+                mfa_required=True,
+                message="Ingresa el código de tu aplicación de autenticación o uno de recuperación.",
+            )
+        verified = False
+        if user.mfa_secret_encrypted:
+            counter = verify_user_totp(
+                user.mfa_secret_encrypted,
+                user.id,
+                data.otp_code,
+                last_counter=user.mfa_last_counter,
+            )
+            if counter is not None:
+                user.mfa_last_counter = counter
+                verified = True
+        if not verified:
+            code_hash = hash_recovery_code(data.otp_code)
+            recovery = db.query(UserMfaRecoveryCode).filter(
+                UserMfaRecoveryCode.user_id == user.id,
+                UserMfaRecoveryCode.code_hash == code_hash,
+                UserMfaRecoveryCode.used_at.is_(None),
+                UserMfaRecoveryCode.is_deleted == False,
+            ).with_for_update().first()
+            if recovery:
+                recovery.used_at = now
+                verified = True
+                remaining = db.query(UserMfaRecoveryCode.id).filter(
+                    UserMfaRecoveryCode.user_id == user.id,
+                    UserMfaRecoveryCode.used_at.is_(None),
+                    UserMfaRecoveryCode.is_deleted == False,
+                ).count()
+                _audit(
+                    db, user, "mfa.recovery_code_used", "user", user.id,
+                    user.barbershop_id, {"remaining": remaining},
+                )
+        if not verified:
+            _record_login_failure(db, buckets, now)
+            raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
     refresh_token = create_refresh_token({"sub": str(user.id), "auth_version": user.auth_version})
     refresh_session = _save_refresh_session(db, user.id, refresh_token)
@@ -651,6 +709,211 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
             feature_flags=_get_user_feature_flags(db, user.id),
         ),
     )
+
+
+def _ensure_mfa_admin(user: User) -> User:
+    if user.role not in {"barbershop_owner", "super_admin"}:
+        raise HTTPException(
+            status_code=403,
+            detail="MFA está disponible solo para owner y superadmin",
+        )
+    return user
+
+
+def _mfa_login_attempts(request: Request, user: User, db: Session, now: datetime):
+    buckets = _login_buckets(
+        user.email, get_client_ip(request, settings.CLIENT_IP_HEADER)
+    )
+    _check_login_throttle(db, buckets, now)
+    return buckets
+
+
+def _record_mfa_failure(db: Session, buckets, now: datetime):
+    _record_login_failure(db, buckets, now)
+    raise HTTPException(status_code=401, detail="Credenciales inválidas")
+
+
+def _encrypt_mfa_secret(secret: str, user_id: int, purpose: str = "active") -> str:
+    try:
+        return encrypt_secret(secret, user_id, purpose)
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="El cifrado MFA no está configurado para este servidor",
+        ) from exc
+
+
+def _consume_mfa_code(db: Session, user: User, code: str, now: datetime) -> bool:
+    if user.mfa_secret_encrypted:
+        counter = verify_user_totp(
+            user.mfa_secret_encrypted,
+            user.id,
+            code,
+            last_counter=user.mfa_last_counter,
+        )
+        if counter is not None:
+            user.mfa_last_counter = counter
+            return True
+    recovery = db.query(UserMfaRecoveryCode).filter(
+        UserMfaRecoveryCode.user_id == user.id,
+        UserMfaRecoveryCode.code_hash == hash_recovery_code(code),
+        UserMfaRecoveryCode.used_at.is_(None),
+        UserMfaRecoveryCode.is_deleted == False,
+    ).with_for_update().first()
+    if not recovery:
+        return False
+    recovery.used_at = now
+    return True
+
+
+@router.get("/auth/mfa/status")
+def mfa_status(
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = _ensure_mfa_admin(_get_current_user(db, authorization))
+    remaining = db.query(UserMfaRecoveryCode.id).filter(
+        UserMfaRecoveryCode.user_id == user.id,
+        UserMfaRecoveryCode.used_at.is_(None),
+        UserMfaRecoveryCode.is_deleted == False,
+    ).count()
+    return {
+        "enabled": user.mfa_enabled,
+        "recovery_codes_remaining": remaining,
+        "enrollment_pending": bool(user.mfa_pending_secret_encrypted),
+    }
+
+
+@router.post("/auth/mfa/setup")
+def mfa_setup(
+    data: MfaSetupRequest,
+    request: Request,
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = _ensure_mfa_admin(_get_current_user(db, authorization))
+    now = utc_now_naive()
+    buckets = _mfa_login_attempts(request, user, db, now)
+    user = db.query(User).filter(User.id == user.id).with_for_update().one()
+    if not verify_password(data.password, user.password_hash):
+        _record_mfa_failure(db, buckets, now)
+    if user.mfa_enabled:
+        raise HTTPException(status_code=409, detail="MFA ya está activado")
+    secret = generate_secret()
+    user.mfa_pending_secret_encrypted = _encrypt_mfa_secret(
+        secret, user.id, "pending"
+    )
+    user.mfa_pending_expires_at = now + timedelta(minutes=10)
+    _audit(db, user, "mfa.enrollment_started", "user", user.id, user.barbershop_id)
+    _clear_login_failures(db, buckets, now)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {
+        "secret": secret,
+        "otpauth_uri": provisioning_uri(secret, user.email),
+        "expires_in_seconds": 600,
+    }
+
+
+@router.post("/auth/mfa/enable")
+def mfa_enable(
+    data: MfaCodeRequest,
+    request: Request,
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = _ensure_mfa_admin(_get_current_user(db, authorization))
+    now = utc_now_naive()
+    buckets = _mfa_login_attempts(request, user, db, now)
+    user = db.query(User).filter(User.id == user.id).with_for_update().one()
+    if (
+        user.mfa_enabled
+        or not user.mfa_pending_secret_encrypted
+        or not user.mfa_pending_expires_at
+        or user.mfa_pending_expires_at < now
+    ):
+        raise HTTPException(status_code=409, detail="Inicia de nuevo la configuración de MFA")
+    secret = decrypt_secret(user.mfa_pending_secret_encrypted, user.id, "pending")
+    counter = verify_totp(secret, data.code)
+    if counter is None:
+        _record_mfa_failure(db, buckets, now)
+    codes = generate_recovery_codes()
+    user.mfa_enabled = True
+    user.mfa_secret_encrypted = _encrypt_mfa_secret(secret, user.id)
+    user.mfa_pending_secret_encrypted = None
+    user.mfa_pending_expires_at = None
+    user.mfa_last_counter = counter
+    db.add_all([
+        UserMfaRecoveryCode(user_id=user.id, code_hash=hash_recovery_code(code))
+        for code in codes
+    ])
+    _audit(db, user, "mfa.enabled", "user", user.id, user.barbershop_id)
+    _clear_login_failures(db, buckets, now)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"enabled": True, "recovery_codes": codes}
+
+
+@router.post("/auth/mfa/disable")
+def mfa_disable(
+    data: MfaDisableRequest,
+    request: Request,
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = _ensure_mfa_admin(_get_current_user(db, authorization))
+    now = utc_now_naive()
+    buckets = _mfa_login_attempts(request, user, db, now)
+    user = db.query(User).filter(User.id == user.id).with_for_update().one()
+    if not user.mfa_enabled or not verify_password(data.password, user.password_hash):
+        _record_mfa_failure(db, buckets, now)
+    if not _consume_mfa_code(db, user, data.code, now):
+        _record_mfa_failure(db, buckets, now)
+    user.mfa_enabled = False
+    user.mfa_secret_encrypted = None
+    user.mfa_pending_secret_encrypted = None
+    user.mfa_pending_expires_at = None
+    user.mfa_last_counter = None
+    db.query(UserMfaRecoveryCode).filter(
+        UserMfaRecoveryCode.user_id == user.id
+    ).update({"is_deleted": True, "deleted_at": now}, synchronize_session=False)
+    _audit(db, user, "mfa.disabled", "user", user.id, user.barbershop_id)
+    _clear_login_failures(db, buckets, now)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"enabled": False}
+
+
+@router.post("/auth/mfa/recovery-codes")
+def mfa_rotate_recovery_codes(
+    data: MfaCodeRequest,
+    request: Request,
+    response: Response,
+    authorization: Optional[str] = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = _ensure_mfa_admin(_get_current_user(db, authorization))
+    now = utc_now_naive()
+    buckets = _mfa_login_attempts(request, user, db, now)
+    user = db.query(User).filter(User.id == user.id).with_for_update().one()
+    if not user.mfa_enabled or not _consume_mfa_code(db, user, data.code, now):
+        _record_mfa_failure(db, buckets, now)
+    db.query(UserMfaRecoveryCode).filter(
+        UserMfaRecoveryCode.user_id == user.id
+    ).update({"is_deleted": True, "deleted_at": now}, synchronize_session=False)
+    codes = generate_recovery_codes()
+    db.add_all([
+        UserMfaRecoveryCode(user_id=user.id, code_hash=hash_recovery_code(code))
+        for code in codes
+    ])
+    _audit(db, user, "mfa.recovery_codes_rotated", "user", user.id, user.barbershop_id)
+    _clear_login_failures(db, buckets, now)
+    db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"recovery_codes": codes}
 
 
 def _tenant_slug(db: Session, name: str) -> str:

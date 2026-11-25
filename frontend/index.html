@@ -12,6 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
     <link rel="stylesheet" href="/css/account-security.css">
     <link rel="stylesheet" href="/css/ui-feedback.css">
+    <link rel="stylesheet" href="/css/mfa-settings.css">
     <link rel="stylesheet" href="/css/business-gallery.css?v=20261125-cover-preview-1">
     <title>KingFlow Barber - Sistema Operativo para Barberías</title>
     <style>
@@ -392,6 +393,12 @@
                         <label for="loginPassword">Contraseña</label>
                         <input type="password" id="loginPassword" required placeholder="Contraseña" value="">
                     </div>
+                    <div class="form-group" id="loginMfaGroup" hidden>
+                        <label for="loginMfaCode">Código de verificación o recuperación</label>
+                        <input type="text" id="loginMfaCode" autocomplete="one-time-code" inputmode="numeric" maxlength="32" aria-describedby="loginMfaHelp">
+                        <small id="loginMfaHelp">Abre tu aplicación de autenticación o usa un código de recuperación.</small>
+                    </div>
+                    <p id="loginMfaStatus" role="status" aria-live="polite"></p>
                     <button type="submit" class="btn-primary btn-large">Iniciar sesión <span aria-hidden="true">→</span></button>
                 </form>
                 <div class="auth-footer">
@@ -1044,6 +1051,7 @@
     <script src="js/config.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/account-security.js"></script>
+    <script src="js/mfa-settings.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
     <script src="js/main.js?v=20261125-break-return-1"></script>
