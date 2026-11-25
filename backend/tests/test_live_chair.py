@@ -83,12 +83,12 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["items"][0]["barber_id"] == barber.id
-    assert payload["items"][0]["state"] == "delayed"
-    assert payload["items"][0]["checked_in_count"] == 1
-    assert payload["items"][0]["estimated_wait_minutes"] == 0
-    assert payload["items"][0]["active_service"]["service_type"] == "Corte activo"
-    assert payload["items"][1]["state"] == "available"
+    by_barber_id = {item["barber_id"]: item for item in payload["items"]}
+    assert by_barber_id[barber.id]["state"] == "delayed"
+    assert by_barber_id[barber.id]["checked_in_count"] == 1
+    assert by_barber_id[barber.id]["estimated_wait_minutes"] == 0
+    assert by_barber_id[barber.id]["active_service"]["service_type"] == "Corte activo"
+    assert by_barber_id[available_barber.id]["state"] == "available"
     assert "PrivateCustomerName" not in json.dumps(payload)
     assert client.get("/api/v1/owner/live-chair", headers=_headers(barber)).status_code == 403
     assert client.get("/api/v1/owner/live-chair").status_code == 401
