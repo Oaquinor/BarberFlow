@@ -156,7 +156,7 @@ test("tema público cambia, recuerda la preferencia y mantiene contraste en el b
     if (path.endsWith("/slots")) return route.fulfill({ json: [] });
     return route.fulfill({ json: {
       id: 1, name: "Barbería de prueba", slug: "theme-test", currency: "USD",
-      timezone: "America/Santo_Domingo", primary_color: "#c7f36b",
+      timezone: "America/Santo_Domingo", primary_color: "#b98752",
       secondary_color: "#71884a", public_theme: "light", gallery_images: [],
     } });
   });
