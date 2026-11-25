@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.ai.demand_forecast import DemandForecastService
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models import Barbershop, Payment, RetailSale, User
+from app.models import Barbershop, OperatingExpense, Payment, RetailSale, User
 from app.schemas.analytics import (
     DemandForecastResponse,
     FinancialReportResponse,
@@ -77,15 +77,31 @@ def get_financial_report(
         RetailSale.sold_at < end_utc,
     ).order_by(RetailSale.sold_at.asc(), RetailSale.id.asc()).all()
 
+    expenses = db.query(OperatingExpense).filter(
+        OperatingExpense.barbershop_id == shop.id,
+        OperatingExpense.is_deleted == False,
+        OperatingExpense.spent_at >= start_utc,
+        OperatingExpense.spent_at < end_utc,
+    ).order_by(OperatingExpense.spent_at.asc(), OperatingExpense.id.asc()).all()
+
     def new_total(label: str) -> dict:
         return {"label": label, "payment_count": 0, "service_revenue_cents": 0,
-                "retail_revenue_cents": 0, "retail_sale_count": 0, "tip_cents": 0}
+                "retail_revenue_cents": 0, "retail_sale_count": 0, "tip_cents": 0,
+                "expense_cents": 0}
 
     daily: dict[str, dict] = defaultdict(lambda: new_total(""))
     methods: dict[str, dict] = {}
     barbers: dict[str, dict] = {}
     method_labels = {"cash": "Efectivo", "card": "Tarjeta", "transfer": "Transferencia", "other": "Otro"}
+    category_labels = {
+        "rent": "Alquiler", "utilities": "Servicios", "payroll": "Nómina",
+        "commission": "Comisiones", "supplies": "Insumos", "maintenance": "Mantenimiento",
+        "marketing": "Publicidad", "administrative": "Administración", "internet": "Internet",
+        "water": "Agua", "electricity": "Electricidad", "other": "Otros",
+    }
     service_revenue = retail_revenue = tip_total = 0
+    expense_total = 0
+    expenses_by_category: dict[str, dict] = {}
     for payment, first_name, last_name in payments:
         local_day = payment.received_at.replace(tzinfo=timezone.utc).astimezone(business_tz).date().isoformat()
         day_total = daily[local_day]
@@ -113,9 +129,34 @@ def get_financial_report(
             aggregate["retail_revenue_cents"] += sale.total_cents
         retail_revenue += sale.total_cents
 
+    for expense in expenses:
+        local_day = expense.spent_at.replace(tzinfo=timezone.utc).astimezone(business_tz).date().isoformat()
+        daily[local_day]["label"] = local_day
+        daily[local_day]["expense_cents"] += expense.amount_cents
+        method = expense.payment_method
+        methods.setdefault(method, new_total(method_labels.get(method, method)))
+        methods[method]["expense_cents"] += expense.amount_cents
+        category = expenses_by_category.setdefault(expense.category, {
+            "key": expense.category,
+            "label": category_labels.get(expense.category, expense.category),
+            "expense_count": 0,
+            "amount_cents": 0,
+        })
+        category["expense_count"] += 1
+        category["amount_cents"] += expense.amount_cents
+        expense_total += expense.amount_cents
+
     def rows(values: dict[str, dict]) -> list[FinancialReportRow]:
         return [
-            FinancialReportRow(key=key, **item, gross_cents=item["service_revenue_cents"] + item["retail_revenue_cents"] + item["tip_cents"])
+            FinancialReportRow(
+                key=key,
+                **item,
+                gross_cents=item["service_revenue_cents"] + item["retail_revenue_cents"] + item["tip_cents"],
+                net_after_recorded_expenses_cents=(
+                    item["service_revenue_cents"] + item["retail_revenue_cents"]
+                    + item["tip_cents"] - item["expense_cents"]
+                ),
+            )
             for key, item in sorted(values.items())
         ]
 
@@ -131,6 +172,10 @@ def get_financial_report(
         retail_sale_count=len(sales),
         tip_cents=tip_total,
         gross_cents=service_revenue + retail_revenue + tip_total,
+        expense_count=len(expenses),
+        expense_total_cents=expense_total,
+        balance_after_recorded_expenses_cents=service_revenue + retail_revenue + tip_total - expense_total,
+        expenses_by_category=[item for _, item in sorted(expenses_by_category.items())],
         by_day=rows(daily),
         by_method=rows(methods),
         by_barber=rows(barbers),

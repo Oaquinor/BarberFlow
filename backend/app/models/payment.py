@@ -35,6 +35,7 @@ class CashRegisterClose(BaseModel):
     closed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     business_date = Column(DateTime, nullable=False)
     expected_cash_cents = Column(Integer, nullable=False)
+    opening_cash_cents = Column(Integer, nullable=False, default=0)
     declared_cash_cents = Column(Integer, nullable=False)
     difference_cents = Column(Integer, nullable=False)
     payment_count = Column(Integer, nullable=False)

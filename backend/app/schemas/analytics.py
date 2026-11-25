@@ -49,6 +49,15 @@ class FinancialReportRow(BaseModel):
     retail_sale_count: int
     tip_cents: int
     gross_cents: int
+    expense_cents: int
+    net_after_recorded_expenses_cents: int
+
+
+class FinancialExpenseCategoryRow(BaseModel):
+    key: str
+    label: str
+    expense_count: int
+    amount_cents: int
 
 
 class FinancialReportResponse(BaseModel):
@@ -63,6 +72,10 @@ class FinancialReportResponse(BaseModel):
     retail_sale_count: int
     tip_cents: int
     gross_cents: int
+    expense_count: int
+    expense_total_cents: int
+    balance_after_recorded_expenses_cents: int
+    expenses_by_category: list[FinancialExpenseCategoryRow]
     by_day: list[FinancialReportRow]
     by_method: list[FinancialReportRow]
     by_barber: list[FinancialReportRow]

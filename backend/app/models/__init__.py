@@ -30,6 +30,7 @@ from app.models.booking_waitlist_entry import BookingWaitlistEntry
 from app.models.inventory_product import InventoryProduct
 from app.models.inventory_movement import InventoryMovement
 from app.models.retail_sale import RetailSale, RetailSaleLine
+from app.models.operating_expense import OperatingExpense
 
 __all__ = [
     "BaseModel",
@@ -68,4 +69,5 @@ __all__ = [
     "InventoryMovement",
     "RetailSale",
     "RetailSaleLine",
+    "OperatingExpense",
 ]

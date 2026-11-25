@@ -570,5 +570,6 @@ class AppointmentPaymentRequest(BaseModel):
 
 class CashRegisterCloseRequest(BaseModel):
     business_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
+    opening_cash_cents: int = Field(0, ge=0, le=2_000_000_000)
     declared_cash_cents: int = Field(..., ge=0, le=2_000_000_000)
     notes: Optional[str] = Field(None, max_length=1000)

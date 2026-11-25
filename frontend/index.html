@@ -342,7 +342,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261126-retail-cart-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261126-owner-expenses-1">
 </head>
 <body>
     <div class="container">
@@ -902,10 +902,11 @@
                 <p id="cashRegisterDate">Cargando...</p>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-value" id="cashTotalToday">—</div><div class="stat-label">Cobros del día</div></div>
-                    <div class="stat-card"><div class="stat-value" id="cashExpectedToday">—</div><div class="stat-label">Efectivo esperado</div></div>
+                    <div class="stat-card"><div class="stat-value" id="cashExpectedToday">—</div><div class="stat-label">Movimiento neto de efectivo</div></div>
                     <div class="stat-card"><div class="stat-value" id="cashPaymentCount">—</div><div class="stat-label">Pagos registrados</div></div>
                 </div>
                 <div id="cashMethods" style="margin:16px 0;"></div>
+                <p id="cashExpenseSummary" class="muted"></p>
                 <section class="card owner-only" id="retailPointOfSale" hidden aria-labelledby="retailPosTitle" style="margin:18px 0; overflow-x:clip;">
                     <h3 id="retailPosTitle">Venta rápida de productos</h3>
                     <p>La venta descuenta existencias y se suma al método de pago y al cierre del día.</p>
@@ -924,6 +925,8 @@
                     <div id="retailRecentSales" class="table-wrap"></div>
                 </section>
                 <form id="cashCloseForm" style="max-width:520px;">
+                    <label for="cashOpening">Fondo inicial de caja</label>
+                    <input id="cashOpening" type="number" min="0" step="0.01" value="0" required style="padding:10px; margin:8px 0; width:100%;">
                     <label for="cashDeclared">Efectivo contado</label>
                     <input id="cashDeclared" type="number" min="0" step="0.01" required style="padding:10px; margin:8px 0; width:100%;">
                     <label for="cashCloseNotes">Notas del cierre (opcional)</label>
@@ -932,8 +935,27 @@
                 </form>
                 <p id="cashCloseResult" role="status" aria-live="polite"></p>
                 <section class="card owner-only" id="ownerFinancialReport" hidden style="margin-top:28px;">
+                    <section class="owner-expense-section" aria-labelledby="ownerExpensesTitle">
+                        <h3 id="ownerExpensesTitle">Gastos del negocio</h3>
+                        <p>Registra egresos realmente pagados. Los movimientos son auditables y no se pueden borrar desde el panel.</p>
+                        <form id="ownerExpenseForm" class="grid">
+                            <div class="field"><label for="ownerExpenseCategory">Categoría</label><select id="ownerExpenseCategory" required>
+                                <option value="rent">Alquiler</option><option value="utilities">Servicios</option><option value="payroll">Nómina</option>
+                                <option value="commission">Comisiones</option><option value="supplies">Insumos</option><option value="maintenance">Mantenimiento</option>
+                                <option value="marketing">Publicidad</option><option value="administrative">Administración</option><option value="internet">Internet</option>
+                                <option value="water">Agua</option><option value="electricity">Electricidad</option><option value="other">Otros</option>
+                            </select></div>
+                            <div class="field"><label for="ownerExpenseAmount">Importe pagado</label><input id="ownerExpenseAmount" type="number" min="0.01" max="20000000" step="0.01" required></div>
+                            <div class="field"><label for="ownerExpenseDescription">Descripción o referencia</label><input id="ownerExpenseDescription" minlength="2" maxlength="200" required></div>
+                            <div class="field"><label for="ownerExpenseMethod">Pagado desde</label><select id="ownerExpenseMethod" required><option value="cash">Efectivo de caja</option><option value="card">Tarjeta</option><option value="transfer">Transferencia</option><option value="other">Otro medio</option></select></div>
+                            <div class="field settings-wide"><button class="btn-primary" type="submit">Registrar gasto pagado</button></div>
+                        </form>
+                        <p id="ownerExpenseResult" role="status" aria-live="polite"></p>
+                        <h4>Movimientos recientes</h4>
+                        <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Método</th><th>Importe</th></tr></thead><tbody id="ownerExpensesBody"></tbody></table></div>
+                    </section>
                     <h3>Reporte financiero</h3>
-                    <p>Resumen de cobros realmente registrados, por fecha comercial, método y barbero.</p>
+                    <p>Cobros y gastos registrados por fecha comercial. El saldo mostrado no descuenta costos que aún no estén registrados.</p>
                     <form id="financialReportForm" class="toolbar" style="align-items:flex-end;">
                         <label for="financialReportStart">Desde <input id="financialReportStart" type="date" required></label>
                         <label for="financialReportEnd">Hasta <input id="financialReportEnd" type="date" required></label>
@@ -1005,7 +1027,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261126-retail-cart-1"></script>
+    <script src="js/main.js?v=20261126-owner-expenses-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

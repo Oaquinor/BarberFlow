@@ -6,6 +6,7 @@ test('owner creates a product and records a stock receipt from the inventory pan
   const products = [];
   const movements = [];
   const sales = [];
+  const expenses = [];
   const pageErrors = [];
   products.push({ id: 80, name: 'Champú', category: 'Cuidado', unit: 'unidad', barcode: null, unit_cost_cents: 400, unit_price_cents: 700, stock_quantity: 10, stock_minimum: 1, low_stock: false, is_active: true });
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -60,6 +61,14 @@ test('owner creates a product and records a stock receipt from the inventory pan
       status = 201;
     } else if (path === '/owner/inventory/sales') {
       payload = { items: sales, total: sales.length };
+    } else if (path === '/owner/expenses' && request.method() === 'POST') {
+      const body = request.postDataJSON();
+      requests.push({ path, method: request.method(), body });
+      payload = { id: 111, ...body, currency: 'DOP', spent_at: new Date().toISOString(), created_by_user_id: 4 };
+      expenses.unshift(payload);
+      status = 201;
+    } else if (path === '/owner/expenses') {
+      payload = { items: expenses, limit: 50 };
     } else if (path === '/notifications/unread-count') {
       payload = { count: 0 };
     } else if (path === '/barber/share-link') {
@@ -67,7 +76,7 @@ test('owner creates a product and records a stock receipt from the inventory pan
     } else if (path === '/barber/cash/today') {
       payload = { business_date: '2026-11-25', currency: 'DOP', payment_count: 0, total_cents: 0, by_method: {}, expected_cash_cents: 0, closed: false, close: null };
     } else if (path === '/analytics/financial-report') {
-      payload = { currency: 'DOP', gross_cents: 0, service_revenue_cents: 0, tip_cents: 0, payment_count: 0, by_day: [], by_method: [], by_barber: [], start_date: '2026-11-25', end_date: '2026-11-25', timezone: 'America/Santo_Domingo' };
+      payload = { currency: 'DOP', gross_cents: 0, expense_total_cents: expenses.reduce((total, item) => total + item.amount_cents, 0), balance_after_recorded_expenses_cents: -expenses.reduce((total, item) => total + item.amount_cents, 0), expense_count: expenses.length, expenses_by_category: expenses.map(item => ({ key: item.category, label: item.category === 'supplies' ? 'Insumos' : 'Otros', expense_count: 1, amount_cents: item.amount_cents })), service_revenue_cents: 0, retail_revenue_cents: 0, retail_sale_count: 0, tip_cents: 0, payment_count: 0, service_payment_count: 0, by_day: [], by_method: [], by_barber: [], start_date: '2026-11-25', end_date: '2026-11-25', timezone: 'America/Santo_Domingo' };
     } else {
       payload = {};
     }
@@ -114,6 +123,18 @@ test('owner creates a product and records a stock receipt from the inventory pan
   await expect(page.locator('#retailSaleResult')).toContainText('Venta #101 registrada');
   await expect(page.locator('#ownerInventoryProductsBody')).toContainText('6 unidad');
   await expect(page.locator('#retailRecentSales')).toContainText('#101');
+  await page.locator('#ownerFinancialReport').scrollIntoViewIfNeeded();
+  await page.locator('.owner-expense-section').screenshot({ path: path.join(evidenceDir, 'owner-expenses-before.png') });
+  await page.locator('#ownerExpenseCategory').selectOption('supplies');
+  await page.locator('#ownerExpenseAmount').fill('25.50');
+  await page.locator('#ownerExpenseDescription').fill('Compra de navajas');
+  await page.locator('#ownerExpenseMethod').selectOption('cash');
+  await page.getByRole('button', { name: 'Registrar gasto pagado' }).click();
+  await expect(page.locator('#ownerExpenseResult')).toContainText('DOP');
+  await expect(page.locator('#ownerExpensesBody')).toContainText('Compra de navajas');
+  await expect(page.locator('#financialReportSummary')).toContainText('Gastos registrados');
+  await expect(page.locator('#financialReportBreakdowns')).toContainText('Gastos por categoría');
+  await page.locator('.owner-expense-section').screenshot({ path: path.join(evidenceDir, 'owner-expenses-after.png') });
   await page.setViewportSize({ width: 320, height: 800 });
   const posGeometry = await page.locator('#retailPointOfSale').evaluate(section => ({
     width: section.clientWidth,
@@ -135,8 +156,11 @@ test('owner creates a product and records a stock receipt from the inventory pan
   expect(requests[2]).toMatchObject({ path: '/owner/inventory/sales', method: 'POST' });
   expect(requests[2].body).toMatchObject({ method: 'cash', items: [{ product_id: 81, quantity: 2 }, { product_id: 80, quantity: 1 }] });
   expect(requests[2].body.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(requests[3]).toMatchObject({ path: '/owner/expenses', method: 'POST' });
+  expect(requests[3].body).toMatchObject({ category: 'supplies', description: 'Compra de navajas', amount_cents: 2550, payment_method: 'cash' });
+  expect(requests[3].body.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
   await page.setViewportSize({ width: 320, height: 800 });
-  for (const id of ['ownerInventoryProductForm', 'ownerInventoryMovementForm']) {
+  for (const id of ['ownerInventoryProductForm', 'ownerInventoryMovementForm', 'ownerExpenseForm']) {
     const geometry = await page.locator(`#${id}`).evaluate(form => ({
       width: form.clientWidth,
       scrollWidth: form.scrollWidth,

@@ -353,6 +353,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 #businessSettingsForm .brand-preview > small[data-level="low"] { color:#9a4d28; }
 #businessSettingsForm > .settings-submit { display:block; }
 #businessSettingsForm .settings-submit > button { display:block; width:100%; min-height:48px; margin:0; padding:12px 16px; font-size:.92rem; }
+#ownerExpenseForm > .settings-wide { grid-column:1 / -1; }
+.owner-expense-section { margin-bottom:28px; padding:20px; border:1px solid #e8e1d6; border-radius:14px; background:#fbfaf7; }
+.owner-expense-section > p { max-width:760px; color:#71695e; font-size:.84rem; line-height:1.6; }
+.owner-expense-section > h4 { margin:20px 0 10px; }
+#cashExpenseSummary { color:#685a47; font-size:.82rem; }
 .tab-content form.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:14px 16px; }
 .tab-content form.grid > .field { display:flex; min-width:0; flex-direction:column; gap:7px; margin:0; }
 .tab-content form.grid > .field > label { display:block; margin:0; color:#514c44; font-size:.78rem; line-height:1.45; font-weight:700; }
@@ -374,6 +379,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   #businessSettingsForm { grid-template-columns:minmax(0,1fr); gap:15px; }
   #businessSettingsForm > .settings-wide { grid-column:1; }
   #businessSettingsForm .brand-preview { padding:12px; }
+  #ownerExpenseForm > .settings-wide { grid-column:1; }
+  .owner-expense-section { padding:14px; }
   .tab-content form.grid { grid-template-columns:minmax(0,1fr); gap:12px; }
   .tab-content .services-header { align-items:flex-start; }
   .tab-content .services-header > .btn-primary { flex:none; }

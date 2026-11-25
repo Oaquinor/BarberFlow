@@ -40,6 +40,7 @@ from app.models.user import UserFeatureFlag
 from app.models.refresh_session import RefreshSession
 from app.models.payment import Payment, CashRegisterClose
 from app.models.retail_sale import RetailSale
+from app.models.operating_expense import OperatingExpense
 from app.models.barber_commission import BarberCommission
 from app.models.in_app_notification import InAppNotification
 from app.models.login_attempt import LoginAttempt
@@ -1458,6 +1459,7 @@ def barber_cash_today(
         for sale in retail_sales:
             by_method[sale.payment_method] = by_method.get(sale.payment_method, 0) + sale.total_cents
     cash_commissions_paid = 0
+    recorded_expenses = []
     if user.role in {"barbershop_owner", "super_admin"}:
         cash_commissions_paid = db.query(func.coalesce(func.sum(BarberCommission.amount_cents), 0)).filter(
             BarberCommission.barbershop_id == shop.id,
@@ -1467,7 +1469,17 @@ def barber_cash_today(
             BarberCommission.paid_at < end,
             BarberCommission.is_deleted == False,
         ).scalar() or 0
-    expected_cash = by_method.get("cash", 0) - int(cash_commissions_paid)
+        recorded_expenses = db.query(OperatingExpense).filter(
+            OperatingExpense.barbershop_id == shop.id,
+            OperatingExpense.spent_at >= start,
+            OperatingExpense.spent_at < end,
+            OperatingExpense.is_deleted == False,
+        ).all()
+    cash_expenses = sum(
+        expense.amount_cents for expense in recorded_expenses
+        if expense.payment_method == "cash"
+    )
+    expected_cash = by_method.get("cash", 0) - int(cash_commissions_paid) - cash_expenses
     close_query = db.query(CashRegisterClose).filter(
         CashRegisterClose.barbershop_id == shop.id,
         CashRegisterClose.business_date == datetime.combine(_utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date(), time.min),
@@ -1492,10 +1504,16 @@ def barber_cash_today(
         "total_cents": sum(by_method.values()),
         "by_method": by_method,
         "cash_commissions_paid_cents": int(cash_commissions_paid),
+        "expense_count": len(recorded_expenses),
+        "expenses_total_cents": sum(expense.amount_cents for expense in recorded_expenses),
+        "cash_expense_cents": cash_expenses,
+        "cash_movement_net_cents": expected_cash,
         "expected_cash_cents": expected_cash,
         "closed": bool(close),
         "close": {
             "declared_cash_cents": close.declared_cash_cents,
+            "opening_cash_cents": close.opening_cash_cents,
+            "expected_cash_cents": close.expected_cash_cents,
             "difference_cents": close.difference_cents,
             "closed_at": close.closed_at.isoformat(),
         } if close else None,
@@ -1594,6 +1612,7 @@ def barber_close_cash_register(
             RetailSale.is_deleted == False,
         ).with_for_update().all()
     cash_commissions_paid = 0
+    cash_expenses = []
     if user.role in {"barbershop_owner", "super_admin"}:
         paid_cash_commissions = db.query(BarberCommission.amount_cents).filter(
             BarberCommission.barbershop_id == shop.id,
@@ -1604,14 +1623,23 @@ def barber_close_cash_register(
             BarberCommission.is_deleted == False,
         ).with_for_update().all()
         cash_commissions_paid = sum(int(amount) for (amount,) in paid_cash_commissions)
-    expected = sum(item.amount_cents + item.tip_cents for item in cash_payments) + sum(
+        cash_expenses = db.query(OperatingExpense).filter(
+            OperatingExpense.barbershop_id == shop.id,
+            OperatingExpense.payment_method == "cash",
+            OperatingExpense.spent_at >= start,
+            OperatingExpense.spent_at < end,
+            OperatingExpense.is_deleted == False,
+        ).with_for_update().all()
+    cash_movement_net = sum(item.amount_cents + item.tip_cents for item in cash_payments) + sum(
         sale.total_cents for sale in retail_cash_sales
-    ) - int(cash_commissions_paid)
+    ) - int(cash_commissions_paid) - sum(expense.amount_cents for expense in cash_expenses)
+    expected = data.opening_cash_cents + cash_movement_net
     close = CashRegisterClose(
         barbershop_id=shop.id,
         closed_by_user_id=user.id,
         business_date=date_key,
         expected_cash_cents=expected,
+        opening_cash_cents=data.opening_cash_cents,
         declared_cash_cents=data.declared_cash_cents,
         difference_cents=data.declared_cash_cents - expected,
         payment_count=len(cash_payments) + len(retail_cash_sales),
@@ -1623,7 +1651,9 @@ def barber_close_cash_register(
         db.flush()
         _audit(db, user, "cash.closed", "cash_register_close", close.id, shop.id,
                {"business_date": data.business_date, "expected_cents": expected,
+                "opening_cash_cents": data.opening_cash_cents,
                 "cash_commissions_paid_cents": int(cash_commissions_paid),
+                "cash_expense_cents": sum(expense.amount_cents for expense in cash_expenses),
                 "declared_cents": data.declared_cash_cents,
                 "difference_cents": data.declared_cash_cents - expected})
         db.commit()
@@ -1635,11 +1665,14 @@ def barber_close_cash_register(
         "business_date": data.business_date,
         "currency": shop.currency,
         "expected_cash_cents": expected,
+        "opening_cash_cents": data.opening_cash_cents,
+        "cash_movement_net_cents": cash_movement_net,
         "declared_cash_cents": close.declared_cash_cents,
         "difference_cents": close.difference_cents,
         "payment_count": close.payment_count,
         "retail_sale_count": len(retail_cash_sales),
         "cash_commissions_paid_cents": int(cash_commissions_paid),
+        "cash_expense_cents": sum(expense.amount_cents for expense in cash_expenses),
     }
 
 

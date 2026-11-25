@@ -105,8 +105,8 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `POST` | `/barber/appointments/{appointment_id}/payment` | Registra el pago y finaliza el servicio |
 | `POST` | `/barber/appointments/walk-in` | Inicia una atención presencial sin reserva |
 | `GET` | `/barber/commissions` | El barbero consulta sus comisiones y saldos por moneda |
-| `GET` | `/barber/cash/today` | Cobros del día local y conciliación |
-| `POST` | `/barber/cash/close` | Registra cierre diario |
+| `GET` | `/barber/cash/today` | Cobros, comisiones pagadas y movimiento neto de efectivo del día local; owner incluye gastos |
+| `POST` | `/barber/cash/close` | Concilia cierre diario con fondo inicial, efectivo contado y egresos |
 | `GET` | `/barber/share-link` | Enlace público del negocio |
 
 ## Gestión del negocio (owner)
@@ -158,11 +158,11 @@ Las rutas de escritura requieren rol owner; las que admiten `super_admin` exigen
 | Método | Ruta | Acceso | Función |
 |---|---|---|---|
 | `GET` | `/analytics/demand-forecast` | Owner autenticado | Estima el volumen de servicios por día y hora para los próximos siete días |
-| `GET` | `/analytics/financial-report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Owner autenticado | Resume pagos de servicios y ventas minoristas realmente cobrados, separados por día comercial y método; por barbero muestra servicios |
+| `GET` | `/analytics/financial-report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Owner autenticado | Resume pagos cobrados y gastos registrados por día comercial, método y categoría; por barbero muestra servicios |
 
 El pronóstico usa el promedio histórico de citas completadas por día de la semana y hora durante las 12 semanas anteriores, y lo combina con las reservas próximas conocidas. Es una referencia estadística explicable, no un modelo de aprendizaje automático. La respuesta incluye el periodo y tamaño de la muestra, reservas conocidas, horas pico y nivel de confianza; con poco historial se indica esa limitación y solo sirven de referencia las reservas existentes. Todos los datos se filtran por la barbería del owner autenticado.
 
-El reporte financiero exige un rango de fechas de hasta 366 días y lo interpreta en la zona horaria IANA del negocio. Se basa en cobros guardados, separa servicios, productos y propinas, y expresa todos los importes en centavos y la moneda del tenant. Las ventas minoristas no se asignan a un barbero. No estima ingresos de citas aún no cobradas.
+El reporte financiero exige un rango de fechas de hasta 366 días y lo interpreta en la zona horaria IANA del negocio. Se basa en cobros y egresos realmente guardados, separa servicios, productos, propinas y gastos, y expresa todos los importes en centavos y la moneda del tenant. El saldo se llama «cobros menos gastos registrados» y no es utilidad neta: no necesariamente incluye todos los costos, impuestos ni obligaciones. Las ventas minoristas y gastos no se asignan a un barbero. No estima ingresos de citas aún no cobradas.
 
 Para iniciar servicio:
 
@@ -183,10 +183,10 @@ Métodos aceptados: `cash`, `card`, `transfer`, `other`. Cada cita admite un sol
 Cierre:
 
 ```json
-{"business_date":"2026-11-19","declared_cash_cents":30000,"notes":"Conteo revisado"}
+{"business_date":"2026-11-19","opening_cash_cents":10000,"declared_cash_cents":30000,"notes":"Conteo revisado"}
 ```
 
-Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva esperado, declarado y diferencia. Una segunda conciliación de la misma fecha y usuario se rechaza. El cierre del owner también cierra la fecha para los barberos del negocio. Antes de cerrar, se deben resolver las citas pendientes o confirmadas y finalizar los servicios en curso de esa fecha, también cuando se cierra un día anterior.
+Un barbero ve sus cobros; el owner ve los del negocio y sus gastos. Antes del cierre, «movimiento neto de efectivo» son las entradas en efectivo menos comisiones en efectivo y gastos en efectivo, excluido el fondo inicial. El cierre lo suma al fondo inicial para obtener el efectivo esperado, conserva fondo, esperado, declarado y diferencia. Una segunda conciliación de la misma fecha y usuario se rechaza. El cierre del owner también cierra la fecha para los barberos del negocio. Antes de cerrar, se deben resolver las citas pendientes o confirmadas y finalizar los servicios en curso de esa fecha, también cuando se cierra un día anterior.
 
 ## Catálogo de servicios
 
@@ -215,6 +215,15 @@ Todas estas rutas requieren sesión de propietario y derivan la barbería del us
 | `GET` | `/owner/inventory/sales?limit=50&offset=0` | Owner; lista ventas de su tenant |
 
 Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. La venta guarda snapshots de precio/costo, bloquea el tenant y los productos, impide existencias negativas y se refleja en efectivo esperado y reporte financiero. El panel owner prepara un carrito de hasta 50 productos distintos, admite reintentos seguros y muestra las últimas diez ventas. El POS actual no aplica impuestos/descuentos, no procesa reembolsos, compras/proveedores, transferencias entre sucursales ni comisiones de producto.
+
+## Gastos del negocio
+
+| Método | Ruta | Acceso | Función |
+|---|---|---|---|
+| `POST` | `/owner/expenses` | Owner; solo su tenant | Registra un gasto pagado con categoría, método, importe en centavos, UUID idempotente y auditoría |
+| `GET` | `/owner/expenses?start_date=&end_date=&limit=50` | Owner; solo su tenant | Lista hasta 100 egresos por fecha local; el rango de fechas debe enviarse completo |
+
+Los gastos son append-only desde la API: no hay edición ni eliminación que cambie registros financieros ya asentados. La clave UUID y el payload se almacenan como hashes; el mismo reintento devuelve el registro y reutilizar la clave con otros datos responde `409`. Registrar un gasto tras el cierre del día también responde `409`. Solo el método en efectivo afecta el movimiento neto y la conciliación; tarjeta/transferencia se muestran en el reporte por método. Las categorías no sustituyen cuentas contables. En esta etapa no se guardan comprobantes ni proveedores y no hay gastos recurrentes.
 
 ## Rendimiento y logros
 

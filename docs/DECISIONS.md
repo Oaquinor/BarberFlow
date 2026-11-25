@@ -31,3 +31,9 @@
 **Decisión:** las cantidades no se editan directamente; el owner registra movimientos con clave idempotente, costo snapshot, actor y motivo. El saldo y el movimiento se guardan en una transacción MySQL con auditoría.
 
 **Motivo:** evita ajustes sin rastro y recepciones duplicadas. La venta POS se conserva separada de las citas y cada línea guarda snapshots; venta, cobro, costo y decremento de inventario se confirman en la misma transacción MySQL. Impuestos, descuentos, devoluciones, compra y comisión de productos quedan fuera hasta que tengan política explícita.
+
+## D-007: registrar gastos sin declarar utilidad neta
+
+**Decisión:** los egresos del negocio usan un libro append-only por tenant, con idempotencia, auditoría, moneda y centavos enteros. Los gastos cash reducen el movimiento conciliable; el cierre guarda el fondo inicial declarado por el owner. Los reportes llaman al cálculo «cobros menos gastos registrados» y no «utilidad neta».
+
+**Motivo:** una partida parcial de gastos no incluye necesariamente todos los costos, impuestos, compras u obligaciones. No hay comprobantes, proveedores, gastos recurrentes ni borrado/edición financiera en este incremento; incorporarlos requiere un flujo auditable y política de reversos.

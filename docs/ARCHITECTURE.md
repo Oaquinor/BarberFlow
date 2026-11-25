@@ -10,12 +10,13 @@ Esta guía describe el código actualmente conectado. Los ejemplos y módulos no
 
 - `frontend/`: páginas HTML, CSS y JavaScript del panel, portal público y PWA. No es una aplicación React.
 - `backend/app/main.py`: configura FastAPI, seguridad HTTP, CORS, router `/api/v1`, health check dependiente de MySQL y servicio de archivos estáticos.
-- `backend/app/api/v1/__init__.py`: punto de registro de los routers activos: onboarding, plataforma, reservas, notificaciones, administración general, gestión de barbería, catálogo de servicios, logros, rendimiento, analítica, ajustes de administración, billing, recuperación de contraseña, inventario y POS minorista.
+- `backend/app/api/v1/__init__.py`: punto de registro de los routers activos: onboarding, plataforma, reservas, notificaciones, administración general, gestión de barbería, catálogo de servicios, logros, rendimiento, analítica, ajustes de administración, billing, recuperación de contraseña, inventario, POS minorista y gastos operativos.
 - `backend/app/api/v1/endpoints/platform.py`: implementa autenticación, registro SaaS, soporte y operaciones de agenda, pagos y caja.
 - `backend/app/api/v1/endpoints/notifications.py`: expone la bandeja tenant-scoped de notificaciones internas y el marcado de lectura para el usuario autenticado; mantiene los paths y el tag público existentes.
 - `backend/app/api/v1/endpoints/booking.py`: implementa el portal público, reserva/seguimiento/cambios de citas, disponibilidad, turnos del barbero y ausencias; conserva los paths y tags de API.
 - `backend/app/api/v1/endpoints/booking_waitlist.py`: registra solicitudes públicas no vinculantes con rate limit y ofrece al owner una cola tenant-scoped para contacto y cierre.
 - `backend/app/api/v1/inventory.py` y `backend/app/api/v1/retail_sales.py`: administran catálogo e historial append-only; el POS de propietario vende sin cita, descuenta stock y registra una venta idempotente en la misma transacción MySQL.
+- `backend/app/api/v1/expenses.py`: registra y consulta gastos del propietario dentro de su tenant. Las entradas son idempotentes, auditadas y no se editan ni borran desde la API; el efectivo pagado se integra con el cierre y los reportes.
 - `backend/app/api/v1/endpoints/admin.py`: implementa soporte de plataforma, tenants, afiliados, suscripciones, usuarios y auditoría. Comparte los helpers de autenticación y auditoría del módulo `platform.py`; ambos routers conservan el tag público `platform`.
 - `backend/app/api/v1/endpoints/owner.py`: implementa gestión de barberos, comisiones y clientes para owners y barberos. Reutiliza los controles compartidos de tenant, suscripción y auditoría; mantiene los paths y el tag API existentes.
 - `backend/app/api/v1/endpoints/common.py`: centraliza los helpers de autenticación, autorización de tenant, suscripción, zona horaria y auditoría compartidos por los routers activos.
@@ -42,7 +43,7 @@ Las preferencias del cliente y las respuestas a preguntas configuradas por el ne
 
 Los usuarios autenticados derivan el tenant de su identidad. Las operaciones de administración general que permiten elegir barbería lo hacen explícitamente y deben comprobar el rol autorizado. Las consultas y mutaciones del negocio restringen sus registros al tenant correspondiente. La ruta compartida de reprogramación acepta un token privado para el flujo público o una sesión cliente verificada junto con la cita CRM vinculada; el ID de cita no funciona como credencial.
 
-Los cobros de servicios se guardan junto al cambio de estado de la cita. Las ventas de productos usan su entidad independiente, sin crear citas ficticias, y enlazan venta, snapshots, movimiento de inventario y auditoría dentro de la misma transacción. Ambas fuentes alimentan la caja; analítica distingue ventas de producto, servicios y propinas.
+Los cobros de servicios se guardan junto al cambio de estado de la cita. Las ventas de productos usan su entidad independiente, sin crear citas ficticias, y enlazan venta, snapshots, movimiento de inventario y auditoría dentro de la misma transacción. Los gastos pagados se almacenan como movimientos financieros append-only. La conciliación descuenta gastos en efectivo y comisiones pagadas de las entradas en efectivo; al cerrar suma el fondo inicial declarado. El reporte muestra cobros, egresos y cobros menos gastos registrados, que no representa utilidad neta.
 
 ## Autenticación y controles
 

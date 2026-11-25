@@ -54,6 +54,12 @@ La migración `035_shop_favorites` permite guardar también la barbería. Al baj
 
 La migración `036_booking_answers` agrega una columna JSON nullable a `appointments`. Guarda por separado las respuestas del cuestionario de estilo de la reserva pública. Las citas existentes mantienen `NULL`; una migración downgrade elimina solo la columna nueva y no reescribe sus notas libres.
 
+### operating_expenses
+
+La migración `040_operating_expenses` crea un libro de egresos operativos por barbería y agrega `opening_cash_cents` a `cash_register_closes` con valor histórico cero. Cada gasto conserva el usuario, categoría, descripción, importe entero en centavos, método pagado, moneda, fecha UTC, hash de clave idempotente y hash de payload. La clave es única por tenant; hay índices por fecha y por categoría/fecha y restricciones `CHECK` de importe, categoría y medio de pago. El `CHECK` monetario impide gastos cero/negativos. Las rutas activas no permiten editar ni borrar esos registros.
+
+El cierre de caja conserva fondo inicial, movimiento esperado, importe contado y diferencia. El movimiento en efectivo incluye cobros cash, ventas retail cash, comisiones cash liquidadas y gastos cash; se calcula como entradas menos egresos. El efectivo esperado al cerrar suma el fondo inicial declarado a ese movimiento. La migración no altera importes de cierres anteriores: quedan con fondo inicial cero.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

@@ -2740,15 +2740,19 @@ async function loadCashSummary() {
         if (currentUser?.role === 'barbershop_owner') {
             await loadOwnerInventory();
             await loadOwnerRetailSales();
+            await loadOwnerExpenses();
         }
         const methods = document.getElementById('cashMethods');
         if (methods) {
             const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };
             methods.textContent = Object.entries(data.by_method || {}).map(([key, value]) => `${labels[key] || key}: ${format(value)}`).join(' · ') || 'Aún no hay cobros registrados hoy.';
         }
+        setText('cashExpenseSummary', data.expense_count
+            ? `${data.expense_count} gasto(s) registrado(s): ${format(data.expenses_total_cents)} · ${format(data.cash_expense_cents)} descontados del movimiento neto. El cierre suma el fondo inicial.`
+            : 'El movimiento neto excluye el fondo inicial; indícalo al cerrar la caja.');
         const form = document.getElementById('cashCloseForm');
         if (form) form.style.display = data.closed ? 'none' : 'block';
-        if (data.closed && data.close) setText('cashCloseResult', `Caja cerrada. Diferencia: ${format(data.close.difference_cents)}`);
+        if (data.closed && data.close) setText('cashCloseResult', `Caja cerrada. Fondo inicial: ${format(data.close.opening_cash_cents)} · efectivo esperado: ${format(data.close.expected_cash_cents)} · diferencia: ${format(data.close.difference_cents)}`);
     } catch (error) {
         console.error('Error loading cash summary:', error);
     }
@@ -2758,15 +2762,16 @@ document.getElementById('cashCloseForm')?.addEventListener('submit', async (even
     event.preventDefault();
     const result = document.getElementById('cashCloseResult');
     const declared = Number(document.getElementById('cashDeclared').value);
-    if (!cashBusinessDate || !Number.isFinite(declared) || declared < 0) {
-        result.textContent = 'Indica un importe válido para el efectivo contado.';
+    const opening = Number(document.getElementById('cashOpening').value);
+    if (!cashBusinessDate || !Number.isFinite(declared) || declared < 0 || !Number.isFinite(opening) || opening < 0) {
+        result.textContent = 'Indica importes válidos para el fondo inicial y el efectivo contado.';
         return;
     }
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/cash/close`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ business_date: cashBusinessDate, declared_cash_cents: Math.round(declared * 100), notes: document.getElementById('cashCloseNotes').value.trim() || null })
+            body: JSON.stringify({ business_date: cashBusinessDate, opening_cash_cents: Math.round(opening * 100), declared_cash_cents: Math.round(declared * 100), notes: document.getElementById('cashCloseNotes').value.trim() || null })
         });
         const data = await response.json();
         if (!response.ok) {
@@ -2790,6 +2795,83 @@ function businessDateFor(timeZone, date = new Date()) {
     return `${values.year}-${values.month}-${values.day}`;
 }
 
+let ownerExpensesRequestSequence = 0;
+
+async function loadOwnerExpenses() {
+    if (currentUser?.role !== 'barbershop_owner') return;
+    const body = document.getElementById('ownerExpensesBody');
+    if (!body) return;
+    const requestSequence = ++ownerExpensesRequestSequence;
+    const start = document.getElementById('financialReportStart')?.value;
+    const end = document.getElementById('financialReportEnd')?.value;
+    const params = new URLSearchParams({ limit: '50' });
+    if (start && end) {
+        params.set('start_date', start);
+        params.set('end_date', end);
+    }
+    try {
+        const data = await ownerFetch(`/owner/expenses?${params}`);
+        if (requestSequence !== ownerExpensesRequestSequence) return;
+        const labels = {
+            rent: 'Alquiler', utilities: 'Servicios', payroll: 'Nómina', commission: 'Comisiones',
+            supplies: 'Insumos', maintenance: 'Mantenimiento', marketing: 'Publicidad',
+            administrative: 'Administración', internet: 'Internet', water: 'Agua',
+            electricity: 'Electricidad', other: 'Otros',
+        };
+        const methods = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };
+        const timeZone = barbershopProfile?.timezone || 'UTC';
+        body.innerHTML = (data.items || []).length ? data.items.map((expense) => {
+            const dateLabel = new Intl.DateTimeFormat('es-DO', {
+                dateStyle: 'medium', timeStyle: 'short', timeZone,
+            }).format(new Date(expense.spent_at));
+            return `<tr><td data-label="Fecha">${escapeHtml(dateLabel)}</td><td data-label="Categoría">${escapeHtml(labels[expense.category] || expense.category)}</td><td data-label="Descripción">${escapeHtml(expense.description)}</td><td data-label="Método">${escapeHtml(methods[expense.payment_method] || expense.payment_method)}</td><td data-label="Importe">${escapeHtml(fmtMoneyFromCents(expense.amount_cents, expense.currency))}</td></tr>`;
+        }).join('') : '<tr><td colspan="5" data-label="Gastos">No hay gastos en este periodo.</td></tr>';
+    } catch (error) {
+        if (requestSequence !== ownerExpensesRequestSequence) return;
+        body.innerHTML = '<tr><td colspan="5" data-label="Gastos">No se pudieron cargar los gastos.</td></tr>';
+    }
+}
+
+document.getElementById('ownerExpenseForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const result = document.getElementById('ownerExpenseResult');
+    const submit = form.querySelector('[type="submit"]');
+    const payload = {
+        category: document.getElementById('ownerExpenseCategory').value,
+        description: document.getElementById('ownerExpenseDescription').value.trim(),
+        amount_cents: Math.round(Number(document.getElementById('ownerExpenseAmount').value) * 100),
+        payment_method: document.getElementById('ownerExpenseMethod').value,
+    };
+    if (!Number.isSafeInteger(payload.amount_cents) || payload.amount_cents <= 0) {
+        result.textContent = 'Indica un importe mayor que cero.';
+        return;
+    }
+    const signature = JSON.stringify(payload);
+    if (form.dataset.requestSignature !== signature || !form.dataset.requestKey) {
+        form.dataset.requestKey = crypto.randomUUID();
+        form.dataset.requestSignature = signature;
+    }
+    submit.disabled = true;
+    result.textContent = 'Registrando gasto…';
+    try {
+        const response = await ownerFetch('/owner/expenses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, idempotency_key: form.dataset.requestKey }),
+        });
+        result.textContent = `Gasto de ${fmtMoneyFromCents(response.amount_cents, response.currency)} registrado.`;
+        form.reset();
+        delete form.dataset.requestKey;
+        delete form.dataset.requestSignature;
+        await Promise.all([loadOwnerExpenses(), loadCashSummary(), loadFinancialReport()]);
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo registrar el gasto. Puedes reintentar sin duplicarlo.';
+    } finally {
+        submit.disabled = false;
+    }
+});
+
 async function loadFinancialReport() {
     if (currentUser?.role !== 'barbershop_owner' || !barbershopProfile) return;
     const startInput = document.getElementById('financialReportStart');
@@ -2811,6 +2893,8 @@ async function loadFinancialReport() {
         }).format((Number(cents) || 0) / 100);
         document.getElementById('financialReportSummary').innerHTML = [
             ['Cobros recibidos', format(data.gross_cents)],
+            ['Gastos registrados', format(data.expense_total_cents)],
+            ['Cobros menos gastos registrados', format(data.balance_after_recorded_expenses_cents)],
             ['Servicios', format(data.service_revenue_cents)],
             ['Productos', format(data.retail_revenue_cents)],
             ['Ventas de productos', String(data.retail_sale_count)],
@@ -2826,10 +2910,14 @@ async function loadFinancialReport() {
         ];
         document.getElementById('financialReportBreakdowns').innerHTML = sections.map(([title, rows]) => `
             <h4>${escapeHtml(title)}</h4>
-            <table><thead><tr><th>Grupo</th><th>Transacciones</th><th>Servicios</th><th>Productos</th><th>Propinas</th><th>Total</th></tr></thead>
-            <tbody>${rows.length ? rows.map((row) => `<tr><td data-label="Grupo">${escapeHtml(row.label)}</td><td data-label="Transacciones">${Number(row.payment_count)}</td><td data-label="Servicios">${format(row.service_revenue_cents)}</td><td data-label="Productos">${format(row.retail_revenue_cents)}</td><td data-label="Propinas">${format(row.tip_cents)}</td><td data-label="Total">${format(row.gross_cents)}</td></tr>`).join('') : '<tr><td colspan="6" data-label="Informe">Sin cobros en el rango.</td></tr>'}</tbody></table>
-        `).join('');
-        result.textContent = `${data.payment_count} transacciones · ${data.start_date} a ${data.end_date} (${data.timezone})`;
+            <table><thead><tr><th>Grupo</th><th>Transacciones</th><th>Servicios</th><th>Productos</th><th>Propinas</th><th>Gastos</th><th>Saldo registrado</th></tr></thead>
+            <tbody>${rows.length ? rows.map((row) => `<tr><td data-label="Grupo">${escapeHtml(row.label)}</td><td data-label="Transacciones">${Number(row.payment_count)}</td><td data-label="Servicios">${format(row.service_revenue_cents)}</td><td data-label="Productos">${format(row.retail_revenue_cents)}</td><td data-label="Propinas">${format(row.tip_cents)}</td><td data-label="Gastos">${format(row.expense_cents)}</td><td data-label="Saldo registrado">${format(row.net_after_recorded_expenses_cents)}</td></tr>`).join('') : '<tr><td colspan="7" data-label="Informe">Sin cobros ni gastos en el rango.</td></tr>'}</tbody></table>
+        `).join('') + `
+            <h4>Gastos por categoría</h4>
+            <table><thead><tr><th>Categoría</th><th>Movimientos</th><th>Importe</th></tr></thead>
+            <tbody>${(data.expenses_by_category || []).length ? data.expenses_by_category.map((row) => `<tr><td data-label="Categoría">${escapeHtml(row.label)}</td><td data-label="Movimientos">${Number(row.expense_count)}</td><td data-label="Importe">${format(row.amount_cents)}</td></tr>`).join('') : '<tr><td colspan="3" data-label="Gastos">Sin gastos en el rango.</td></tr>'}</tbody></table>`;
+        result.textContent = `${data.payment_count} transacciones · ${data.expense_count} gastos · ${data.start_date} a ${data.end_date} (${data.timezone})`;
+        await loadOwnerExpenses();
     } catch (error) {
         result.textContent = error.message || 'Error de conexión al consultar el reporte.';
     }

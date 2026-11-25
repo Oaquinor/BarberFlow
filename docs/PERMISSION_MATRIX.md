@@ -11,9 +11,11 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Filtrar, contactar y cambiar estado de solicitudes de espera | No | Solo su tenant | No | No | No por defecto |
 | Administrar catálogo, costos, precios y umbrales de inventario | No | Solo su tenant | No | No | No por defecto |
 | Cobrar venta de productos y consultar ventas POS | No | Solo su tenant | No | No | No por defecto |
+| Registrar y consultar gastos del negocio | No | Solo su tenant; idempotente y auditado; sin edición/borrado financiero | No | No | No por defecto |
 | Registrar o consultar movimientos de existencias | No | Solo productos y movimientos de su tenant; deja auditoría | No | No | No por defecto |
 | Consultar/cancelar/reprogramar reserva guest con token privado | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva |
 | Agenda/estado/cobro/caja | No | Su negocio | Solo operaciones propias permitidas | No | Según endpoint administrativo explícito |
+| Consultar conciliación del día | No | Su negocio, incluye egresos operativos | Sus cobros y cierres permitidos; no ve el detalle de gastos del negocio | No | Solo conforme al tenant de su cuenta |
 | Crear/editar barberos, clientes y comisiones | No | Su tenant | No; consulta permitida de sus comisiones | No | Según endpoints administrativos explícitos |
 | Configurar negocio, horarios y branding | No | Su tenant | Lectura o acceso limitado según ruta | No | No por defecto |
 | Métricas de negocio | No | Su tenant | Sus métricas | No | Métricas globales/operación explícita |
