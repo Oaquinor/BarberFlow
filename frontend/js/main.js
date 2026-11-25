@@ -1366,6 +1366,7 @@ async function loadOwnerManagement() {
         }
         await loadOwnerClients();
         await loadOwnerWaitlist();
+        await loadOwnerInventory();
         await loadDemandForecast();
     } catch (error) {
         barberBody.textContent = '';
@@ -1430,6 +1431,146 @@ document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (e
     } catch (error) {
         button.disabled = false;
         document.getElementById('ownerWaitlistResult').textContent = error.message || 'No se pudo actualizar la solicitud.';
+    }
+});
+
+let ownerInventoryProducts = [];
+
+function moneyInputToCents(value) {
+    const match = String(value).trim().match(/^(\d{1,9})(?:\.(\d{1,2}))?$/);
+    if (!match) throw new Error('Escribe un importe válido con hasta dos decimales.');
+    return Number(match[1]) * 100 + Number((match[2] || '').padEnd(2, '0'));
+}
+
+async function loadOwnerInventory() {
+    const productsBody = document.getElementById('ownerInventoryProductsBody');
+    const movementsBody = document.getElementById('ownerInventoryMovementsBody');
+    const movementProduct = document.getElementById('inventoryMovementProduct');
+    const summary = document.getElementById('ownerInventorySummary');
+    if (!productsBody || !movementsBody || !movementProduct || !summary || currentUser?.role !== 'barbershop_owner') return;
+    productsBody.replaceChildren();
+    movementsBody.replaceChildren();
+    try {
+        const [products, movements] = await Promise.all([
+            ownerFetch('/owner/inventory/products?include_inactive=true&limit=100'),
+            ownerFetch('/owner/inventory/movements?limit=100'),
+        ]);
+        ownerInventoryProducts = products.items || [];
+        productsBody.innerHTML = ownerInventoryProducts.map(product => `<tr>
+            <td data-label="Producto">${escapeHtml(product.name)}<br><small>${escapeHtml(product.category)} · ${escapeHtml(product.unit)}</small></td>
+            <td data-label="Código">${escapeHtml(product.barcode || '—')}</td>
+            <td data-label="Costo">${fmtMoneyFromCents(product.unit_cost_cents)}</td>
+            <td data-label="Precio">${fmtMoneyFromCents(product.unit_price_cents)}</td>
+            <td data-label="Existencias">${Number(product.stock_quantity)} ${escapeHtml(product.unit)}${product.low_stock ? ' · Reponer' : ''}</td>
+            <td data-label="Estado">${product.is_active ? 'Activo' : 'Inactivo'}</td></tr>`).join('');
+        const selected = movementProduct.value;
+        movementProduct.replaceChildren(new Option('Selecciona un producto', ''));
+        ownerInventoryProducts.filter(product => product.is_active).forEach(product => {
+            movementProduct.add(new Option(`${product.name} · ${product.stock_quantity} ${product.unit}`, String(product.id)));
+        });
+        if ([...movementProduct.options].some(option => option.value === selected)) movementProduct.value = selected;
+        const productNames = new Map(ownerInventoryProducts.map(product => [Number(product.id), product.name]));
+        const labels = { receipt: 'Recepción', return: 'Devolución', consumption: 'Consumo', adjustment: 'Ajuste' };
+        movementsBody.innerHTML = (movements.items || []).map(item => `<tr>
+            <td data-label="Fecha">${escapeHtml(new Date(item.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
+            <td data-label="Producto">${escapeHtml(productNames.get(Number(item.product_id)) || `#${Number(item.product_id)}`)}</td>
+            <td data-label="Movimiento">${escapeHtml(labels[item.reason] || item.reason)}</td>
+            <td data-label="Variación">${Number(item.quantity_delta) > 0 ? '+' : ''}${Number(item.quantity_delta)}</td>
+            <td data-label="Costo por unidad">${fmtMoneyFromCents(item.unit_cost_cents)}</td>
+            <td data-label="Nota">${escapeHtml(item.note || '—')}</td></tr>`).join('');
+        summary.textContent = `${Number(products.total)} producto(s) · ${Number(movements.total)} movimiento(s) recientes`;
+    } catch (error) {
+        summary.textContent = error.message || 'No se pudo cargar el inventario.';
+    }
+}
+
+document.getElementById('refreshOwnerInventory')?.addEventListener('click', loadOwnerInventory);
+document.getElementById('ownerInventoryProductForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const result = document.getElementById('ownerInventoryProductResult');
+    const button = form.querySelector('[type="submit"]');
+    button.disabled = true;
+    result.textContent = 'Guardando producto…';
+    try {
+        const priceInCents = (id) => moneyInputToCents(document.getElementById(id).value);
+        await ownerFetch('/owner/inventory/products', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: document.getElementById('inventoryProductName').value.trim(),
+                category: document.getElementById('inventoryProductCategory').value.trim(),
+                barcode: document.getElementById('inventoryProductBarcode').value.trim() || null,
+                unit: document.getElementById('inventoryProductUnit').value.trim(),
+                unit_cost_cents: priceInCents('inventoryProductCost'),
+                unit_price_cents: priceInCents('inventoryProductPrice'),
+                stock_minimum: Number(document.getElementById('inventoryProductMinimum').value),
+            }),
+        });
+        form.reset();
+        document.getElementById('inventoryProductCategory').value = 'General';
+        document.getElementById('inventoryProductUnit').value = 'unidad';
+        result.textContent = 'Producto creado. Registra una recepción para cargar sus existencias.';
+        await loadOwnerInventory();
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo crear el producto.';
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.getElementById('ownerInventoryMovementForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const result = document.getElementById('ownerInventoryMovementResult');
+    const button = form.querySelector('[type="submit"]');
+    const productId = Number(document.getElementById('inventoryMovementProduct').value);
+    const reason = document.getElementById('inventoryMovementReason').value;
+    const rawQuantity = document.getElementById('inventoryMovementQuantity').value;
+    const quantity = Number(rawQuantity);
+    if (!Number.isInteger(productId) || productId <= 0 || !Number.isInteger(quantity) || quantity === 0) {
+        result.textContent = 'Selecciona producto y una cantidad entera distinta de cero.';
+        return;
+    }
+    if ((reason === 'receipt' || reason === 'return') && quantity < 0 || reason === 'consumption' && quantity > 0) {
+        result.textContent = 'La cantidad debe corresponder al tipo de movimiento seleccionado.';
+        return;
+    }
+    let unitCostCents = null;
+    try {
+        const rawCost = document.getElementById('inventoryMovementCost').value.trim();
+        if (rawCost) unitCostCents = moneyInputToCents(rawCost);
+    } catch (error) {
+        result.textContent = error.message;
+        return;
+    }
+    const payload = {
+        quantity_delta: quantity,
+        reason,
+        unit_cost_cents: unitCostCents,
+        note: document.getElementById('inventoryMovementNote').value.trim() || null,
+    };
+    const signature = JSON.stringify({ productId, ...payload });
+    if (form.dataset.requestSignature !== signature) {
+        form.dataset.requestSignature = signature;
+        form.dataset.requestKey = crypto.randomUUID();
+    }
+    payload.idempotency_key = form.dataset.requestKey;
+    button.disabled = true;
+    result.textContent = 'Registrando movimiento…';
+    try {
+        await ownerFetch(`/owner/inventory/products/${productId}/movements`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        form.reset();
+        delete form.dataset.requestSignature;
+        delete form.dataset.requestKey;
+        document.getElementById('inventoryMovementReason').value = 'receipt';
+        result.textContent = 'Movimiento registrado en el historial de inventario.';
+        await loadOwnerInventory();
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo registrar el movimiento.';
+    } finally {
+        button.disabled = false;
     }
 });
 

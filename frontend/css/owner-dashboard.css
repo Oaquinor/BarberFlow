@@ -378,3 +378,4 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .tab-content .services-header { align-items:flex-start; }
   .tab-content .services-header > .btn-primary { flex:none; }
 }
+.inventory-table-wrap { margin-top: 14px; }

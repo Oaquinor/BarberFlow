@@ -25,3 +25,9 @@
 **Decisión:** guardar solicitudes públicas de contacto de forma independiente a `appointments`; nunca bloquear disponibilidad, consumir límites de citas del plan ni mostrarlas como turno confirmado. La barbería debe contactar manualmente y crear la cita por el flujo existente. Cada intento incluye UUID idempotente, guardado únicamente como hash único por tenant.
 
 **Motivo:** una solicitud sin horario confirmado no representa una obligación del negocio ni ingreso. El perfil público limita su captura con rate limiting; el owner ve los datos dentro del tenant, los estados quedan auditados y los nombres de servicio/profesional se guardan como snapshot.
+
+## D-006: existencias derivadas de un libro inmutable
+
+**Decisión:** las cantidades no se editan directamente; el owner registra movimientos con clave idempotente, costo snapshot, actor y motivo. El saldo y el movimiento se guardan en una transacción MySQL con auditoría.
+
+**Motivo:** evita ajustes sin rastro y recepciones duplicadas. La venta POS no se habilita hasta integrar cada línea de venta con caja, ingreso, costo e inventario en la misma transacción.

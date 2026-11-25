@@ -1,0 +1,180 @@
+"""MySQL integration coverage for inventory ownership and immutable movements."""
+
+from datetime import timedelta
+from uuid import uuid4
+
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.core.security import create_access_token
+from app.models import Barbershop, InventoryMovement, InventoryProduct, Subscription, User
+from app.utils.datetime import utc_now_naive
+
+
+def _tenant(db: Session, key: str, role: str = "barbershop_owner"):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="free",
+        status="active",
+        current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29),
+        max_barbers=3,
+        max_appointments_per_month=100,
+        max_clients=200,
+        auto_renew=False,
+    )
+    db.add(subscription)
+    db.flush()
+    shop = Barbershop(
+        name=f"Inventory {key}",
+        slug=f"inventory-{key}",
+        email=f"{key}@example.com",
+        phone="8095554100",
+        address_line1="Calle 10",
+        city="Santo Domingo",
+        state="DN",
+        postal_code="10110",
+        country="DO",
+        timezone="America/Santo_Domingo",
+        currency="DOP",
+        subscription_id=subscription.id,
+    )
+    db.add(shop)
+    db.flush()
+    user = User(
+        email=f"owner-{key}@example.com",
+        password_hash="unused",
+        first_name="Owner",
+        last_name=key,
+        role=role,
+        is_active=True,
+        barbershop_id=shop.id,
+    )
+    db.add(user)
+    db.commit()
+    return shop, user
+
+
+def _headers(user: User):
+    token = create_access_token({"sub": str(user.id), "role": user.role})
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _product(client: TestClient, headers: dict, name: str = "Pomada"):
+    response = client.post(
+        "/api/v1/owner/inventory/products",
+        headers=headers,
+        json={
+            "name": name,
+            "category": "Cabello",
+            "barcode": "840000000001",
+            "unit": "unidad",
+            "unit_cost_cents": 50000,
+            "unit_price_cents": 90000,
+            "stock_minimum": 2,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_stock_movement_is_atomic_idempotent_and_auditable(client: TestClient, test_db: Session):
+    shop, owner = _tenant(test_db, "ledger")
+    headers = _headers(owner)
+    product = _product(client, headers)
+    key = str(uuid4())
+    payload = {
+        "idempotency_key": key,
+        "quantity_delta": 5,
+        "reason": "receipt",
+        "unit_cost_cents": 47000,
+        "note": "Factura 10",
+    }
+
+    created = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements", headers=headers, json=payload
+    )
+    retried = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements", headers=headers, json=payload
+    )
+    assert created.status_code == retried.status_code == 201
+    assert created.json()["id"] == retried.json()["id"]
+    changed_retry = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements",
+        headers=headers,
+        json={**payload, "quantity_delta": 6},
+    )
+    assert changed_retry.status_code == 409
+
+    listing = client.get("/api/v1/owner/inventory/products", headers=headers)
+    assert listing.json()["items"][0]["stock_quantity"] == 5
+    assert listing.json()["items"][0]["unit_cost_cents"] == 47000
+    assert test_db.query(InventoryMovement).filter_by(barbershop_id=shop.id).count() == 1
+
+
+def test_inventory_prevents_negative_stock_and_cross_tenant_access(
+    client: TestClient, test_db: Session
+):
+    shop, owner = _tenant(test_db, "local")
+    foreign_shop, foreign_owner = _tenant(test_db, "foreign")
+    product = _product(client, _headers(owner))
+    headers = _headers(owner)
+    negative = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements",
+        headers=headers,
+        json={
+            "idempotency_key": str(uuid4()),
+            "quantity_delta": -1,
+            "reason": "consumption",
+        },
+    )
+    assert negative.status_code == 409
+    assert (
+        client.get("/api/v1/owner/inventory/products", headers=_headers(foreign_owner)).json()[
+            "items"
+        ]
+        == []
+    )
+    crossed = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements",
+        headers=_headers(foreign_owner),
+        json={
+            "idempotency_key": str(uuid4()),
+            "quantity_delta": 1,
+            "reason": "receipt",
+        },
+    )
+    assert crossed.status_code == 404
+    assert (
+        test_db.query(InventoryProduct).filter_by(barbershop_id=shop.id).one().stock_quantity == 0
+    )
+    assert test_db.query(InventoryProduct).filter_by(barbershop_id=foreign_shop.id).count() == 0
+
+
+def test_inventory_owner_only_and_barcode_unique_per_tenant(client: TestClient, test_db: Session):
+    _shop, owner = _tenant(test_db, "owner")
+    _other_shop, other_owner = _tenant(test_db, "other")
+    product = _product(client, _headers(owner))
+    duplicate = client.post(
+        "/api/v1/owner/inventory/products",
+        headers=_headers(owner),
+        json={
+            "name": "Pomada 2",
+            "barcode": product["barcode"],
+        },
+    )
+    assert duplicate.status_code == 409
+    other_tenant = client.post(
+        "/api/v1/owner/inventory/products",
+        headers=_headers(other_owner),
+        json={
+            "name": "Pomada en otro local",
+            "barcode": product["barcode"],
+        },
+    )
+    assert other_tenant.status_code == 201
+    barber_shop, barber = _tenant(test_db, "barber", role="barber")
+    denied = client.get("/api/v1/owner/inventory/products", headers=_headers(barber))
+    assert denied.status_code == 403
+    assert barber_shop.id
+    assert client.get("/api/v1/owner/inventory/products").status_code == 401

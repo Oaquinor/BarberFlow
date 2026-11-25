@@ -9,6 +9,8 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Crear reserva como invitado | Sí | Sí | Sí | Sí; además se guarda en su historial | Sí |
 | Solicitar contacto por horario (lista de espera) | Sí; solo propia solicitud | Consulta y seguimiento de su tenant | No | Sí; se comporta como petición guest | No por defecto |
 | Filtrar, contactar y cambiar estado de solicitudes de espera | No | Solo su tenant | No | No | No por defecto |
+| Administrar catálogo, costos, precios y umbrales de inventario | No | Solo su tenant | No | No | No por defecto |
+| Registrar o consultar movimientos de existencias | No | Solo productos y movimientos de su tenant; deja auditoría | No | No | No por defecto |
 | Consultar/cancelar/reprogramar reserva guest con token privado | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva |
 | Agenda/estado/cobro/caja | No | Su negocio | Solo operaciones propias permitidas | No | Según endpoint administrativo explícito |
 | Crear/editar barberos, clientes y comisiones | No | Su tenant | No; consulta permitida de sus comisiones | No | Según endpoints administrativos explícitos |

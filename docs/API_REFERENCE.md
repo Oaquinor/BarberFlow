@@ -200,6 +200,20 @@ Un barbero ve sus cobros; el owner ve los del negocio. El cierre conserva espera
 
 `name` admite hasta 100 caracteres y se conserva como snapshot en la cita; `price` es entero en centavos. Todos los registros se restringen al tenant autenticado.
 
+## Productos e inventario
+
+Todas estas rutas requieren sesión de propietario y derivan la barbería del usuario autenticado. Los precios y costos se reciben como enteros en unidades monetarias menores (por ejemplo, 550 para RD$5.50). Las cantidades solo cambian mediante el libro de movimientos; las entradas son inmutables desde la API.
+
+| Método | Ruta | Acceso |
+|---|---|---|
+| `GET` | `/owner/inventory/products?q=&low_stock=false&include_inactive=false&limit=50&offset=0` | Owner de su tenant; búsqueda y paginación |
+| `POST` | `/owner/inventory/products` | Owner; crea producto sin existencias iniciales |
+| `PATCH` | `/owner/inventory/products/{product_id}` | Owner del tenant del producto |
+| `POST` | `/owner/inventory/products/{product_id}/movements` | Owner; registra recepción, devolución, consumo o ajuste idempotente y evita stock negativo |
+| `GET` | `/owner/inventory/movements?product_id=&limit=50&offset=0` | Owner; consulta historial de su tenant |
+
+Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. El módulo actual cubre catálogo y existencias; aún no procesa ventas minoristas, devoluciones financieras, compras/proveedores ni su conciliación con caja o comisiones.
+
 ## Rendimiento y logros
 
 | Método | Ruta | Acceso |

@@ -15,6 +15,7 @@ Esta guía describe el código actualmente conectado. Los ejemplos y módulos no
 - `backend/app/api/v1/endpoints/notifications.py`: expone la bandeja tenant-scoped de notificaciones internas y el marcado de lectura para el usuario autenticado; mantiene los paths y el tag público existentes.
 - `backend/app/api/v1/endpoints/booking.py`: implementa el portal público, reserva/seguimiento/cambios de citas, disponibilidad, turnos del barbero y ausencias; conserva los paths y tags de API.
 - `backend/app/api/v1/endpoints/booking_waitlist.py`: registra solicitudes públicas no vinculantes con rate limit y ofrece al owner una cola tenant-scoped para contacto y cierre.
+- `backend/app/api/v1/inventory.py`: administra el catálogo del tenant y registra movimientos append-only de existencias dentro de transacciones MySQL; las ventas POS aún no están conectadas.
 - `backend/app/api/v1/endpoints/admin.py`: implementa soporte de plataforma, tenants, afiliados, suscripciones, usuarios y auditoría. Comparte los helpers de autenticación y auditoría del módulo `platform.py`; ambos routers conservan el tag público `platform`.
 - `backend/app/api/v1/endpoints/owner.py`: implementa gestión de barberos, comisiones y clientes para owners y barberos. Reutiliza los controles compartidos de tenant, suscripción y auditoría; mantiene los paths y el tag API existentes.
 - `backend/app/api/v1/endpoints/common.py`: centraliza los helpers de autenticación, autorización de tenant, suscripción, zona horaria y auditoría compartidos por los routers activos.

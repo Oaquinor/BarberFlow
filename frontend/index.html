@@ -342,7 +342,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-service-catalog-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261126-inventory-1">
 </head>
 <body>
     <div class="container">
@@ -842,6 +842,32 @@
                     <div class="table-wrap"><table><thead><tr><th>Barbero</th><th>Fecha</th><th>Importe</th><th>Tasa</th><th>Estado</th><th>Liquidación</th></tr></thead><tbody id="ownerCommissionsBody"></tbody></table></div>
                     <p id="ownerCommissionsResult" role="status"></p>
                 </section>
+                <section class="card" aria-labelledby="ownerInventoryHeading">
+                    <div class="services-header"><div><h3 id="ownerInventoryHeading">Productos e inventario</h3><p>Administra productos e insumos con existencias auditables. Las ventas minoristas se habilitarán junto con su cobro en caja.</p></div><button id="refreshOwnerInventory" class="btn-secondary" type="button">Actualizar</button></div>
+                    <p id="ownerInventorySummary" role="status" aria-live="polite"></p>
+                    <form id="ownerInventoryProductForm" class="grid">
+                        <div class="field"><label for="inventoryProductName">Producto o insumo</label><input id="inventoryProductName" required minlength="2" maxlength="120"></div>
+                        <div class="field"><label for="inventoryProductCategory">Categoría</label><input id="inventoryProductCategory" value="General" required maxlength="80"></div>
+                        <div class="field"><label for="inventoryProductBarcode">Código de barras (opcional)</label><input id="inventoryProductBarcode" maxlength="80"></div>
+                        <div class="field"><label for="inventoryProductUnit">Unidad</label><input id="inventoryProductUnit" value="unidad" required maxlength="30"></div>
+                        <div class="field"><label for="inventoryProductCost">Costo por unidad</label><input id="inventoryProductCost" type="number" min="0" step="0.01" value="0" required></div>
+                        <div class="field"><label for="inventoryProductPrice">Precio de venta</label><input id="inventoryProductPrice" type="number" min="0" step="0.01" value="0" required></div>
+                        <div class="field"><label for="inventoryProductMinimum">Avisar al llegar a</label><input id="inventoryProductMinimum" type="number" min="0" step="1" value="0" required></div>
+                        <div class="field"><button class="btn-primary" type="submit">Crear producto</button></div>
+                    </form>
+                    <p id="ownerInventoryProductResult" role="status" aria-live="polite"></p>
+                    <div class="table-wrap inventory-table-wrap"><table><thead><tr><th>Producto</th><th>Código</th><th>Costo</th><th>Precio</th><th>Existencias</th><th>Estado</th></tr></thead><tbody id="ownerInventoryProductsBody"></tbody></table></div>
+                    <form id="ownerInventoryMovementForm" class="grid" style="margin-top:16px;">
+                        <div class="field"><label for="inventoryMovementProduct">Producto</label><select id="inventoryMovementProduct" required><option value="">Selecciona un producto</option></select></div>
+                        <div class="field"><label for="inventoryMovementReason">Movimiento</label><select id="inventoryMovementReason" required><option value="receipt">Recepción (+)</option><option value="return">Devolución de producto (+)</option><option value="consumption">Consumo (salida)</option><option value="adjustment">Ajuste físico (+/-)</option></select></div>
+                        <div class="field"><label for="inventoryMovementQuantity">Cantidad (ajuste admite negativo)</label><input id="inventoryMovementQuantity" type="number" required min="-2000000" max="2000000" step="1"></div>
+                        <div class="field"><label for="inventoryMovementCost">Costo unitario recibido (opcional)</label><input id="inventoryMovementCost" type="number" min="0" step="0.01"></div>
+                        <div class="field"><label for="inventoryMovementNote">Nota o referencia</label><input id="inventoryMovementNote" maxlength="500"></div>
+                        <div class="field"><button class="btn-secondary" type="submit">Registrar movimiento</button></div>
+                    </form>
+                    <p id="ownerInventoryMovementResult" role="status" aria-live="polite"></p>
+                    <div class="table-wrap inventory-table-wrap"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Variación</th><th>Costo por unidad</th><th>Nota</th></tr></thead><tbody id="ownerInventoryMovementsBody"></tbody></table></div>
+                </section>
                 <section class="card">
                     <div class="services-header"><div><h3>Lista de espera</h3><p>Solicitudes reales pendientes de contacto; no representan citas.</p></div><button id="refreshOwnerWaitlist" class="btn-secondary" type="button">Actualizar</button></div>
                     <div class="field"><label for="ownerWaitlistStatus">Estado</label><select id="ownerWaitlistStatus"><option value="">Todos</option><option value="new">Pendientes</option><option value="contacted">Contactados</option><option value="closed">Cerrados</option></select></div>
@@ -962,7 +988,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-waitlist-1"></script>
+    <script src="js/main.js?v=20261126-inventory-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

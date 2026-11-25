@@ -27,6 +27,8 @@ from app.models.client_account import (
     ClientAccountFavorite, ClientAccountShopLink, ClientAccountVerification,
 )
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
+from app.models.inventory_product import InventoryProduct
+from app.models.inventory_movement import InventoryMovement
 
 __all__ = [
     "BaseModel",
@@ -61,4 +63,6 @@ __all__ = [
     "ClientAccountVerification",
     "ClientAccountFavorite",
     "BookingWaitlistEntry",
+    "InventoryProduct",
+    "InventoryMovement",
 ]
