@@ -66,6 +66,8 @@ La migración `041_style_passport` permite un registro único por cita completad
 
 Las filas de fotos guardan categoría (`reference`/`result`), MIME normalizado, tamaño y clave UUID aleatoria. Los bytes JPEG re-encodeados se almacenan en `UPLOAD_DIR/private/style-passport/{account_id}`, fuera del acceso estático público. La API valida titularidad o consentimiento del tenant en cada lectura; la respuesta usa `private, no-store`. Se admiten hasta dos archivos por categoría de hasta 5 MiB cada uno. El registro principal y sus datos se limpian con soft delete para auditar la cita; los metadatos y bytes de fotos se retiran al terminar la limpieza física. La migración `042_style_passport_retention` agrega `barbershops.style_passport_retention_days`, nulo por defecto. El owner puede elegir 90/180/365/730 días; el worker aplica una purga acotada y auditada, y reintenta retirar archivos marcados como eliminados. Nulo significa que no hay purga automática.
 
+La migración `043_barber_live_state` agrega `barber_live_states`, con una fila por barbero y estado explícito disponible/descanso. La tabla es una proyección operacional, no sustituye el calendario de citas ni sus estados. El cambio queda auditado; el descanso no se permite durante atención y los endpoints de inicio de servicio validan ese estado.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

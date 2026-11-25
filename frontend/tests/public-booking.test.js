@@ -195,6 +195,7 @@ test('appointment tracking offers private arrival check-in and labels queue esti
   assert.match(clientScript, /check_in_available && !item\.checked_in_at/);
   assert.match(clientScript, /posición aproximada/);
   assert.match(clientScript, /Consulta de nuevo para actualizar/);
+  assert.match(clientScript, /queue_estimate_note/);
 });
 
 test('appointment tracking handles network failures and allows another attempt', async () => {

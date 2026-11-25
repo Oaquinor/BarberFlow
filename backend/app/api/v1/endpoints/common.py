@@ -12,6 +12,7 @@ from app.api.deps import get_current_user as authenticate_user
 from app.core.constants.enums import SUBSCRIPTION_LIMITS
 from app.models.barbershop import Barbershop
 from app.models.payment import CashRegisterClose
+from app.models.barber_live_state import BarberLiveState
 from app.models.subscription import Subscription
 from app.models.user import User
 from app.services.audit_service import record_audit
@@ -37,6 +38,15 @@ def _require_active_subscription(db: Session, shop: Barbershop, lock: bool = Fal
     ):
         raise HTTPException(status_code=402, detail="La suscripción de esta barbería no está activa")
     return subscription
+
+def _ensure_barber_not_on_break(db: Session, barber_id: int, barbershop_id: int) -> None:
+    state = db.query(BarberLiveState.state).filter(
+        BarberLiveState.barber_id == barber_id,
+        BarberLiveState.barbershop_id == barbershop_id,
+        BarberLiveState.is_deleted == False,
+    ).with_for_update().first()
+    if state and state[0] == "on_break":
+        raise HTTPException(status_code=409, detail="El barbero está en descanso; reanuda disponibilidad para iniciar")
 
 def _get_timezone(shop: Barbershop) -> ZoneInfo:
     try:

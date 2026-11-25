@@ -806,7 +806,7 @@ async function trackAppointments() {
         ? `<button class="primary check-in-booking" type="button" data-token="${escapeHtml(token)}">Ya llegué · confirmar llegada</button>`
         : '';
       const queueNotice = item.checked_in_at
-        ? `<p class="booking-queue">Llegada confirmada${item.queue_position ? ` · posición aproximada ${Number(item.queue_position)}` : ''}${item.estimated_wait_minutes != null && Number.isFinite(Number(item.estimated_wait_minutes)) ? ` · espera estimada ${Number(item.estimated_wait_minutes)} min` : ''}. Consulta de nuevo para actualizar.</p>`
+        ? `<p class="booking-queue">Llegada confirmada${item.queue_position ? ` · posición aproximada ${Number(item.queue_position)}` : ''}${item.estimated_wait_minutes != null && Number.isFinite(Number(item.estimated_wait_minutes)) ? ` · espera estimada ${Number(item.estimated_wait_minutes)} min` : ''}${item.queue_estimate_note ? ` · ${escapeHtml(item.queue_estimate_note)}` : ''}. Consulta de nuevo para actualizar.</p>`
         : '';
       const canReschedule = ['pending', 'confirmed'].includes(item.status);
       const duration = Number(item.estimated_duration);

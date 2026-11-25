@@ -20,6 +20,7 @@ from app.core.security.password import hash_password
 from app.models.appointment import Appointment
 from app.models.barber_availability import BarberAvailability
 from app.models.barber_availability_block import BarberAvailabilityBlock
+from app.models.barber_live_state import BarberLiveState
 from app.models.barbershop import Barbershop
 from app.models.client_account import ClientAccountShopLink
 from app.models.payment import CashRegisterClose
@@ -28,6 +29,7 @@ from app.models.user import User
 from app.schemas.platform import (
     BarberAbsenceRequest,
     BarberCreateSlotsRequest,
+    BarberLiveStateUpdate,
     BarberShareLinkResponse,
     PublicAvailableSlotResponse,
     PublicBarbershopResponse,
@@ -47,7 +49,7 @@ from app.services.customer_appointment_service import cancel_customer_appointmen
 from app.services.client_account_service import get_or_create_shop_client
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.api.v1.endpoints.common import (
-    _audit, _cash_register_closed_for_user, _get_current_user, _get_timezone,
+    _audit, _cash_register_closed_for_user, _ensure_barber_not_on_break, _get_current_user, _get_timezone,
     _normalize_phone, _require_active_subscription, _utc_aware,
 )
 from app.api.v1.endpoints.platform import (
@@ -59,6 +61,86 @@ from app.api.v1.endpoints.platform import (
 )
 
 router = APIRouter(tags=["platform"])
+
+
+@router.get("/barber/live-status")
+def barber_live_status(
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return the authenticated barber's explicit operational presence."""
+    barber = _get_current_user(db, authorization)
+    if barber.role != "barber" or not barber.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el barbero puede consultar su estado")
+    state = db.query(BarberLiveState).filter(
+        BarberLiveState.barber_id == barber.id,
+        BarberLiveState.barbershop_id == barber.barbershop_id,
+        BarberLiveState.is_deleted == False,
+    ).first()
+    return {"state": state.state if state else "available"}
+
+
+@router.put("/barber/live-status")
+def update_barber_live_status(
+    data: BarberLiveStateUpdate,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Allow a barber to pause/resume availability without altering bookings."""
+    barber = _get_current_user(db, authorization)
+    if barber.role != "barber" or not barber.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el barbero puede cambiar su estado")
+    locked_barber = db.query(User).filter(
+        User.id == barber.id,
+        User.barbershop_id == barber.barbershop_id,
+        User.role == "barber",
+        User.is_active == True,
+        User.is_deleted == False,
+    ).with_for_update().first()
+    if not locked_barber:
+        raise HTTPException(status_code=403, detail="El perfil de barbero no está activo")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == locked_barber.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _require_active_subscription(db, shop)
+
+    if data.state == "on_break":
+        active_appointment = db.query(Appointment.id).filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.barber_id == locked_barber.id,
+            Appointment.status == "in_progress",
+            Appointment.is_deleted == False,
+        ).with_for_update().first()
+        if active_appointment:
+            raise HTTPException(
+                status_code=409,
+                detail="Finaliza el servicio en curso antes de iniciar un descanso",
+            )
+
+    live_state = db.query(BarberLiveState).filter(
+        BarberLiveState.barber_id == locked_barber.id,
+    ).with_for_update().first()
+    if live_state:
+        live_state.barbershop_id = shop.id
+        live_state.state = data.state
+        live_state.is_deleted = False
+        live_state.deleted_at = None
+    else:
+        live_state = BarberLiveState(
+            barbershop_id=shop.id, barber_id=locked_barber.id, state=data.state,
+        )
+        db.add(live_state)
+    db.flush()
+    _audit(
+        db, locked_barber, "barber.live_state_updated", "barber_live_state",
+        live_state.id, shop.id, {"state": data.state},
+    )
+    db.commit()
+    return {"state": data.state}
 
 @router.get("/public/{slug}", response_model=PublicBarbershopResponse)
 def public_barbershop(slug: str, db: Session = Depends(get_db)):
@@ -542,6 +624,7 @@ def create_walk_in_appointment(
     ).with_for_update().first()
     if not barber:
         raise HTTPException(status_code=404, detail="Barbero no encontrado o inactivo")
+    _ensure_barber_not_on_break(db, barber.id, shop.id)
     shop = db.query(Barbershop).filter(
         Barbershop.id == shop.id,
         Barbershop.is_active == True,
@@ -1016,6 +1099,17 @@ def _public_queue_estimate(db: Session, appointment: Appointment, now: datetime)
     ahead = [row for row in ahead if row.status == "in_progress" or row.checked_in_at is not None]
     ahead.sort(key=lambda row: (row.scheduled_time, row.id))
     ahead = [row for row in ahead if (row.scheduled_time, row.id) < (appointment.scheduled_time, appointment.id)]
+    live_state = db.query(BarberLiveState.state).filter(
+        BarberLiveState.barbershop_id == appointment.barbershop_id,
+        BarberLiveState.barber_id == appointment.barber_id,
+        BarberLiveState.is_deleted == False,
+    ).first()
+    if live_state and live_state[0] == "on_break" and appointment.status != "in_progress":
+        return {
+            "queue_position": len(ahead) + 1,
+            "estimated_wait_minutes": None,
+            "queue_estimate_note": "El barbero está en descanso; actualizaremos la espera cuando vuelva.",
+        }
     wait = 0
     for row in ahead:
         if row.status == "in_progress" and row.actual_start_time:

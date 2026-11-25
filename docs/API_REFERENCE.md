@@ -56,7 +56,7 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
 | `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
 | `POST` | `/public/{slug}/waitlist` | Registra una solicitud sin compromiso para que la barbería contacte al cliente; limita por negocio/IP y conserva snapshots del servicio/profesional en MySQL |
-| `POST` | `/public/{slug}/track` | Consulta con token privado |
+| `POST` | `/public/{slug}/track` | Consulta con token privado; la espera aproximada se omite durante el descanso del barbero |
 | `POST` | `/public/{slug}/appointments/check-in` | Confirma llegada con token privado desde 60 min antes hasta 30 min después de la cita |
 | `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado o sesión autenticada de la cuenta propietaria |
 | `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
@@ -114,6 +114,8 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `DELETE` | `/barber/absences/{absence_id}` | Cancela una ausencia propia y vuelve a publicar los turnos originales |
 | `GET` | `/barber/dashboard` | Agenda del día y métricas operativas |
 | `GET` | `/owner/live-chair` | Estado operativo por barbero para el propietario; devuelve atención activa, cantidad de check-ins, próxima cita y estimación aproximada, sin nombres/notas de clientes |
+| `GET` | `/barber/live-status` | Estado disponible/descanso del barbero autenticado |
+| `PUT` | `/barber/live-status` | Actualiza disponibilidad o descanso; no permite iniciar descanso con servicio activo |
 | `GET` | `/barber/appointments?target_date=YYYY-MM-DD` | Agenda local del negocio; al equipo incluye el ID del perfil CRM para consultar únicamente el Style Passport compartido |
 | `GET` | `/barber/appointments/calendar?view=week&anchor_date=YYYY-MM-DD` | Citas por día para una semana o mes local; el barbero solo recibe sus citas y el ID CRM necesario para revisar registros compartidos |
 | `PUT` | `/barber/appointments/{appointment_id}/status` | Confirma, inicia, cancela o marca no presentado |

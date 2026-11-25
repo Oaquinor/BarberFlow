@@ -22,6 +22,7 @@ Esta guía describe el código actualmente conectado. Los ejemplos y módulos no
 - `backend/app/api/v1/endpoints/common.py`: centraliza los helpers de autenticación, autorización de tenant, suscripción, zona horaria y auditoría compartidos por los routers activos.
 - `backend/app/api/v1/endpoints/onboarding.py` y `backend/app/services/onboarding_service.py`: configuración inicial y ajustes del tenant autenticado.
 - `backend/app/models/` y `backend/app/schemas/`: entidades ORM y validación/serialización de solicitudes y respuestas.
+- `backend/app/models/barber_live_state.py` y `043_barber_live_state`: estado operacional explícito disponible/descanso en MySQL; atención, retraso y próximo turno siguen derivándose de citas persistidas.
 - `backend/app/services/`: lógica de servicios conectada a endpoints, notificaciones, auditoría, rendimiento y pronóstico.
 - `backend/app/core/database/session.py`: valida `DATABASE_URL` con el prefijo `mysql+pymysql://`, construye el engine y sesiones síncronas.
 - `backend/alembic/`: cambios versionados de esquema MySQL.

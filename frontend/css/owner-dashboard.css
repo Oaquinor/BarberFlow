@@ -414,7 +414,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .live-chair-state-delayed { color:#7a3d29; border-color:#e5c6bb; background:#fcf1ed; }
 .live-chair-state-waiting, .live-chair-state-up_next { color:#72531c; border-color:#ead9aa; background:#fbf6e6; }
 .live-chair-state-available { color:#3b5b76; border-color:#cbdbe9; background:#eff5fa; }
+.live-chair-state-on_break { color:#5a4b70; border-color:#d8cde5; background:#f4eff8; }
 .live-chair-progress { height:6px; margin-top:10px; overflow:hidden; border-radius:999px; background:#ece7df; }
 .live-chair-progress span { display:block; height:100%; border-radius:inherit; background:var(--brand-primary); }
 #ownerLiveChair > small { display:block; color:var(--kf-muted); font-size:.72rem; line-height:1.5; }
 @media(prefers-reduced-motion:reduce) { .live-chair-progress span { transition:none; } }
+.barber-live-presence { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 18px; margin:0 0 20px; padding:17px 19px; border:1px solid var(--kf-line); border-radius:14px; background:var(--kf-paper); }
+.barber-live-presence-copy { display:flex; min-width:0; align-items:flex-start; gap:12px; }
+.barber-live-presence-copy h3 { margin:0; color:var(--kf-ink); font-size:.96rem; }
+.barber-live-presence-copy p { margin:5px 0 0; color:var(--kf-muted); font-size:.8rem; line-height:1.5; }
+.barber-live-presence-dot { width:11px; height:11px; flex:none; margin-top:4px; border-radius:50%; background:#4e8b69; box-shadow:0 0 0 4px #e8f3eb; }
+.barber-live-presence[data-state="on_break"] .barber-live-presence-dot { background:#a06d43; box-shadow:0 0 0 4px #f6ede4; }
+.barber-live-presence-actions { display:flex; flex:none; flex-wrap:wrap; gap:8px; }
+.barber-live-presence-actions button { min-height:42px; padding:9px 13px; border-radius:9px; font-size:.8rem; }
+#barberLivePresenceResult { flex-basis:100%; margin:0; color:var(--kf-muted); font-size:.76rem; }
+@media(max-width:640px) { .barber-live-presence { align-items:flex-start; flex-direction:column; padding:15px; } .barber-live-presence-actions, .barber-live-presence-actions button { width:100%; } }

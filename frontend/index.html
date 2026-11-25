@@ -342,7 +342,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-live-chair-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-barber-presence-1">
 </head>
 <body>
     <div class="container">
@@ -452,6 +452,12 @@
                 <div id="smartMessages"></div>
 
                 <h2>Tu jornada</h2>
+
+                <section id="barberLivePresence" class="barber-live-presence" aria-labelledby="barberLivePresenceTitle" hidden>
+                    <div class="barber-live-presence-copy"><span class="barber-live-presence-dot" aria-hidden="true"></span><div><h3 id="barberLivePresenceTitle">Tu disponibilidad</h3><p id="barberLivePresenceDescription">Actualizando estado…</p></div></div>
+                    <div class="barber-live-presence-actions"><button id="barberStartBreak" class="btn-secondary" type="button">Iniciar descanso</button><button id="barberResumeAvailability" class="btn-primary" type="button" hidden>Volver disponible</button></div>
+                    <p id="barberLivePresenceResult" role="status" aria-live="polite"></p>
+                </section>
 
                 <!-- Active Service Card -->
                 <div class="service-card active-service">
@@ -1040,7 +1046,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-style-retention-1"></script>
+    <script src="js/main.js?v=20261125-barber-presence-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

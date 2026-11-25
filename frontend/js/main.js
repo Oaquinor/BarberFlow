@@ -18,6 +18,7 @@ let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 let liveChairRefreshTimer = null;
 let liveChairRequestInFlight = false;
+let barberLiveState = 'available';
 let serviceTimerInterval = null;
 let performanceChartResizeObserver = null;
 const ownerClientCache = new Map();
@@ -1011,6 +1012,7 @@ async function loadBarberDashboardData() {
 
         const active = data.active_appointment ||
             (Array.isArray(data.appointments) ? data.appointments : []).find((a) => a.status === 'in_progress') || null;
+        updateBarberPresenceControls(Boolean(active));
         const finishServiceButton = document.getElementById('finishServiceButton');
         const activeServiceStatus = document.getElementById('activeServiceStatus');
         if (finishServiceButton) finishServiceButton.disabled = !active;
@@ -1067,6 +1069,68 @@ async function loadBarberDashboardData() {
         renderAchievements(achievements);
     } catch (error) {
         console.error('Error loading barber dashboard data:', error);
+    }
+}
+
+function renderBarberLiveState(state) {
+    barberLiveState = state === 'on_break' ? 'on_break' : 'available';
+    const panel = document.getElementById('barberLivePresence');
+    const description = document.getElementById('barberLivePresenceDescription');
+    const startBreak = document.getElementById('barberStartBreak');
+    const resume = document.getElementById('barberResumeAvailability');
+    if (!panel || !description || !startBreak || !resume) return;
+    panel.dataset.state = barberLiveState;
+    description.textContent = barberLiveState === 'on_break'
+        ? 'Estás en descanso. La agenda sigue visible, pero Live Chair no te mostrará como disponible.'
+        : 'Estás disponible para recibir al siguiente cliente.';
+    startBreak.hidden = barberLiveState === 'on_break';
+    resume.hidden = barberLiveState !== 'on_break';
+}
+
+function updateBarberPresenceControls(hasActiveAppointment) {
+    const startBreak = document.getElementById('barberStartBreak');
+    const description = document.getElementById('barberLivePresenceDescription');
+    if (startBreak) startBreak.disabled = hasActiveAppointment;
+    if (hasActiveAppointment && barberLiveState !== 'on_break' && description) {
+        description.textContent = 'Estás atendiendo una cita. Finaliza el servicio antes de iniciar un descanso.';
+    } else {
+        renderBarberLiveState(barberLiveState);
+    }
+}
+
+async function loadBarberLiveStatus() {
+    const panel = document.getElementById('barberLivePresence');
+    const result = document.getElementById('barberLivePresenceResult');
+    if (!panel || currentUser?.role !== 'barber') return;
+    panel.hidden = false;
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/live-status`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo cargar tu disponibilidad.');
+        renderBarberLiveState(data.state);
+    } catch (error) {
+        if (result) result.textContent = error.message || 'No se pudo cargar tu disponibilidad.';
+    }
+}
+
+async function setBarberLiveStatus(state) {
+    const result = document.getElementById('barberLivePresenceResult');
+    const buttons = [document.getElementById('barberStartBreak'), document.getElementById('barberResumeAvailability')].filter(Boolean);
+    buttons.forEach((button) => { button.disabled = true; });
+    if (result) result.textContent = 'Guardando disponibilidad…';
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/live-status`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo guardar el estado.');
+        renderBarberLiveState(data.state);
+        if (result) result.textContent = data.state === 'on_break' ? 'Descanso iniciado.' : 'Disponibilidad reanudada.';
+    } catch (error) {
+        if (result) result.textContent = error.message || 'No se pudo guardar el estado.';
+    } finally {
+        updateBarberPresenceControls(document.getElementById('finishServiceButton')?.disabled === false);
+        buttons.forEach((button) => { button.disabled = button.id === 'barberStartBreak' && document.getElementById('finishServiceButton')?.disabled === false; });
     }
 }
 
@@ -2230,6 +2294,7 @@ async function loadOwnerLiveChair() {
         if (!response.ok) throw new Error(data.detail || 'No se pudo consultar Live Chair.');
         const stateLabels = {
             attending: 'En servicio', delayed: 'Servicio con retraso', waiting: 'Cliente en espera',
+            on_break: 'En descanso',
             up_next: 'Próxima cita', available: 'Disponible', unscheduled: 'Sin turno registrado',
         };
         const items = Array.isArray(data.items) ? data.items : [];
@@ -3404,6 +3469,8 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (ownerTabButton) ownerTabButton.hidden = currentUser.role !== 'barbershop_owner';
         const ownerLiveChairPanel = document.getElementById('ownerLiveChair');
         if (ownerLiveChairPanel) ownerLiveChairPanel.hidden = currentUser.role !== 'barbershop_owner';
+        const barberLivePresencePanel = document.getElementById('barberLivePresence');
+        if (barberLivePresencePanel) barberLivePresencePanel.hidden = currentUser.role !== 'barber';
         const achievementsButton = document.getElementById('achievementsTabButton');
         const achievementsPanel = document.getElementById('achievementsTab');
         if (achievementsButton) achievementsButton.hidden = currentUser.role !== 'barber';
@@ -3426,6 +3493,7 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
 
         const canContinue = await loadBarbershopProfile();
         if (!canContinue) return;
+        if (currentUser.role === 'barber') await loadBarberLiveStatus();
 
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('dashboardSection').style.display = 'block';
@@ -3525,6 +3593,9 @@ if (sessionStorage.getItem('kingflow-password-changed') === '1') {
 
 document.getElementById('logoutButton')?.addEventListener('click', logout);
 document.getElementById('finishServiceButton')?.addEventListener('click', finishService);
+document.getElementById('barberStartBreak')?.addEventListener('click', () => setBarberLiveStatus('on_break'));
+document.getElementById('barberResumeAvailability')?.addEventListener('click', () => setBarberLiveStatus('available'));
+
 document.getElementById('startNextAppointmentButton')?.addEventListener('click', (event) => {
     const button = event.currentTarget;
     const appointmentId = Number(button.dataset.appointmentId);

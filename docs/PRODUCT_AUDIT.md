@@ -29,7 +29,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Citas grupales o recurrentes | No implementado | No aparecen en rutas activas |
 | Multi-sucursal, renta de silla, empleo | No implementado | No afirmar soporte de sedes, contratos o nómina |
 | Style Passport | Parcial; flujo cliente/equipo y retención configurable integrados | Guarda preferencias vinculadas a citas completadas y fotos privadas de referencia/resultado. Owner y barbero del tenant pueden consultar y anotar solo registros compartidos; el consentimiento es opcional y revocable. El owner puede configurar 90/180/365/730 días; desactivada si deja "hasta que el cliente lo elimine". Worker MySQL con purga limitada y auditada. No usa reconocimiento facial ni publica fotos. |
-| Live Chair | Parcial | Cliente confirma llegada por token y ve posición/espera aproximadas; owner tiene tablero privado por equipo con servicio activo, demora, conteo de check-ins y siguiente cita, refrescado cada 30 s mientras lo consulta. No hay estado manual de descanso, canal streaming/push ni tablero público en vivo. |
+| Live Chair | Parcial | Cliente confirma llegada por token y ve posición/espera aproximadas; owner tiene tablero privado por equipo con servicio activo, demora, check-ins y siguiente cita; barbero puede iniciar/terminar descanso. El tablero consulta cada 30 s; no hay canal streaming/push ni tablero público en vivo. |
 | Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
 | Pronóstico de demanda | Parcial | Promedio estadístico explicable; no es ML ni predicción comercial validada |
 | MFA, WebSocket, notificaciones push | No implementado | No hay MFA ni canal push/WebSocket activo |
@@ -44,6 +44,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Cambios cerrados en este incremento
 
+- Live Chair completa presencia manual disponible/descanso para el barbero con persistencia MySQL y auditoría. No permite entrar en descanso durante una cita activa ni comenzar otro servicio mientras el estado sea descanso; el owner ve el estado y la estimación se suspende hasta volver disponible. `043_barber_live_state` conserva la agenda y estados de atención existentes.
 - Live Chair añade `GET /owner/live-chair` y una vista para el propietario: servicio activo, retraso estimado según tiempo real, número de clientes con llegada confirmada, próxima cita y disponibilidad basada en turnos abiertos. La vista refresca cada 30 s mientras está visible, no expone nombres ni notas de clientes y limita el acceso a owner del tenant. Los estados se derivan de citas/check-ins y turnos guardados; el tablero no finge estados manuales de descanso.
 - El commit `dec0395` conecta el check-in del cliente con token privado y muestra posición/espera aproximadas sin exponer información de terceros. El commit `4f4341b` agrega coincidencias de lista de espera contra turnos disponibles respetando duración, fechas, barbero, bloqueos y citas superpuestas; el owner puede ofrecer por WhatsApp un enlace con servicio/barbero preseleccionados, sin reservar el turno automáticamente. Validación local: frontend **120/120**, lint selectivo, compilación y `git diff --check`; la integración local MySQL omitió 3 casos por falta de `TEST_DATABASE_URL`. CI [run 45689154650](https://github.com/Oaquinor/BarberFlow/actions/runs/45689154650) pasó **195 pruebas MySQL 8.4**, **120 pruebas frontend**, **75 flujos por navegador** en Chromium/Firefox/WebKit, **8 pruebas WhatsApp** y contenedores de producción.
 - Style Passport: `041_style_passport` agrega un registro por cita completada y fotos privadas con claves aleatorias fuera de rutas públicas; consentimiento apagado por defecto y revocable, acceso del equipo acotado a CRM/tenant, borrado lógico del registro con limpieza de campos y eliminación física de archivos. Las imágenes JPG/PNG se decodifican y re-guardan en JPEG para quitar EXIF, con límite de tamaño/píxeles y máximo de dos por categoría. El owner configura una retención de 90/180/365/730 días o la deja desactivada; migración `042_style_passport_retention` y worker ejecutan purga por lotes, revocan acceso, limpian datos, registran auditoría y reintentan retirar archivos soft-deleted.
@@ -105,6 +106,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Siguiente orden de entrega
 
-1. Ampliar Live Chair con tablero operativo, actualización en tiempo real y políticas de precisión; el check-in y la estimación privada están implementados, pero no son una sala en vivo.
-2. Definir país, proveedor y modelo comercial antes de diseñar cobros online; automatizar la lista de espera y definir fidelidad/sucursales antes de esos dominios.
-3. Completar threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.
+1. Añadir avisos oportunos y canal de actualización en tiempo real para Live Chair; hoy cliente y owner consultan proyecciones por solicitud/polling y la ETA se oculta durante descanso.
+2. Automatizar ofertas de lista de espera con aceptación atómica y vencimiento; actualmente owner todavía ofrece un enlace de reserva sin apartar turno.
+3. Definir país, proveedor y modelo comercial antes de diseñar cobros online; decidir fidelidad/sucursales antes de esos dominios.
+4. Completar threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.

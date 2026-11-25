@@ -36,6 +36,7 @@ from app.models.appointment import Appointment
 from app.models.subscription import Subscription
 from app.models.barber_availability import BarberAvailability
 from app.models.barber_availability_block import BarberAvailabilityBlock
+from app.models.barber_live_state import BarberLiveState
 from app.models.user import UserFeatureFlag
 from app.models.refresh_session import RefreshSession
 from app.models.payment import Payment, CashRegisterClose
@@ -66,6 +67,7 @@ from app.services.notification_service import NotificationService
 from app.services.notification_outbox import enqueue_delivery
 from app.services.auth_record_retention import prune_expired_auth_records
 from app.api.v1.endpoints.common import (
+    _ensure_barber_not_on_break,
     _apply_plan_limits,
     _audit,
     _cash_register_closed_for_user,
@@ -1077,6 +1079,7 @@ def barber_update_appointment_status(
 
     shop = None
     if status == "in_progress":
+        _ensure_barber_not_on_break(db, assigned_barber.id, user.barbershop_id)
         # Cash close locks the shop before reading appointments. Acquire that
         # same mutex before locking this appointment to keep a consistent order.
         shop = db.query(Barbershop).filter(
@@ -2043,6 +2046,14 @@ def owner_live_chair(
     if not barbers:
         return {"updated_at": _utc_aware(now), "items": []}
     barber_ids = [barber.id for barber in barbers]
+    explicit_states = {
+        row.barber_id: row.state
+        for row in db.query(BarberLiveState).filter(
+            BarberLiveState.barbershop_id == shop.id,
+            BarberLiveState.barber_id.in_(barber_ids),
+            BarberLiveState.is_deleted == False,
+        ).all()
+    }
     appointments = db.query(Appointment).filter(
         Appointment.barbershop_id == shop.id,
         Appointment.barber_id.in_(barber_ids),
@@ -2103,16 +2114,20 @@ def owner_live_chair(
         if active:
             state = "delayed" if active_elapsed >= active.estimated_duration else "attending"
         elif waiting:
-            state = "waiting"
+            state = "on_break" if explicit_states.get(barber.id) == "on_break" else "waiting"
         elif upcoming:
-            state = "up_next"
+            state = "on_break" if explicit_states.get(barber.id) == "on_break" else "up_next"
+        elif explicit_states.get(barber.id) == "on_break":
+            state = "on_break"
         elif barber.id in open_barber_ids:
             state = "available"
         else:
             state = "unscheduled"
 
         next_wait_minutes = None
-        if waiting:
+        if state == "on_break":
+            next_wait_minutes = None
+        elif waiting:
             next_wait_minutes = max(
                 active_remaining,
                 max(0, int((waiting[0].scheduled_time - now).total_seconds() // 60)),

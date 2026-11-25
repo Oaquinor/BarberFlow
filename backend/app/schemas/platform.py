@@ -3,7 +3,7 @@ Schemas para operación productiva: auth, cliente público, barbero y admin.
 """
 
 from datetime import datetime, time
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -264,6 +264,10 @@ class BarberAbsenceRequest(BaseModel):
         return value.strip() or None if value else None
 
 
+class BarberLiveStateUpdate(BaseModel):
+    state: Literal["available", "on_break"]
+
+
 class PublicCreateAppointmentResponse(BaseModel):
     appointment_id: int
     status: str
@@ -304,6 +308,7 @@ class PublicTrackAppointmentItem(BaseModel):
     check_in_available: bool = False
     queue_position: Optional[int] = None
     estimated_wait_minutes: Optional[int] = None
+    queue_estimate_note: Optional[str] = None
 
 
 class PublicTrackAppointmentResponse(BaseModel):
