@@ -21,6 +21,7 @@ from app.models.appointment import Appointment
 from app.models.barber_availability import BarberAvailability
 from app.models.barber_availability_block import BarberAvailabilityBlock
 from app.models.barbershop import Barbershop
+from app.models.client_account import ClientAccountShopLink
 from app.models.payment import CashRegisterClose
 from app.models.service import Service
 from app.models.user import User
@@ -1031,8 +1032,9 @@ def public_reschedule_appointment(
     data: PublicRescheduleAppointmentRequest,
     request: Request,
     db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
 ):
-    """Move a private booking to a free slot without exposing client identity."""
+    """Move an appointment with its private token or verified account session."""
     shop = _get_public_shop(db, slug)
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
@@ -1042,12 +1044,39 @@ def public_reschedule_appointment(
     )
     _require_active_subscription(db, shop, lock=True)
 
-    token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
-    appointment_ref = db.query(
-        Appointment.id, Appointment.barber_id, Appointment.scheduled_time,
-    ).filter(
+    account_user = None
+    token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest() if data.token else None
+    if data.appointment_id is not None:
+        account_user = _get_current_user(db, authorization)
+        if (
+            account_user.role != "client"
+            or account_user.barbershop_id is not None
+            or not account_user.is_verified
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Se requiere una cuenta de cliente verificada",
+            )
+        appointment_ref_query = db.query(
+            Appointment.id, Appointment.barber_id, Appointment.scheduled_time,
+        ).join(
+            ClientAccountShopLink,
+            ClientAccountShopLink.crm_client_user_id == Appointment.client_id,
+        ).filter(
+            ClientAccountShopLink.account_user_id == account_user.id,
+            ClientAccountShopLink.is_deleted == False,
+            Appointment.id == data.appointment_id,
+        )
+    else:
+        appointment_ref_query = db.query(
+            Appointment.id, Appointment.barber_id, Appointment.scheduled_time,
+        ).filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.tracking_token_hash == token_hash,
+            Appointment.is_deleted == False,
+        )
+    appointment_ref = appointment_ref_query.filter(
         Appointment.barbershop_id == shop.id,
-        Appointment.tracking_token_hash == token_hash,
         Appointment.is_deleted == False,
     ).first()
     if not appointment_ref:
@@ -1093,12 +1122,22 @@ def public_reschedule_appointment(
         if not shop:
             raise HTTPException(status_code=404, detail="Barbería no encontrada")
 
-    appointment = db.query(Appointment).filter(
+    appointment_query = db.query(Appointment).filter(
         Appointment.id == appointment_ref.id,
         Appointment.barbershop_id == shop.id,
-        Appointment.tracking_token_hash == token_hash,
         Appointment.is_deleted == False,
-    ).with_for_update().first()
+    )
+    if token_hash:
+        appointment_query = appointment_query.filter(Appointment.tracking_token_hash == token_hash)
+    else:
+        appointment_query = appointment_query.join(
+            ClientAccountShopLink,
+            ClientAccountShopLink.crm_client_user_id == Appointment.client_id,
+        ).filter(
+            ClientAccountShopLink.account_user_id == account_user.id,
+            ClientAccountShopLink.is_deleted == False,
+        )
+    appointment = appointment_query.with_for_update().first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
     if appointment.barber_id != appointment_ref.barber_id:
@@ -1184,7 +1223,7 @@ def public_reschedule_appointment(
         additional_barber_ids=(old_barber_id,),
         dedupe_suffix=reschedule_event_id,
     )
-    _audit(db, None, "appointment.rescheduled_by_client", "appointment", appointment.id, shop.id,
+    _audit(db, account_user, "appointment.rescheduled_by_client", "appointment", appointment.id, shop.id,
            {"previous_time": old_start.isoformat(), "new_time": new_start.isoformat(),
             "previous_barber_id": old_barber_id, "new_barber_id": barber.id})
     if appointment.client and not appointment.client.is_deleted and appointment.client.phone:

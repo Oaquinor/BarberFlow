@@ -4,7 +4,7 @@ Schemas para operación productiva: auth, cliente público, barbero y admin.
 
 from datetime import datetime, time
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -266,8 +266,15 @@ class PublicCancelAppointmentRequest(BaseModel):
 
 
 class PublicRescheduleAppointmentRequest(BaseModel):
-    token: str = Field(..., min_length=32, max_length=128)
+    token: Optional[str] = Field(None, min_length=32, max_length=128)
+    appointment_id: Optional[int] = Field(None, gt=0)
     availability_id: int = Field(..., gt=0)
+
+    @model_validator(mode="after")
+    def require_one_booking_credential(self):
+        if (self.token is None) == (self.appointment_id is None):
+            raise ValueError("Indica un código privado o una cita de cuenta")
+        return self
 
 
 class PublicTrackAppointmentItem(BaseModel):

@@ -144,7 +144,13 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
         barbershop_id=shop.id, barber_id=barber.id, slot_start=slot_start,
         slot_end=slot_start + timedelta(minutes=30), is_active=True, is_booked=False,
     )
-    test_db.add(slot)
+    replacement_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id,
+        slot_start=slot_start + timedelta(days=1),
+        slot_end=slot_start + timedelta(days=1, minutes=30),
+        is_active=True, is_booked=False,
+    )
+    test_db.add_all([slot, replacement_slot])
     test_db.commit()
 
     monkeypatch.setattr(booking_api, "_notify_appointment_staff", lambda *args, **kwargs: None)
@@ -192,6 +198,25 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
     )
     assert forbidden_cancel.status_code == 404
     assert test_db.get(Appointment, appointment.id).status == "pending"
+    forbidden_reschedule = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/reschedule",
+        headers=other_headers,
+        json={"appointment_id": appointment.id, "availability_id": replacement_slot.id},
+    )
+    assert forbidden_reschedule.status_code == 404
+    rescheduled = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/reschedule",
+        headers=headers,
+        json={"appointment_id": appointment.id, "availability_id": replacement_slot.id},
+    )
+    assert rescheduled.status_code == 200, rescheduled.text
+    assert rescheduled.json()["appointment_id"] == appointment.id
+    test_db.refresh(appointment)
+    test_db.refresh(slot)
+    test_db.refresh(replacement_slot)
+    assert appointment.scheduled_time == replacement_slot.slot_start
+    assert slot.is_booked is False
+    assert replacement_slot.is_booked is True
     cancelled = client.post(
         f"/api/v1/client-account/appointments/{appointment.id}/cancel",
         headers=headers,
@@ -204,6 +229,8 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
     assert appointment.status == "cancelled"
     assert appointment.cancellation_reason == "Cambio de planes"
     assert slot.is_booked is False
+    test_db.refresh(replacement_slot)
+    assert replacement_slot.is_booked is False
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert history.json()["items"][0]["status"] == "cancelled"
 

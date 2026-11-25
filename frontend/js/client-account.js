@@ -49,6 +49,34 @@
       barber.textContent = `Atiende: ${item.barber || "Equipo"}`;
       card.append(title, details, date, barber);
       if (["pending", "confirmed"].includes(item.status)) {
+        if (item.barbershop_slug) {
+          const rescheduleButton = document.createElement("button");
+          rescheduleButton.type = "button";
+          rescheduleButton.className = "account-action";
+          rescheduleButton.dataset.action = "start-reschedule";
+          rescheduleButton.dataset.appointmentId = String(item.appointment_id);
+          rescheduleButton.dataset.shopSlug = item.barbershop_slug;
+          rescheduleButton.dataset.duration = String(item.duration_minutes || 30);
+          rescheduleButton.textContent = "Cambiar fecha y hora";
+          const chooser = document.createElement("div");
+          chooser.className = "reschedule-chooser";
+          chooser.hidden = true;
+          const select = document.createElement("select");
+          select.setAttribute("aria-label", "Nuevo horario disponible");
+          const save = document.createElement("button");
+          save.type = "button";
+          save.className = "account-action";
+          save.dataset.action = "confirm-reschedule";
+          save.dataset.appointmentId = String(item.appointment_id);
+          save.textContent = "Confirmar nuevo horario";
+          const dismiss = document.createElement("button");
+          dismiss.type = "button";
+          dismiss.className = "button-secondary";
+          dismiss.dataset.action = "dismiss-reschedule";
+          dismiss.textContent = "Conservar horario actual";
+          chooser.append(select, save, dismiss);
+          card.append(rescheduleButton, chooser);
+        }
         const cancelButton = document.createElement("button");
         cancelButton.type = "button";
         cancelButton.className = "account-action";
@@ -87,6 +115,53 @@
   appointmentsList.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
+    if (button.dataset.action === "start-reschedule") {
+      const chooser = button.nextElementSibling;
+      const select = chooser.querySelector("select");
+      button.disabled = true;
+      try {
+        const response = await fetch(`${apiRoot}/api/v1/public/${encodeURIComponent(button.dataset.shopSlug)}/slots?duration_minutes=${encodeURIComponent(button.dataset.duration)}`);
+        const data = await readJson(response);
+        select.replaceChildren();
+        data.forEach((slot) => {
+          const option = document.createElement("option");
+          option.value = String(slot.availability_id);
+          option.textContent = `${formatAppointmentDate(slot.slot_start)} · ${slot.barber_name}`;
+          select.append(option);
+        });
+        chooser.hidden = false;
+        if (!data.length) message("No hay horarios disponibles para esta duración.");
+        else select.focus();
+      } catch (error) {
+        message(error.message);
+      } finally {
+        button.disabled = false;
+      }
+      return;
+    }
+    if (button.dataset.action === "dismiss-reschedule") {
+      button.closest(".reschedule-chooser").hidden = true;
+      return;
+    }
+    if (button.dataset.action === "confirm-reschedule") {
+      const chooser = button.closest(".reschedule-chooser");
+      const select = chooser.querySelector("select");
+      if (!select.value) { message("Selecciona un horario disponible."); return; }
+      button.disabled = true;
+      try {
+        await readJson(await window.KingFlowAuth.fetch(
+          `${apiRoot}/api/v1/public/${encodeURIComponent(button.closest(".appointment-card").querySelector("[data-action=start-reschedule]").dataset.shopSlug)}/appointments/reschedule`,
+          { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ appointment_id: Number(button.dataset.appointmentId), availability_id: Number(select.value) }) },
+        ));
+        message("La cita cambió al nuevo horario y la barbería recibió una notificación.");
+        await loadAppointments();
+      } catch (error) {
+        message(error.message);
+        button.disabled = false;
+      }
+      return;
+    }
     if (button.dataset.action === "start-cancel") {
       const confirmation = button.nextElementSibling;
       confirmation.hidden = false;

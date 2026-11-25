@@ -12,7 +12,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 |---|---|---|
 | Registro de barbería, acceso owner/barbero, sesiones y recuperación | Implementado | API `/auth/*`, `/saas/register`; JWT con refresh persistido/revocable |
 | Catálogo público, disponibilidad, reserva de invitado y gestión con token | Implementado | API de booking admite invitados y cuentas verificadas; no requiere cuenta para reserva, y da seguimiento/cambio con token privado |
-| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial; cuenta verificada en evolución | Registro y login cliente con verificación SMTP, historial multi-barbería, reserva autenticada, reclamación con token privado y cancelación de citas vinculadas con política de negocio. Aún faltan reprogramación desde la cuenta, cartera, pagos, beneficios, favoritos y perfil/privacidad |
+| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial; cuenta verificada en evolución | Registro y login cliente con verificación SMTP, historial multi-barbería, reserva autenticada, reclamación con token privado, cancelación y reprogramación de citas vinculadas con política de negocio. Aún faltan cartera, pagos, beneficios, favoritos y perfil/privacidad |
 | Agenda, atención, turnos presenciales, cobro y conciliación | Implementado | Flujo de cita/pago y caja; el pago de servicio se registra manualmente |
 | Política por barbería para anticipación de cancelación/reprogramación | Implementado en este incremento | Columna MySQL versionada, rango 0–168h, aviso público y validación en ambos cambios |
 | Perfil público: marca, horarios, zona, tema, logo, portada, galería, preguntas | Implementado | Onboarding y opciones públicas; la calidad visual requiere revisión continua en varios anchos |
@@ -47,6 +47,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 - Se añadió una política por tenant para la anticipación mínima de cancelación/reprogramación, con migración compatible, valor histórico cero y enforcement en la API pública.
 - El catálogo del owner ahora muestra las fotos reales asignadas a cada servicio; rechaza visualmente URLs fuera del origen confiable y mantiene el icono accesible para servicios sin foto.
 - Se añadió una cuenta global de cliente con activación por email, límite de reenvío, token de un uso, perfiles CRM aislados por barbería e importación de una cita solo con su token privado. La pantalla cliente permite entrar, revisar historial y reclamar una cita desde su enlace; no relaciona cuentas por teléfono.
+- La cuenta cliente permite reprogramar citas futuras pendientes/confirmadas desde el historial. Reutiliza las mismas reglas, política de anticipación, bloqueos de barbero, límites de agenda, reserva transaccional de disponibilidad, auditoría y notificaciones del flujo de reprogramación con enlace privado.
 - Migración nueva `033_client_accounts`: crea tablas de verificación/link sin tocar citas existentes. Requiere ejecutar `alembic upgrade head` y configurar SMTP antes de habilitar altas.
 - Evidencia visual: [antes](evidence/owner-settings-before.png) y [después](evidence/owner-settings-after.png).
 - Nuevos documentos: arquitectura de permisos, sistema visual, estándar de desarrollo, decisiones de producto y revisión de seguridad.
@@ -54,7 +55,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 ## Validación local y límites
 
 - `python -m pytest backend/tests -q`: 69 passed, 102 skipped en el último intento completo. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; no había instancia configurada. No se modificó la base de datos de desarrollo.
-- `frontend`: `npm test` 110 passed; 65 flujos pasaron localmente en cada uno de Chromium, Firefox y WebKit. Las páginas iniciales se verificaron a 320, 375, 390, 430, 768, 1024, 1366 y 1920 px; incluye cuenta y cancelación.
+- Validación de este incremento: `frontend/npm test` 110 passed y `npm run test:browser -- browser-tests/client-account.spec.js` 4 passed en Chromium, incluida la reprogramación desde cuenta. La suite completa de 66 flujos en Chromium, Firefox y WebKit queda pendiente de CI para este commit. Las páginas iniciales se verifican a 320, 375, 390, 430, 768, 1024, 1366 y 1920 px.
 - GitHub Actions en MySQL 8.4 confirmó migración limpia, downgrade y recuperación, y ejecutó `python -m pytest backend/tests -q`: **171 passed**, incluyendo integración de reserva y cancelación autenticadas y el caso de acceso cruzado rechazado. Los tres jobs terminaron exitosamente en `f5b9114`.
 - En `f5b9114`, la suite Chromium de CI ejecutó 30 casos, anteriores al aumento de 3 a 8 anchos. Se actualizó el workflow para ejecutar 65 casos por motor; la evidencia CI de esos cambios se verificará en la siguiente ejecución del commit que los incorpora.
 - Alembic reconoce `033_client_accounts` como head y `python -m alembic upgrade 032_cancellation_window:033_client_accounts --sql` generó el SQL MySQL esperado. No se aplicó la migración a una base local en este entorno.
