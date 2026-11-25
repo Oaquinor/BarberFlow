@@ -288,3 +288,50 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 [hidden]{display:none!important}
 
 #newServiceBtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+
+/* Business settings: explicit layout for labels, controls and brand preview. */
+#businessSettingsForm {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 20px;
+  align-items:start; margin-top:20px;
+}
+#businessSettingsForm > .field { display:flex; min-width:0; flex-direction:column; gap:7px; margin:0; }
+#businessSettingsForm > .settings-wide { grid-column:1 / -1; }
+#businessSettingsForm label, #businessSettingsForm > .field > span:first-child {
+  display:block; margin:0; color:#514c44; font-size:.81rem; line-height:1.4; font-weight:700;
+}
+#businessSettingsForm input:not([type="color"]), #businessSettingsForm select,
+#businessSettingsForm textarea {
+  display:block; width:100%; min-width:0; min-height:44px; margin:0; padding:10px 12px;
+  border:1px solid #ded8cf; border-radius:9px; color:#292720; background:#fffefa;
+  font-family:inherit; font-size:.9rem; font-weight:400; line-height:1.45; box-shadow:0 1px 2px rgba(36,29,20,.035);
+}
+#businessSettingsForm textarea { min-height:94px; resize:vertical; }
+#businessSettingsForm #businessBookingQuestions { min-height:116px; }
+#businessSettingsForm input:focus, #businessSettingsForm select:focus, #businessSettingsForm textarea:focus {
+  outline:3px solid rgba(166,125,79,.18); border-color:#a67d4f;
+}
+#businessSettingsForm input[type="color"] {
+  display:block; width:100%; height:46px; min-height:46px; padding:5px;
+  border:1px solid #ded8cf; border-radius:9px; background:#fffefa; cursor:pointer;
+}
+#businessSettingsForm .field small { color:#777168; font-size:.74rem; line-height:1.55; }
+#businessSettingsForm .brand-presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+#businessSettingsForm .brand-presets button {
+  min-height:38px; padding:8px 12px; border:1px solid #ded8cf; border-radius:999px;
+  color:#514638; background:#fffefa; font-size:.77rem; font-weight:650; cursor:pointer;
+}
+#businessSettingsForm .brand-presets button:hover { border-color:#bd9a70; background:#f7f1e8; }
+#businessSettingsForm .brand-preview {
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:14px; padding:14px 16px;
+  border:1px solid #e7dfd3; border-radius:12px; background:#faf8f4;
+}
+#businessSettingsForm .brand-preview strong { flex:0 0 100%; color:#514638; font-size:.76rem; }
+#businessSettingsForm .brand-preview span { flex:1 1 180px; color:#514638; font-size:.83rem; }
+#businessSettingsForm .brand-preview button { width:auto; min-height:38px; margin:0; padding:8px 14px; border-radius:8px; font-size:.78rem; }
+#businessSettingsForm .brand-preview small { flex:0 0 100%; }
+#businessSettingsForm .settings-submit button { width:100%; min-height:48px; margin:0; }
+@media(max-width:640px) {
+  #businessSettingsForm { grid-template-columns:minmax(0,1fr); gap:15px; }
+  #businessSettingsForm > .settings-wide { grid-column:1; }
+  #businessSettingsForm .brand-preview { align-items:flex-start; }
+}
