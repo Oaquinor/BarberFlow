@@ -175,3 +175,41 @@ test("customer can update account name and phone while email remains verified an
   expect(download.suggestedFilename()).toBe("kingflow-mis-datos.json");
   await expect(page.getByRole("status")).toContainText("archivo con los datos");
 });
+
+test("customer can review and remove a saved service from account favorites", async ({ page }) => {
+  let favoritesRead = 0;
+  let deletedFavorite;
+  await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
+    access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
+    user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+  } }));
+  await page.route("**/api/v1/client-account/profile", (route) => route.fulfill({ json: {
+    email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213",
+  } }));
+  await page.route("**/api/v1/client-account/appointments", (route) => route.fulfill({ json: { items: [] } }));
+  await page.route("**/api/v1/client-account/favorites**", async (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedFavorite = route.request().url();
+      await route.fulfill({ json: { success: true } });
+      return;
+    }
+    favoritesRead += 1;
+    await route.fulfill({ json: { items: favoritesRead === 1 ? [{
+      favorite_id: 71, barbershop: "KingFlow de Prueba", barbershop_slug: "kingflow-prueba",
+      target_type: "service", target_id: 14, name: "Corte clásico", price_cents: 25000,
+      duration_minutes: 30, image_url: null,
+    }] : [] } });
+  });
+
+  await page.goto("/client-account.html");
+  await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
+  await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
+  await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+
+  await expect(page.getByRole("heading", { name: "Mis favoritos" })).toBeVisible();
+  await expect(page.locator(".favorite-card")).toContainText("Corte clásico");
+  await expect(page.locator(".favorite-card")).toContainText("KingFlow de Prueba");
+  await page.getByRole("button", { name: "Quitar de favoritos" }).click();
+  await expect(page.getByText("Aún no guardas servicios ni barberos.")).toBeVisible();
+  expect(deletedFavorite).toContain("/client-account/favorites/71");
+});

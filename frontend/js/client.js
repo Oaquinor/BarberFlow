@@ -5,6 +5,7 @@ let shopCurrency = 'USD';
 let shopTimezone = 'UTC';
 let availableSlots = [];
 let serviceCatalog = [];
+let publicFavorites = new Map();
 let slotsRequestSequence = 0;
 
 function q(name) {
@@ -101,10 +102,13 @@ function renderServiceCards() {
   }
   container.replaceChildren();
   serviceCatalog.forEach((service) => {
-    const card = document.createElement('button');
-    card.type = 'button';
+    const card = document.createElement('article');
     card.className = 'service-card';
     card.dataset.serviceId = String(Number(service.id));
+    const selectButton = document.createElement('button');
+    selectButton.type = 'button';
+    selectButton.className = 'service-select-trigger';
+    selectButton.setAttribute('aria-label', `Elegir ${service.name}`);
     const category = document.createElement('span');
     category.className = 'service-category';
     category.textContent = service.category || 'Servicio';
@@ -126,16 +130,18 @@ function renderServiceCards() {
       image.alt = '';
       image.loading = 'lazy';
       image.className = 'service-photo';
-      card.append(image);
+      selectButton.append(image);
     } else {
       const visual = document.createElement('span');
       visual.className = 'service-visual';
       visual.setAttribute('aria-hidden', 'true');
       visual.innerHTML = '<svg viewBox="0 0 48 48"><path d="M9 9l30 30M39 9 9 39"/><circle cx="10" cy="10" r="5"/><circle cx="38" cy="38" r="5"/><path d="m28 12 8 8m-13 13 8 8"/></svg><span>ELIGE TU ESTILO</span>';
-      card.append(visual);
+      selectButton.append(visual);
     }
-    card.append(category, title, description, bottom);
-    card.addEventListener('click', () => {
+    selectButton.append(category, title, description, bottom);
+    const favorite = favoriteButton('service', service.id, service.name);
+    card.append(favorite, selectButton);
+    selectButton.addEventListener('click', () => {
       serviceSelect.value = String(Number(service.id));
       serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
       container.querySelectorAll('.service-card').forEach((item) => item.classList.remove('selected'));
@@ -185,9 +191,79 @@ function renderPublicTeam(team) {
     action.className = 'team-book-button';
     action.dataset.barberId = String(Number(member.id));
     action.textContent = 'Reservar con esta persona';
-    card.append(name, bio, action);
+    card.append(name, bio, action, favoriteButton('barber', member.id, member.name || 'Barbero'));
     container.append(card);
   });
+}
+
+function favoriteButton(type, id, label) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'public-favorite-button';
+  button.dataset.favoriteType = type;
+  button.dataset.favoriteId = String(Number(id));
+  button.setAttribute('aria-label', `Guardar ${label} en favoritos`);
+  button.setAttribute('aria-pressed', publicFavorites.has(`${type}:${Number(id)}`) ? 'true' : 'false');
+  button.textContent = publicFavorites.has(`${type}:${Number(id)}`) ? '♥ Guardado' : '♡ Guardar';
+  return button;
+}
+
+async function loadPublicFavorites() {
+  if (!shopSlug || !sessionStorage.getItem('token')) return;
+  try {
+    const response = await window.KingFlowAuth.fetch(`${API_BASE}/client-account/favorites`);
+    if (!response.ok) return;
+    const data = await response.json();
+    publicFavorites = new Map((data.items || []).filter(item => item.barbershop_slug === shopSlug)
+      .map(item => [`${item.target_type}:${Number(item.target_id)}`, Number(item.favorite_id)]));
+    renderServiceCards();
+    const shop = window.__kingflowLoadedShop;
+    if (shop) renderPublicTeam(shop.team);
+  } catch (_) { /* Favorites are optional; keep public booking available. */ }
+}
+
+document.getElementById('publicServices')?.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-favorite-type]');
+  if (button) await togglePublicFavorite(button);
+});
+document.getElementById('publicTeam')?.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-favorite-type]');
+  if (button) { event.stopPropagation(); await togglePublicFavorite(button); }
+});
+
+async function togglePublicFavorite(button) {
+  if (!sessionStorage.getItem('token')) {
+    bookResult.textContent = 'Inicia sesión para guardar favoritos.';
+    const link = document.createElement('a');
+    link.href = '/client-account.html';
+    link.textContent = ' Abrir mi cuenta';
+    bookResult.append(link);
+    return;
+  }
+  button.disabled = true;
+  const type = button.dataset.favoriteType;
+  const id = Number(button.dataset.favoriteId);
+  const key = `${type}:${id}`;
+  try {
+    if (publicFavorites.has(key)) {
+      const response = await window.KingFlowAuth.fetch(`${API_BASE}/client-account/favorites/${publicFavorites.get(key)}`, { method: 'DELETE' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'No se pudo quitar el favorito.');
+      publicFavorites.delete(key);
+    } else {
+      const response = await window.KingFlowAuth.fetch(`${API_BASE}/client-account/favorites`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barbershop_slug: shopSlug, target_type: type, target_id: id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'No se pudo guardar el favorito.');
+      publicFavorites.set(key, Number(data.favorite_id));
+    }
+    if (type === 'service') renderServiceCards();
+    else renderPublicTeam(window.__kingflowLoadedShop?.team);
+    bookResult.textContent = publicFavorites.has(key) ? 'Guardado en tus favoritos.' : 'Eliminado de tus favoritos.';
+  } catch (error) { bookResult.textContent = error.message; }
+  finally { button.disabled = false; }
 }
 
 function renderPublicGallery(images) {
@@ -231,6 +307,7 @@ async function loadShop() {
     }
 
     const shop = await res.json();
+    window.__kingflowLoadedShop = shop;
     shopCurrency = shop.currency || 'USD';
     shopTimezone = shop.timezone || 'UTC';
     const cancellationHours = Math.max(0, Number(shop.cancellation_window_hours) || 0);
@@ -295,6 +372,7 @@ async function loadShop() {
     renderServiceCards();
     renderPublicGallery(shop.gallery_images);
     renderPublicTeam(shop.team);
+    await loadPublicFavorites();
     renderCustomBookingQuestions(shop.booking_questions);
     if (serviceCatalog[0]) {
       document.querySelector(`.service-card[data-service-id="${Number(serviceCatalog[0].id)}"]`)?.classList.add('selected');

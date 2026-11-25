@@ -1,5 +1,7 @@
 """Customer account API contracts."""
 
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -72,3 +74,9 @@ class ClientAccountProfileUpdateRequest(BaseModel):
         if not 6 <= len(digits) <= 20:
             raise ValueError("El teléfono debe contener entre 6 y 20 dígitos")
         return digits
+
+
+class ClientAccountFavoriteRequest(BaseModel):
+    barbershop_slug: str = Field(..., min_length=1, max_length=100)
+    target_type: Literal["barber", "service"]
+    target_id: int = Field(..., gt=0)

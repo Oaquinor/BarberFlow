@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from app.api.v1 import client_accounts as accounts_api
 from app.core.security import create_access_token
 from app.models import (
-    Appointment, BarberAvailability, Barbershop, ClientAccountShopLink, Service, Subscription, User,
+    Appointment, BarberAvailability, Barbershop, ClientAccountFavorite,
+    ClientAccountShopLink, Service, Subscription, User,
 )
 from app.utils.datetime import utc_now_naive
 
@@ -124,6 +125,58 @@ def test_client_claims_only_a_private_token_and_sees_only_linked_shop_history(
     assert exported.json()["account"]["email"] == account.email
     assert [item["appointment_id"] for item in exported.json()["appointments"]] == [appointment.id]
     assert "tracking_token" not in str(exported.json())
+
+
+def test_client_favorites_are_persisted_tenant_scoped_and_private(
+    client: TestClient, test_db: Session,
+):
+    now = utc_now_naive()
+    subscription = Subscription(
+        plan="free", status="active", current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29), max_barbers=2,
+        max_appointments_per_month=100, max_clients=100, auto_renew=False,
+    )
+    shop = Barbershop(
+        name="Favoritos Test", slug="favorite-shop", email="favorite-shop@example.com",
+        phone="8095550403", address_line1="Calle 10", city="Santo Domingo",
+        state="DN", postal_code="10103", country="DO", subscription=subscription,
+    )
+    barber = User(email="favorite-barber@example.com", password_hash="unused", first_name="Luis",
+                  last_name="Barbero", role="barber", is_active=True, barbershop=shop,
+                  avatar_url="/uploads/barber.jpg")
+    service = Service(barbershop=shop, name="Corte favorito", duration_minutes=30, price=22000,
+                      category="haircut", is_active=True, image_url="/uploads/service.jpg")
+    account = User(email="favorite-client@example.com", password_hash="unused", first_name="Ana",
+                   last_name="Cliente", role="client", is_active=True, is_verified=True)
+    other = User(email="other-favorite-client@example.com", password_hash="unused", first_name="Eva",
+                 last_name="Cliente", role="client", is_active=True, is_verified=True)
+    test_db.add_all([shop, barber, service, account, other])
+    test_db.commit()
+    headers = {"Authorization": f"Bearer {create_access_token({'sub': str(account.id), 'role': account.role})}"}
+    other_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(other.id), 'role': other.role})}"}
+
+    payload = {"barbershop_slug": shop.slug, "target_type": "service", "target_id": service.id}
+    saved = client.post("/api/v1/client-account/favorites", headers=headers, json=payload)
+    assert saved.status_code == 200, saved.text
+    favorite_id = saved.json()["favorite_id"]
+    assert client.post("/api/v1/client-account/favorites", headers=headers, json=payload).json()["favorite_id"] == favorite_id
+    barber_save = client.post("/api/v1/client-account/favorites", headers=headers, json={
+        "barbershop_slug": shop.slug, "target_type": "barber", "target_id": barber.id,
+    })
+    assert barber_save.status_code == 200
+
+    listing = client.get("/api/v1/client-account/favorites", headers=headers)
+    assert listing.status_code == 200 and listing.headers["cache-control"] == "no-store"
+    assert {(item["target_type"], item["name"]) for item in listing.json()["items"]} == {
+        ("service", "Corte favorito"), ("barber", "Luis Barbero"),
+    }
+    denied = client.delete(f"/api/v1/client-account/favorites/{favorite_id}", headers=other_headers)
+    assert denied.status_code == 404
+    assert client.delete(f"/api/v1/client-account/favorites/{favorite_id}", headers=headers).status_code == 200
+    assert client.get("/api/v1/client-account/favorites", headers=headers).json()["items"][0]["target_type"] == "barber"
+    restored = client.post("/api/v1/client-account/favorites", headers=headers, json=payload)
+    assert restored.status_code == 200 and restored.json()["favorite_id"] == favorite_id
+    assert test_db.query(ClientAccountFavorite).filter_by(account_user_id=account.id, is_deleted=False).count() == 2
 
 
 def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_account(

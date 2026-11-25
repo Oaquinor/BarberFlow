@@ -21,6 +21,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Reclamar cita guest en el historial | No sin autenticación + token privado | No | No | Sí, únicamente con su token privado | No por defecto |
 | Cancelar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta; respeta anticipación y libera turno | No por defecto |
 | Reprogramar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta verificada; respeta anticipación y disponibilidad | No por defecto |
+| Guardar/quitar favoritos | No | No | No | Solo barberías activas; objetivos validados dentro del tenant; el titular administra sus propios registros | No por defecto |
 
 ## Reglas para cambios
 
@@ -30,5 +31,5 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 - Responder sin filtrar existencia ajena donde el contrato y la privacidad lo requieran.
 - Una cita guest se gestiona con su secreto aleatorio; el ID de cita nunca sirve como credencial.
 - Una cuenta cliente solo reclama citas con el token privado de esa reserva; el teléfono no enlaza identidades ni comparte historiales CRM.
-- La cuenta cliente sigue siendo parcial: pagos, beneficios, favoritos y controles de perfil/privacidad no están integrados en ese portal.
+- La cuenta cliente sigue siendo parcial: favoritos, perfil e historial están integrados; pagos y beneficios no están implementados.
 - Mantener pruebas negativas de acceso cruzado entre tenants para cada endpoint nuevo.

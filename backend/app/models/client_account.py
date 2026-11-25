@@ -1,6 +1,9 @@
 """Verified customer identities and their tenant-scoped CRM profiles."""
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String,
+    UniqueConstraint,
+)
 
 from app.models.base import BaseModel
 
@@ -33,3 +36,22 @@ class ClientAccountShopLink(BaseModel):
     account_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     barbershop_id = Column(Integer, ForeignKey("barbershops.id", ondelete="CASCADE"), nullable=False)
     crm_client_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+
+class ClientAccountFavorite(BaseModel):
+    """A customer's saved barber or service within one tenant."""
+
+    __tablename__ = "client_account_favorites"
+    __table_args__ = (
+        CheckConstraint("target_type IN ('barber', 'service')", name="ck_client_account_favorites_type"),
+        UniqueConstraint(
+            "account_user_id", "barbershop_id", "target_type", "target_id",
+            name="uq_client_account_favorite_target",
+        ),
+        Index("ix_client_account_favorites_owner", "account_user_id", "is_deleted"),
+    )
+
+    account_user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    barbershop_id = Column(Integer, ForeignKey("barbershops.id", ondelete="CASCADE"), nullable=False)
+    target_type = Column(String(20), nullable=False)
+    target_id = Column(Integer, nullable=False)

@@ -22,6 +22,9 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `PATCH` | `/client-account/profile` | Actualiza nombre y teléfono propios; email no editable; registra auditoría |
 | `GET` | `/client-account/export` | Cliente autenticado y verificado; descarga perfil e historial propio en JSON |
 | `GET` | `/client-account/appointments` | Cuenta cliente autenticada y correo verificado; hasta 100 citas vinculadas |
+| `GET` | `/client-account/favorites` | Cliente verificado; solo favoritos propios activos; no almacena en caché datos privados |
+| `POST` | `/client-account/favorites` | Guarda/restaura barbero o servicio existente en la barbería indicada; idempotente y auditado |
+| `DELETE` | `/client-account/favorites/{favorite_id}` | Eliminación lógica del favorito propio; IDs de otras cuentas responden 404 |
 | `POST` | `/client-account/appointments/claim` | Cuenta cliente autenticada y token privado de seguimiento; añade una cita a su historial |
 | `POST` | `/client-account/appointments/{appointment_id}/cancel` | Dueño autenticado de la cita mediante enlace CRM; aplica estado, anticipación de cancelación, libera el turno y encola notificaciones |
 | `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |

@@ -19,12 +19,12 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security.password import hash_password
 from app.models import (
-    Appointment, Barbershop, ClientAccountShopLink, ClientAccountVerification,
-    Subscription, User,
+    Appointment, Barbershop, ClientAccountFavorite, ClientAccountShopLink,
+    ClientAccountVerification, Service, Subscription, User,
 )
 from app.schemas.client_account import (
     ClientAccountRegisterRequest, ClientAccountResendRequest, ClientAccountVerifyRequest,
-    ClientAccountProfileUpdateRequest, ClientAppointmentCancelRequest,
+    ClientAccountFavoriteRequest, ClientAccountProfileUpdateRequest, ClientAppointmentCancelRequest,
     ClientAppointmentClaimRequest,
 )
 from app.services.audit_service import record_audit
@@ -186,6 +186,119 @@ def verify_client_account(data: ClientAccountVerifyRequest, db: Session = Depend
 def _require_client_account(user: User) -> None:
     if user.role != "client" or user.barbershop_id is not None or not user.is_verified:
         raise HTTPException(status_code=403, detail="Se requiere una cuenta de cliente verificada")
+
+
+@router.get("/favorites")
+def list_client_favorites(response: Response, user: CurrentUser, db: Session = Depends(get_db)):
+    _require_client_account(user)
+    response.headers["Cache-Control"] = "no-store"
+    favorites = db.query(ClientAccountFavorite, Barbershop).join(
+        Barbershop, Barbershop.id == ClientAccountFavorite.barbershop_id,
+    ).filter(
+        ClientAccountFavorite.account_user_id == user.id,
+        ClientAccountFavorite.is_deleted == False,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).order_by(ClientAccountFavorite.created_at.desc()).all()
+    items = []
+    for favorite, shop in favorites:
+        if favorite.target_type == "service":
+            target = db.query(Service).filter(
+                Service.id == favorite.target_id,
+                Service.barbershop_id == shop.id,
+                Service.is_active == True,
+                Service.is_deleted == False,
+            ).first()
+            details = {"price_cents": target.price, "duration_minutes": target.duration_minutes} if target else {}
+        else:
+            target = db.query(User).filter(
+                User.id == favorite.target_id,
+                User.barbershop_id == shop.id,
+                User.role == "barber",
+                User.is_active == True,
+                User.is_deleted == False,
+            ).first()
+            details = {}
+        if not target:
+            continue
+        items.append({
+            "favorite_id": favorite.id, "barbershop": shop.name,
+            "barbershop_slug": shop.slug, "target_type": favorite.target_type,
+            "target_id": target.id,
+            "name": target.name if favorite.target_type == "service" else target.full_name,
+            "image_url": target.image_url if favorite.target_type == "service" else target.avatar_url,
+            **details,
+        })
+    return {"items": items}
+
+
+@router.post("/favorites")
+def save_client_favorite(
+    data: ClientAccountFavoriteRequest, user: CurrentUser, db: Session = Depends(get_db),
+):
+    _require_client_account(user)
+    shop = db.query(Barbershop).filter(
+        Barbershop.slug == data.barbershop_slug,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no disponible")
+    if data.target_type == "service":
+        target = db.query(Service).filter(
+            Service.id == data.target_id, Service.barbershop_id == shop.id,
+            Service.is_active == True, Service.is_deleted == False,
+        ).first()
+    else:
+        target = db.query(User).filter(
+            User.id == data.target_id, User.barbershop_id == shop.id,
+            User.role == "barber", User.is_active == True, User.is_deleted == False,
+        ).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="El servicio o barbero no está disponible")
+    favorite = db.query(ClientAccountFavorite).filter(
+        ClientAccountFavorite.account_user_id == user.id,
+        ClientAccountFavorite.barbershop_id == shop.id,
+        ClientAccountFavorite.target_type == data.target_type,
+        ClientAccountFavorite.target_id == data.target_id,
+    ).with_for_update().first()
+    changed = False
+    if favorite and favorite.is_deleted:
+        favorite.is_deleted = False
+        favorite.deleted_at = None
+        changed = True
+    elif not favorite:
+        favorite = ClientAccountFavorite(
+            account_user_id=user.id, barbershop_id=shop.id,
+            target_type=data.target_type, target_id=data.target_id,
+        )
+        db.add(favorite)
+        changed = True
+    if changed:
+        db.flush()
+        record_audit(db, user, "client_account.favorite_saved", "client_account_favorite",
+                     favorite.id, shop.id,
+                     {"target_type": data.target_type, "target_id": data.target_id})
+    db.commit()
+    return {"success": True, "favorite_id": favorite.id}
+
+
+@router.delete("/favorites/{favorite_id}")
+def remove_client_favorite(favorite_id: int, user: CurrentUser, db: Session = Depends(get_db)):
+    _require_client_account(user)
+    favorite = db.query(ClientAccountFavorite).filter(
+        ClientAccountFavorite.id == favorite_id,
+        ClientAccountFavorite.account_user_id == user.id,
+        ClientAccountFavorite.is_deleted == False,
+    ).with_for_update().first()
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Favorito no encontrado")
+    favorite.soft_delete()
+    record_audit(db, user, "client_account.favorite_removed", "client_account_favorite",
+                 favorite.id, favorite.barbershop_id,
+                 {"target_type": favorite.target_type, "target_id": favorite.target_id})
+    db.commit()
+    return {"success": True}
 
 
 @router.get("/profile")

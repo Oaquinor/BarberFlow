@@ -8,6 +8,7 @@
   const customerPanel = document.getElementById("customerPanel");
   const verifyPanel = document.getElementById("verifyPanel");
   const appointmentsList = document.getElementById("appointmentsList");
+  const favoritesList = document.getElementById("favoritesList");
   const labels = { pending: "Pendiente", confirmed: "Confirmada", in_progress: "En curso", completed: "Completada", cancelled: "Cancelada", no_show: "No asistió" };
   const fragment = new URLSearchParams(window.location.hash.slice(1));
   let pendingClaimToken = fragment.get("claim");
@@ -167,6 +168,43 @@
     renderAppointments(data.items || []);
   }
 
+  async function loadFavorites() {
+    const data = await readJson(await window.KingFlowAuth.fetch(`${api}/favorites`));
+    favoritesList.replaceChildren();
+    if (!(data.items || []).length) {
+      const empty = document.createElement("p");
+      empty.textContent = "Aún no guardas servicios ni barberos. Puedes hacerlo desde la página de cada barbería.";
+      favoritesList.append(empty);
+      return;
+    }
+    data.items.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "favorite-card";
+      const title = document.createElement("h3");
+      title.textContent = item.name;
+      const description = document.createElement("p");
+      description.textContent = `${item.target_type === "service" ? "Servicio" : "Barbero"} · ${item.barbershop}`;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "account-action";
+      remove.textContent = "Quitar de favoritos";
+      remove.addEventListener("click", async () => {
+        remove.disabled = true;
+        try {
+          await readJson(await window.KingFlowAuth.fetch(`${api}/favorites/${encodeURIComponent(item.favorite_id)}`, { method: "DELETE" }));
+          message("Se quitó de tus favoritos.");
+          await loadFavorites();
+        } catch (error) { message(error.message); remove.disabled = false; }
+      });
+      const visit = document.createElement("a");
+      visit.className = "button-secondary favorite-visit";
+      visit.href = `/client.html?shop=${encodeURIComponent(item.barbershop_slug)}`;
+      visit.textContent = "Ver barbería";
+      card.append(title, description, remove, visit);
+      favoritesList.append(card);
+    });
+  }
+
   appointmentsList.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
@@ -258,6 +296,7 @@
       message(error.message);
     }
     await loadAppointments();
+    try { await loadFavorites(); } catch (error) { message(error.message); }
     if (pendingClaimToken) {
       document.getElementById("claimToken").value = pendingClaimToken;
       const token = pendingClaimToken;
