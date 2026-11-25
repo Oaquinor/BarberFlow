@@ -66,7 +66,7 @@ La migración `041_style_passport` permite un registro único por cita completad
 
 Las filas de fotos guardan categoría (`reference`/`result`), MIME normalizado, tamaño y clave UUID aleatoria. Los bytes JPEG re-encodeados se almacenan en `UPLOAD_DIR/private/style-passport/{account_id}`, fuera del acceso estático público. La API valida titularidad o consentimiento del tenant en cada lectura; la respuesta usa `private, no-store`. Se admiten hasta dos archivos por categoría de hasta 5 MiB cada uno. El registro principal y sus datos se limpian con soft delete para auditar la cita; los metadatos y bytes de fotos se retiran al terminar la limpieza física. La migración `042_style_passport_retention` agrega `barbershops.style_passport_retention_days`, nulo por defecto. El owner puede elegir 90/180/365/730 días; el worker aplica una purga acotada y auditada, y reintenta retirar archivos marcados como eliminados. Nulo significa que no hay purga automática.
 
-La migración `043_barber_live_state` agrega `barber_live_states`, con una fila por barbero y estado explícito disponible/descanso. La tabla es una proyección operacional, no sustituye el calendario de citas ni sus estados. El cambio queda auditado; el descanso no se permite durante atención y los endpoints de inicio de servicio validan ese estado.
+La migración `043_barber_live_state` agrega `barber_live_states`, con una fila por barbero y estado explícito disponible/descanso. La tabla es una proyección operacional, no sustituye el calendario de citas ni sus estados. El cambio queda auditado; el descanso no se permite durante atención y los endpoints de inicio de servicio validan ese estado. La migración `045_live_chair_break_return` añade `expected_return_at`, opcional; al iniciar descanso se calcula desde los minutos indicados por el barbero y al reanudar se limpia. Este valor es una proyección aproximada, no cambia horarios ni citas.
 
 La migración `044_booking_waitlist_offers` registra ofertas manuales de lista de espera por barbería, solicitud y turno. Conserva solo el hash del token público, vencimiento, estado y cita aceptada; no bloquea el turno al emitir la oferta. El endpoint de aceptación vuelve a validar disponibilidad y marca el slot reservado junto con la creación de la cita en una transacción MySQL. Cerrar una solicitud o aceptar una oferta cancela las otras ofertas pendientes relacionadas.
 
@@ -290,6 +290,7 @@ La cadena vigente termina en `025_perf_day_unique` y todas las conexiones de la 
 | `026_users_client_listing` | Índice compuesto para listados y conteos de usuarios por barbería, rol y estado de eliminación |
 | `027_appointment_monthly_usage` | Índice compuesto de barbería y fecha de creación para aplicar y mostrar los límites mensuales de citas |
 | `044_booking_waitlist_offers` | Ofertas tenant-scoped de lista de espera con turno, hash de token, estado, vencimiento y cita aceptada; índices de pendientes por solicitud y horario |
+| `045_live_chair_break_return` | Hora de regreso opcional prevista por el barbero en `barber_live_states`; permite mostrar una espera aproximada durante descanso |
 
 `support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 

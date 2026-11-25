@@ -77,7 +77,10 @@ def barber_live_status(
         BarberLiveState.barbershop_id == barber.barbershop_id,
         BarberLiveState.is_deleted == False,
     ).first()
-    return {"state": state.state if state else "available"}
+    return {
+        "state": state.state if state else "available",
+        "expected_return_at": state.expected_return_at if state else None,
+    }
 
 
 @router.put("/barber/live-status")
@@ -127,20 +130,32 @@ def update_barber_live_status(
     if live_state:
         live_state.barbershop_id = shop.id
         live_state.state = data.state
+        live_state.expected_return_at = (
+            utc_now_naive() + timedelta(minutes=data.break_duration_minutes)
+            if data.state == "on_break" else None
+        )
         live_state.is_deleted = False
         live_state.deleted_at = None
     else:
         live_state = BarberLiveState(
             barbershop_id=shop.id, barber_id=locked_barber.id, state=data.state,
+            expected_return_at=(
+                utc_now_naive() + timedelta(minutes=data.break_duration_minutes)
+                if data.state == "on_break" else None
+            ),
         )
         db.add(live_state)
     db.flush()
     _audit(
         db, locked_barber, "barber.live_state_updated", "barber_live_state",
-        live_state.id, shop.id, {"state": data.state},
+        live_state.id, shop.id, {
+            "state": data.state,
+            "expected_return_at": live_state.expected_return_at.isoformat()
+            if live_state.expected_return_at else None,
+        },
     )
     db.commit()
-    return {"state": data.state}
+    return {"state": data.state, "expected_return_at": live_state.expected_return_at}
 
 @router.get("/public/{slug}", response_model=PublicBarbershopResponse)
 def public_barbershop(slug: str, db: Session = Depends(get_db)):
@@ -1099,12 +1114,38 @@ def _public_queue_estimate(db: Session, appointment: Appointment, now: datetime)
     ahead = [row for row in ahead if row.status == "in_progress" or row.checked_in_at is not None]
     ahead.sort(key=lambda row: (row.scheduled_time, row.id))
     ahead = [row for row in ahead if (row.scheduled_time, row.id) < (appointment.scheduled_time, appointment.id)]
-    live_state = db.query(BarberLiveState.state).filter(
+    live_state = db.query(BarberLiveState).filter(
         BarberLiveState.barbershop_id == appointment.barbershop_id,
         BarberLiveState.barber_id == appointment.barber_id,
         BarberLiveState.is_deleted == False,
     ).first()
-    if live_state and live_state[0] == "on_break" and appointment.status != "in_progress":
+    if live_state and live_state.state == "on_break" and appointment.status != "in_progress":
+        expected_return_at = live_state.expected_return_at
+        if expected_return_at:
+            if expected_return_at <= now:
+                return {
+                    "queue_position": len(ahead) + 1,
+                    "estimated_wait_minutes": None,
+                    "queue_estimate_note": "La hora prevista de regreso ya pasó; la barbería debe confirmar el retorno.",
+                }
+            break_remaining = max(0, int((expected_return_at - now).total_seconds() // 60))
+            cursor = max(now, expected_return_at)
+            for row in ahead:
+                if row.status == "in_progress" and row.actual_start_time:
+                    cursor = max(
+                        cursor,
+                        row.actual_start_time + timedelta(minutes=row.estimated_duration),
+                    )
+                else:
+                    cursor = max(cursor, row.scheduled_time) + timedelta(
+                        minutes=max(0, row.estimated_duration or 0)
+                    )
+            wait = max(0, int((max(cursor, appointment.scheduled_time) - now).total_seconds() // 60))
+            return {
+                "queue_position": len(ahead) + 1,
+                "estimated_wait_minutes": wait,
+                "queue_estimate_note": "Espera aproximada; el barbero indicó su hora estimada de regreso.",
+            }
         return {
             "queue_position": len(ahead) + 1,
             "estimated_wait_minutes": None,

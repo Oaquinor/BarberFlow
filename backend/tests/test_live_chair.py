@@ -94,6 +94,7 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
     )
     break_state = BarberLiveState(
         barbershop_id=shop.id, barber_id=break_barber.id, state="on_break",
+        expected_return_at=now + timedelta(minutes=30),
     )
     test_db.add_all([active, waiting, break_waiting, open_slot, break_state])
     test_db.commit()
@@ -109,7 +110,8 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
     assert by_barber_id[barber.id]["active_service"]["service_type"] == "Corte activo"
     assert by_barber_id[available_barber.id]["state"] == "available"
     assert by_barber_id[break_barber.id]["state"] == "on_break"
-    assert by_barber_id[break_barber.id]["estimated_wait_minutes"] is None
+    assert 28 <= by_barber_id[break_barber.id]["estimated_wait_minutes"] <= 30
+    assert by_barber_id[break_barber.id]["expected_return_at"]
     assert "PrivateCustomerName" not in json.dumps(payload)
     tracking = client.post(
         "/api/v1/public/live-chair-test/track", json={"token": break_waiting_token},
@@ -117,8 +119,19 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
     assert tracking.status_code == 200
     tracked_break = tracking.json()["items"][0]
     assert tracked_break["queue_position"] == 1
-    assert tracked_break["estimated_wait_minutes"] is None
-    assert "en descanso" in tracked_break["queue_estimate_note"]
+    assert 28 <= tracked_break["estimated_wait_minutes"] <= 30
+    assert "regreso" in tracked_break["queue_estimate_note"]
+    break_state.expected_return_at = now - timedelta(minutes=1)
+    test_db.commit()
+    overdue_owner = client.get("/api/v1/owner/live-chair", headers=_headers(owner)).json()
+    overdue_barber = {item["barber_id"]: item for item in overdue_owner["items"]}[break_barber.id]
+    assert overdue_barber["estimated_wait_minutes"] is None
+    assert overdue_barber["break_return_overdue"] is True
+    overdue_track = client.post(
+        "/api/v1/public/live-chair-test/track", json={"token": break_waiting_token},
+    ).json()["items"][0]
+    assert overdue_track["estimated_wait_minutes"] is None
+    assert "ya pasó" in overdue_track["queue_estimate_note"]
     assert client.get("/api/v1/owner/live-chair", headers=_headers(barber)).status_code == 403
     assert client.get("/api/v1/owner/live-chair").status_code == 401
     assert client.put(
@@ -136,16 +149,21 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
 
     start_break = client.put(
         "/api/v1/barber/live-status", headers=_headers(available_barber),
-        json={"state": "on_break"},
+        json={"state": "on_break", "break_duration_minutes": 30},
     )
     assert start_break.status_code == 200
-    assert client.get("/api/v1/barber/live-status", headers=_headers(available_barber)).json() == {
-        "state": "on_break",
-    }
+    assert start_break.json()["expected_return_at"]
+    break_status = client.get("/api/v1/barber/live-status", headers=_headers(available_barber)).json()
+    assert break_status["state"] == "on_break"
+    assert break_status["expected_return_at"]
     assert client.put(
         f"/api/v1/barber/appointments/{scheduled.id}/status",
         headers=_headers(available_barber), json={"status": "in_progress"},
     ).status_code == 409
+    assert client.put(
+        "/api/v1/barber/live-status", headers=_headers(barber),
+        json={"state": "on_break", "break_duration_minutes": 121},
+    ).status_code == 422
     owner_snapshot = client.get("/api/v1/owner/live-chair", headers=_headers(owner)).json()
     assert {item["barber_id"]: item for item in owner_snapshot["items"]}[
         available_barber.id
@@ -155,6 +173,10 @@ def test_owner_live_chair_aggregates_status_without_customer_identity(
         json={"state": "available"},
     )
     assert resume.status_code == 200
+    assert resume.json()["expected_return_at"] is None
+    assert client.get("/api/v1/barber/live-status", headers=_headers(available_barber)).json() == {
+        "state": "available", "expected_return_at": None,
+    }
     assert client.put(
         "/api/v1/barber/live-status", headers=_headers(barber),
         json={"state": "on_break"},

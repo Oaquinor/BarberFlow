@@ -70,3 +70,20 @@ test('Live Chair remains private to owners and recovers from service errors', as
   assert.equal(failed.nodes.ownerLiveChairResult.textContent, 'offline');
   assert.equal(failed.nodes.refreshOwnerLiveChair.disabled, false);
 });
+
+test('owner Live Chair displays the expected break return and avoids stale ETAs', async () => {
+  const { sandbox, nodes } = liveChairSandbox({ payload: {
+    items: [{
+      barber_name: 'Barbero Descanso', state: 'on_break', checked_in_count: 1,
+      estimated_wait_minutes: null, expected_return_at: '2026-11-25T17:00:00Z',
+      break_return_overdue: true,
+    }],
+  } });
+
+  await sandbox.load();
+
+  assert.match(nodes.ownerLiveChairGrid.innerHTML, /En descanso/);
+  assert.match(nodes.ownerLiveChairGrid.innerHTML, /Sin estimación/);
+  assert.match(nodes.ownerLiveChairGrid.innerHTML, /hora prevista de regreso ya pasó/);
+  assert.doesNotMatch(nodes.ownerLiveChairGrid.innerHTML, /Regreso estimado/);
+});

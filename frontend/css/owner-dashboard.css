@@ -427,5 +427,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .barber-live-presence[data-state="on_break"] .barber-live-presence-dot { background:#a06d43; box-shadow:0 0 0 4px #f6ede4; }
 .barber-live-presence-actions { display:flex; flex:none; flex-wrap:wrap; gap:8px; }
 .barber-live-presence-actions button { min-height:42px; padding:9px 13px; border-radius:9px; font-size:.8rem; }
+.barber-break-duration { display:flex; align-items:center; gap:8px; color:var(--kf-muted); font-size:.78rem; }
+.barber-break-duration select { min-height:42px; padding:8px 10px; border:1px solid var(--kf-line); border-radius:9px; background:var(--kf-paper); color:var(--kf-ink); font:inherit; }
 #barberLivePresenceResult { flex-basis:100%; margin:0; color:var(--kf-muted); font-size:.76rem; }
-@media(max-width:640px) { .barber-live-presence { align-items:flex-start; flex-direction:column; padding:15px; } .barber-live-presence-actions, .barber-live-presence-actions button { width:100%; } }
+@media(max-width:640px) { .barber-live-presence { align-items:flex-start; flex-direction:column; padding:15px; } .barber-live-presence-actions, .barber-live-presence-actions button, .barber-break-duration { width:100%; } .barber-break-duration { justify-content:space-between; } }

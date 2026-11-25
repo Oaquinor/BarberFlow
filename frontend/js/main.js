@@ -19,6 +19,7 @@ let notificationRefreshTimer = null;
 let liveChairRefreshTimer = null;
 let liveChairRequestInFlight = false;
 let barberLiveState = 'available';
+let barberExpectedReturnAt = null;
 let serviceTimerInterval = null;
 let performanceChartResizeObserver = null;
 const ownerClientCache = new Map();
@@ -1072,16 +1073,22 @@ async function loadBarberDashboardData() {
     }
 }
 
-function renderBarberLiveState(state) {
+function renderBarberLiveState(state, expectedReturnAt = null) {
     barberLiveState = state === 'on_break' ? 'on_break' : 'available';
+    barberExpectedReturnAt = barberLiveState === 'on_break' ? expectedReturnAt : null;
     const panel = document.getElementById('barberLivePresence');
     const description = document.getElementById('barberLivePresenceDescription');
     const startBreak = document.getElementById('barberStartBreak');
     const resume = document.getElementById('barberResumeAvailability');
     if (!panel || !description || !startBreak || !resume) return;
     panel.dataset.state = barberLiveState;
+    const returnLabel = barberExpectedReturnAt
+        ? new Date(barberExpectedReturnAt).toLocaleTimeString('es-DO', {
+            timeZone: barbershopProfile?.timezone || 'UTC', hour: 'numeric', minute: '2-digit',
+        })
+        : null;
     description.textContent = barberLiveState === 'on_break'
-        ? 'Estás en descanso. La agenda sigue visible, pero Live Chair no te mostrará como disponible.'
+        ? `Estás en descanso. La agenda sigue visible${returnLabel ? `; regreso estimado a las ${returnLabel}` : ''}.`
         : 'Estás disponible para recibir al siguiente cliente.';
     startBreak.hidden = barberLiveState === 'on_break';
     resume.hidden = barberLiveState !== 'on_break';
@@ -1094,7 +1101,7 @@ function updateBarberPresenceControls(hasActiveAppointment) {
     if (hasActiveAppointment && barberLiveState !== 'on_break' && description) {
         description.textContent = 'Estás atendiendo una cita. Finaliza el servicio antes de iniciar un descanso.';
     } else {
-        renderBarberLiveState(barberLiveState);
+        renderBarberLiveState(barberLiveState, barberExpectedReturnAt);
     }
 }
 
@@ -1107,7 +1114,7 @@ async function loadBarberLiveStatus() {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/live-status`);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || 'No se pudo cargar tu disponibilidad.');
-        renderBarberLiveState(data.state);
+        renderBarberLiveState(data.state, data.expected_return_at);
     } catch (error) {
         if (result) result.textContent = error.message || 'No se pudo cargar tu disponibilidad.';
     }
@@ -1120,11 +1127,16 @@ async function setBarberLiveStatus(state) {
     if (result) result.textContent = 'Guardando disponibilidad…';
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/live-status`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state }),
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                state,
+                ...(state === 'on_break' ? {
+                    break_duration_minutes: Number(document.getElementById('barberBreakDuration')?.value || 15),
+                } : {}),
+            }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || 'No se pudo guardar el estado.');
-        renderBarberLiveState(data.state);
+        renderBarberLiveState(data.state, data.expected_return_at);
         if (result) result.textContent = data.state === 'on_break' ? 'Descanso iniciado.' : 'Disponibilidad reanudada.';
     } catch (error) {
         if (result) result.textContent = error.message || 'No se pudo guardar el estado.';
@@ -2332,10 +2344,16 @@ async function loadOwnerLiveChair() {
             const wait = item.estimated_wait_minutes == null
                 ? 'Sin estimación'
                 : item.estimated_wait_minutes === 0 ? 'Siguiente cliente listo' : `~${Number(item.estimated_wait_minutes)} min`;
+            const breakReturnAt = item.expected_return_at
+                ? new Date(item.expected_return_at).toLocaleTimeString('es-DO', {
+                    timeZone: barbershopProfile?.timezone || 'UTC', hour: 'numeric', minute: '2-digit',
+                })
+                : '';
             return `<article class="owner-live-chair-card">
                 <div class="owner-live-chair-card-heading"><h4>${escapeHtml(item.barber_name || 'Barbero')}</h4><span class="live-chair-state live-chair-state-${state}">${stateLabels[state]}</span></div>
                 ${active ? `<p><strong>${escapeHtml(active.service_type || 'Servicio')}</strong> · ${Number(active.elapsed_minutes) || 0} min transcurridos</p><div class="live-chair-progress" role="progressbar" aria-label="Progreso estimado del servicio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}"><span style="width:${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}%"></span></div>` : '<p>Sin servicio en curso</p>'}
                 <p>${Number(item.checked_in_count) || 0} cliente(s) confirmaron llegada · ${escapeHtml(wait)}</p>
+                ${item.break_return_overdue ? '<p>La hora prevista de regreso ya pasó; confirma el estado con el barbero.</p>' : breakReturnAt ? `<p>Regreso estimado · ${escapeHtml(breakReturnAt)}</p>` : ''}
                 ${next ? `<p>Siguiente turno${nextAt ? ` · ${escapeHtml(nextAt)}` : ''}: ${escapeHtml(next.service_type || 'Servicio')}</p>` : ''}
             </article>`;
         }).join('');

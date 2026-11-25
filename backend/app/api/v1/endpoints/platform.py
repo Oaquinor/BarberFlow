@@ -2039,7 +2039,7 @@ def owner_live_chair(
         return {"updated_at": _utc_aware(now), "items": []}
     barber_ids = [barber.id for barber in barbers]
     explicit_states = {
-        row.barber_id: row.state
+        row.barber_id: row
         for row in db.query(BarberLiveState).filter(
             BarberLiveState.barbershop_id == shop.id,
             BarberLiveState.barber_id.in_(barber_ids),
@@ -2106,10 +2106,12 @@ def owner_live_chair(
         if active:
             state = "delayed" if active_elapsed >= active.estimated_duration else "attending"
         elif waiting:
-            state = "on_break" if explicit_states.get(barber.id) == "on_break" else "waiting"
+            live_state = explicit_states.get(barber.id)
+            state = "on_break" if live_state and live_state.state == "on_break" else "waiting"
         elif upcoming:
-            state = "on_break" if explicit_states.get(barber.id) == "on_break" else "up_next"
-        elif explicit_states.get(barber.id) == "on_break":
+            live_state = explicit_states.get(barber.id)
+            state = "on_break" if live_state and live_state.state == "on_break" else "up_next"
+        elif explicit_states.get(barber.id) and explicit_states[barber.id].state == "on_break":
             state = "on_break"
         elif barber.id in open_barber_ids:
             state = "available"
@@ -2117,8 +2119,20 @@ def owner_live_chair(
             state = "unscheduled"
 
         next_wait_minutes = None
+        live_state = explicit_states.get(barber.id)
+        expected_return_at = live_state.expected_return_at if live_state else None
         if state == "on_break":
-            next_wait_minutes = None
+            if expected_return_at and expected_return_at > now:
+                break_remaining = max(0, int((expected_return_at - now).total_seconds() // 60))
+                next_scheduled = waiting[0].scheduled_time if waiting else (
+                    upcoming.scheduled_time if upcoming else None
+                )
+                next_wait_minutes = (
+                    max(break_remaining, int((next_scheduled - now).total_seconds() // 60))
+                    if next_scheduled else break_remaining
+                )
+            else:
+                next_wait_minutes = None
         elif waiting:
             next_wait_minutes = max(
                 active_remaining,
@@ -2134,6 +2148,8 @@ def owner_live_chair(
             "active_service": active_service,
             "checked_in_count": len(waiting),
             "estimated_wait_minutes": next_wait_minutes,
+            "expected_return_at": _utc_aware(expected_return_at) if expected_return_at else None,
+            "break_return_overdue": bool(expected_return_at and expected_return_at <= now),
             "next_appointment": ({
                 "scheduled_time": _utc_aware(upcoming.scheduled_time),
                 "service_type": upcoming.service_type,

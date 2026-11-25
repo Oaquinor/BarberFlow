@@ -1,6 +1,6 @@
 """Current operational presence selected by a barber."""
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
 
 from app.models.base import BaseModel
 
@@ -17,3 +17,4 @@ class BarberLiveState(BaseModel):
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=False, index=True)
     barber_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     state = Column(String(20), nullable=False, default="available", server_default="available")
+    expected_return_at = Column(DateTime, nullable=True)

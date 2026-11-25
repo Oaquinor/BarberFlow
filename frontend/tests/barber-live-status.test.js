@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const script = fs.readFileSync(path.join(__dirname, '..', 'js', 'main.js'), 'utf8');
-const start = script.indexOf('function renderBarberLiveState(state)');
+const start = script.indexOf('function renderBarberLiveState(');
 const end = script.indexOf('\nasync function ownerFetch(', start);
 const source = script.slice(start, end);
 
@@ -13,12 +13,14 @@ function createSandbox({ initialState = 'available', putResponse = { state: 'on_
   const nodes = Object.fromEntries([
     'barberLivePresence', 'barberLivePresenceDescription', 'barberStartBreak',
     'barberResumeAvailability', 'barberLivePresenceResult', 'finishServiceButton',
+    'barberBreakDuration',
   ].map(id => [id, { hidden: id === 'barberResumeAvailability' || id === 'barberLivePresence', disabled: false, textContent: '', dataset: {}, addEventListener() {} }]));
   const requests = [];
   const sandbox = {
     API_ROOT: 'https://api.kingflow.test',
     currentUser: { role: 'barber' },
     barberLiveState: 'available',
+    barbershopProfile: { timezone: 'America/Santo_Domingo' },
     document: { getElementById: id => nodes[id] || null },
     KingFlowAuth: { fetch: async (url, options = {}) => {
       requests.push({ url, options });
@@ -40,7 +42,7 @@ test('barber can pause and resume presence through the authenticated API', async
   assert.equal(nodes.barberStartBreak.hidden, true);
   assert.equal(nodes.barberResumeAvailability.hidden, false);
   assert.equal(nodes.barberLivePresenceResult.textContent, 'Descanso iniciado.');
-  assert.deepEqual(requests[1].options.body, JSON.stringify({ state: 'on_break' }));
+  assert.deepEqual(requests[1].options.body, JSON.stringify({ state: 'on_break', break_duration_minutes: 15 }));
 });
 
 test('barber identity check avoids availability requests for owners', async () => {

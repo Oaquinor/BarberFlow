@@ -266,6 +266,7 @@ class BarberAbsenceRequest(BaseModel):
 
 class BarberLiveStateUpdate(BaseModel):
     state: Literal["available", "on_break"]
+    break_duration_minutes: int = Field(default=15, ge=5, le=120)
 
 
 class PublicCreateAppointmentResponse(BaseModel):
