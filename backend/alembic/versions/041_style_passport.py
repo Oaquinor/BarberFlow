@@ -87,14 +87,7 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_style_passport_photo_entry", table_name="style_passport_photos")
+    # Dropping each table also drops its indexes and foreign keys. MySQL
+    # refuses to drop the child index first because InnoDB uses it for the FK.
     op.drop_table("style_passport_photos")
-    op.drop_index(
-        "ix_style_passport_shop_share_active",
-        table_name="style_passport_entries",
-    )
-    op.drop_index(
-        "ix_style_passport_account_shop_active",
-        table_name="style_passport_entries",
-    )
     op.drop_table("style_passport_entries")
