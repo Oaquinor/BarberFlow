@@ -193,6 +193,15 @@
     verifyPanel.hidden = true;
     customerPanel.hidden = false;
     document.getElementById("customerGreeting").textContent = `Hola, ${user.full_name || user.email}`;
+    try {
+      const profile = await readJson(await window.KingFlowAuth.fetch(`${api}/profile`));
+      document.getElementById("profileEmail").value = profile.email;
+      document.getElementById("profileFirstName").value = profile.first_name;
+      document.getElementById("profileLastName").value = profile.last_name;
+      document.getElementById("profilePhone").value = profile.phone;
+    } catch (error) {
+      message(error.message);
+    }
     await loadAppointments();
     if (pendingClaimToken) {
       document.getElementById("claimToken").value = pendingClaimToken;
@@ -286,6 +295,29 @@
   document.getElementById("claimForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     await claimAppointment(document.getElementById("claimToken").value.trim());
+  });
+
+  document.getElementById("profileForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const result = await readJson(await window.KingFlowAuth.fetch(`${api}/profile`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: document.getElementById("profileFirstName").value.trim(),
+          last_name: document.getElementById("profileLastName").value.trim(),
+          phone: document.getElementById("profilePhone").value.trim(),
+        }),
+      }));
+      document.getElementById("customerGreeting").textContent = `Hola, ${result.first_name} ${result.last_name}`;
+      message("Tu perfil se guardó correctamente.");
+    } catch (error) {
+      message(error.message);
+    } finally {
+      button.disabled = false;
+    }
   });
 
   document.getElementById("logoutButton").addEventListener("click", async () => {

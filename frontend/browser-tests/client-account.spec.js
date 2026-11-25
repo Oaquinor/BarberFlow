@@ -12,6 +12,9 @@ test("verified customer can sign in and claim a booking with its private trackin
     claimPayload = route.request().postDataJSON();
     await route.fulfill({ json: { success: true, appointment_id: 42, message: "La cita se añadió a tu historial." } });
   });
+  await page.route("**/api/v1/client-account/profile", (route) => route.fulfill({ json: {
+    email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213",
+  } }));
   await page.route("**/api/v1/client-account/appointments", async (route) => {
     listCalls += 1;
     await route.fulfill({ json: { items: listCalls > 1 ? [{
@@ -39,9 +42,9 @@ test("registration explains that an email verification link is required", async 
   await page.goto("/client-account.html");
   await page.getByText("Crear cuenta de cliente").click();
   await page.getByLabel("Nombre", { exact: true }).fill("Ana");
-  await page.getByLabel("Apellido").fill("Cliente");
+  await page.getByLabel("Apellido", { exact: true }).fill("Cliente");
   await page.getByLabel("Correo para verificar tu cuenta").fill("ana@example.com");
-  await page.getByLabel(/Teléfono/).fill("8095551212");
+  await page.getByLabel("Teléfono (no se usa para reclamar citas)").fill("8095551212");
   await page.getByLabel("Contraseña (12 caracteres, una mayúscula y un número)").fill("CustomerPass123");
   await page.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(page.getByRole("status")).toContainText("enlace de verificación");
@@ -58,6 +61,9 @@ test("customer cancels an upcoming appointment only after an in-page confirmatio
     cancelRequest = route.request().postDataJSON();
     await route.fulfill({ json: { success: true, appointment_id: 42, status: "cancelled" } });
   });
+  await page.route("**/api/v1/client-account/profile", (route) => route.fulfill({ json: {
+    email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213",
+  } }));
   await page.route("**/api/v1/client-account/appointments", async (route) => {
     listCalls += 1;
     const status = listCalls > 1 ? "cancelled" : "confirmed";
@@ -86,6 +92,9 @@ test("verified customer can reschedule an appointment from account history", asy
   await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
     access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
     user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+  } }));
+  await page.route("**/api/v1/client-account/profile", (route) => route.fulfill({ json: {
+    email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213",
   } }));
   await page.route("**/api/v1/public/kingflow-prueba/slots?duration_minutes=30", (route) => route.fulfill({ json: [{
     availability_id: 84, barber_id: 5, barber_name: "Luis Barbero",
@@ -116,4 +125,36 @@ test("verified customer can reschedule an appointment from account history", asy
   expect(rescheduleRequest.body).toEqual({ appointment_id: 42, availability_id: 84 });
   expect(rescheduleRequest.authorization).toBe("Bearer client-access");
   expect(listCalls).toBe(2);
+});
+
+test("customer can update account name and phone while email remains verified and read only", async ({ page }) => {
+  let profileUpdate;
+  await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
+    access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
+    user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+  } }));
+  await page.route("**/api/v1/client-account/profile", async (route) => {
+    if (route.request().method() === "PATCH") {
+      profileUpdate = route.request().postDataJSON();
+      await route.fulfill({ json: { success: true, email: "ana@example.com", ...profileUpdate } });
+      return;
+    }
+    await route.fulfill({ json: { email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213" } });
+  });
+  await page.route("**/api/v1/client-account/appointments", (route) => route.fulfill({ json: { items: [] } }));
+
+  await page.goto("/client-account.html");
+  await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
+  await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
+  await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+  await expect(page.getByLabel("Correo verificado")).toHaveValue("ana@example.com");
+  await expect(page.getByLabel("Correo verificado")).toHaveAttribute("readonly", "");
+  await page.getByLabel("Nombre de tu cuenta").fill("Andrea");
+  await page.getByLabel("Apellido de tu cuenta").fill("Pérez");
+  await page.getByLabel("Teléfono de tu cuenta").fill("809 555 0099");
+  await page.getByRole("button", { name: "Guardar perfil" }).click();
+
+  await expect(page.getByRole("status")).toContainText("perfil se guardó");
+  expect(profileUpdate).toEqual({ first_name: "Andrea", last_name: "Pérez", phone: "809 555 0099" });
+  await expect(page.getByText("Hola, Andrea Pérez")).toBeVisible();
 });

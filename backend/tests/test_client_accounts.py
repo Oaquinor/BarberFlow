@@ -43,6 +43,21 @@ def test_client_registration_requires_email_verification_before_login(
     login = client.post("/api/v1/auth/login", json={"email": payload["email"], "password": payload["password"]})
     assert login.status_code == 200
     assert login.json()["user"]["role"] == "client"
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    profile = client.get("/api/v1/client-account/profile", headers=headers)
+    assert profile.status_code == 200
+    assert profile.json()["email"] == payload["email"]
+    updated = client.patch(
+        "/api/v1/client-account/profile", headers=headers,
+        json={"first_name": "  Ana María ", "last_name": "  Pérez ", "phone": "+1 (809) 555-9922"},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json() == {
+        "success": True, "email": payload["email"], "first_name": "Ana María",
+        "last_name": "Pérez", "phone": "18095559922",
+    }
+    test_db.refresh(user)
+    assert (user.first_name, user.last_name, user.phone) == ("Ana María", "Pérez", "18095559922")
 
 
 def test_client_claims_only_a_private_token_and_sees_only_linked_shop_history(

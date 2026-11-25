@@ -50,3 +50,25 @@ class ClientAppointmentClaimRequest(BaseModel):
 
 class ClientAppointmentCancelRequest(BaseModel):
     reason: str | None = Field(None, max_length=500)
+
+
+class ClientAccountProfileUpdateRequest(BaseModel):
+    first_name: str = Field(..., min_length=2, max_length=100)
+    last_name: str = Field(..., min_length=2, max_length=100)
+    phone: str = Field(..., min_length=6, max_length=30)
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def normalize_profile_name(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("El nombre debe tener al menos dos caracteres")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_profile_phone(cls, value: str) -> str:
+        digits = "".join(char for char in value if char.isdigit())
+        if not 6 <= len(digits) <= 20:
+            raise ValueError("El teléfono debe contener entre 6 y 20 dígitos")
+        return digits

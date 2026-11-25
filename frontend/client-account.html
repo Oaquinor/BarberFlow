@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-3">
+  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-4">
   <title>Mi cuenta · KingFlow Barber</title>
 </head>
 <body>
@@ -48,6 +48,15 @@
 
       <section id="customerPanel" hidden>
         <div class="account-toolbar"><p id="customerGreeting"></p><button id="logoutButton" class="button-secondary" type="button">Cerrar sesión</button></div>
+        <form id="profileForm" class="account-form profile-form">
+          <h2>Tu perfil</h2>
+          <p>Tu correo verificado identifica la cuenta. Para cambiarlo tendrás que verificar el nuevo correo.</p>
+          <label for="profileEmail">Correo verificado</label><input id="profileEmail" type="email" readonly aria-readonly="true">
+          <label for="profileFirstName">Nombre de tu cuenta</label><input id="profileFirstName" autocomplete="given-name" required minlength="2" maxlength="100">
+          <label for="profileLastName">Apellido de tu cuenta</label><input id="profileLastName" autocomplete="family-name" required minlength="2" maxlength="100">
+          <label for="profilePhone">Teléfono de tu cuenta</label><input id="profilePhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30">
+          <button type="submit">Guardar perfil</button>
+        </form>
         <form id="claimForm" class="account-form claim-form">
           <h2>Añadir una cita anterior</h2>
           <p>Usa el código privado del enlace de seguimiento. El teléfono no sirve para reclamar citas.</p>
@@ -69,6 +78,6 @@
   <script src="/js/config.js"></script>
   <script src="/js/pwa.js"></script>
   <script src="/js/auth.js"></script>
-  <script src="/js/client-account.js?v=20261125-account-3"></script>
+  <script src="/js/client-account.js?v=20261125-account-4"></script>
 </body>
 </html>

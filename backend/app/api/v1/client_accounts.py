@@ -24,7 +24,8 @@ from app.models import (
 )
 from app.schemas.client_account import (
     ClientAccountRegisterRequest, ClientAccountResendRequest, ClientAccountVerifyRequest,
-    ClientAppointmentCancelRequest, ClientAppointmentClaimRequest,
+    ClientAccountProfileUpdateRequest, ClientAppointmentCancelRequest,
+    ClientAppointmentClaimRequest,
 )
 from app.services.audit_service import record_audit
 from app.services.client_account_service import get_or_create_shop_client
@@ -185,6 +186,45 @@ def verify_client_account(data: ClientAccountVerifyRequest, db: Session = Depend
 def _require_client_account(user: User) -> None:
     if user.role != "client" or user.barbershop_id is not None or not user.is_verified:
         raise HTTPException(status_code=403, detail="Se requiere una cuenta de cliente verificada")
+
+
+@router.get("/profile")
+def get_client_profile(user: CurrentUser):
+    _require_client_account(user)
+    return {
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": user.phone or "",
+    }
+
+
+@router.patch("/profile")
+def update_client_profile(
+    data: ClientAccountProfileUpdateRequest,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+):
+    _require_client_account(user)
+    changed_fields = []
+    for field in ("first_name", "last_name", "phone"):
+        value = getattr(data, field)
+        if getattr(user, field) != value:
+            setattr(user, field, value)
+            changed_fields.append(field)
+    if changed_fields:
+        record_audit(
+            db, user, "client_account.profile_updated", "user", user.id,
+            details={"changed_fields": changed_fields},
+        )
+    db.commit()
+    return {
+        "success": True,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": user.phone or "",
+    }
 
 
 @router.get("/appointments")
