@@ -2,7 +2,7 @@
 Schemas para operación productiva: auth, cliente público, barbero y admin.
 """
 
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -91,17 +91,31 @@ class AuthLoginResponse(BaseModel):
     user: AuthUserResponse
 
 
+class PublicBarberCard(BaseModel):
+    id: int
+    name: str
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
 class PublicBarbershopResponse(BaseModel):
     id: int
     name: str
     slug: str
     currency: str
     timezone: str
+    phone: str
+    address_line1: str
+    city: str
+    state: str
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
     logo_url: Optional[str]
     cover_image_url: Optional[str] = None
     description: Optional[str] = None
     gallery_images: List[str] = Field(default_factory=list)
     booking_questions: List[str] = Field(default_factory=list)
+    team: List[PublicBarberCard] = Field(default_factory=list)
     primary_color: Optional[str]
     secondary_color: Optional[str]
     public_theme: str = "light"

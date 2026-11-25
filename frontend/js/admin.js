@@ -522,7 +522,7 @@ document.getElementById('usersBody')?.addEventListener('click', async (event) =>
         }
         await loadUsers();
     } catch (error) {
-        showToast(`❌ ${error.message}`);
+        showToast(` ${error.message}`);
     }
 });
 
@@ -539,7 +539,7 @@ document.getElementById('tenantsBody')?.addEventListener('click', async (event) 
         });
         await loadTenants();
     } catch (error) {
-        showToast(`❌ ${error.message}`);
+        showToast(` ${error.message}`);
     }
 });
 
@@ -574,7 +574,7 @@ async function loadSubscription() {
             document.getElementById('subPeriodEnd').value = '';
             resultEl.textContent = 'Esta barbería no tiene suscripción aún. Guarda para crear una.';
         } else {
-            resultEl.textContent = `❌ ${error.message}`;
+            resultEl.textContent = ` ${error.message}`;
         }
     }
 }
@@ -605,10 +605,10 @@ async function saveSubscription() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        resultEl.textContent = `✅ Guardado. Plan: ${sub.plan} · Estado: ${sub.status} · Fin del periodo: ${(sub.current_period_end || '').slice(0, 10)} · El cobro se registra manualmente.`;
+        resultEl.textContent = ` Guardado. Plan: ${sub.plan} · Estado: ${sub.status} · Fin del periodo: ${(sub.current_period_end || '').slice(0, 10)} · El cobro se registra manualmente.`;
         await loadTenants();
     } catch (error) {
-        resultEl.textContent = `❌ ${error.message}`;
+        resultEl.textContent = ` ${error.message}`;
     }
 }
 

@@ -94,7 +94,7 @@
     <div class="container" id="gateContainer" style="display:none;">
         <div class="login-gate">
             <div class="card login-card">
-                <h2>🔒 Acceso restringido</h2>
+                <h2> Acceso restringido</h2>
                 <p>Esta sección es solo para Super Admin. Inicia sesión con una cuenta administradora.</p>
                 <a href="/index.html">Ir a iniciar sesión</a>
             </div>
@@ -104,19 +104,19 @@
     <div class="container" id="adminContainer" style="display:none;">
         <div class="card header">
             <div>
-                <h1>🛡️ Panel de Administración</h1>
+                <h1> Panel de Administración</h1>
                 <p>Gestión de barberías afiliadas, roles y soporte</p>
             </div>
             <div class="header-actions">
                 <span class="badge" id="adminEmail">-</span>
-                <button class="logout" type="button" id="changePasswordBtn" aria-haspopup="dialog">🔒 Contraseña</button>
+                <button class="logout" type="button" id="changePasswordBtn" aria-haspopup="dialog"> Contraseña</button>
                 <button class="logout" id="logoutBtn">Cerrar sesión</button>
             </div>
         </div>
 
         <div class="card">
-            <div class="title">📈 Métricas globales</div>
-            <div class="toolbar"><span id="overviewPeriod" style="color:var(--text-secondary);"></span><button id="refreshOverviewBtn" type="button">🔄 Actualizar</button></div>
+            <div class="title"> Métricas globales</div>
+            <div class="toolbar"><span id="overviewPeriod" style="color:var(--text-secondary);"></span><button id="refreshOverviewBtn" type="button"> Actualizar</button></div>
             <div class="overview-grid">
                 <div class="overview-stat"><span class="overview-label">Barberías activas</span><strong class="overview-value" id="overviewTenants">—</strong></div>
                 <div class="overview-stat"><span class="overview-label">Suscripciones vigentes</span><strong class="overview-value" id="overviewSubscriptions">—</strong></div>
@@ -128,7 +128,7 @@
         </div>
 
         <section class="card">
-            <div class="title">⚙️ Configuración general de plataforma</div>
+            <div class="title"> Configuración general de plataforma</div>
             <form id="platformSettingsForm" class="toolbar" style="align-items:flex-end;">
                 <label><input id="registrationsEnabled" type="checkbox"> Permitir nuevos registros de barberías</label>
                 <label for="freePeriodDays">Duración inicial del periodo gratuito (días)
@@ -140,9 +140,9 @@
         </section>
 
         <div class="card">
-            <div class="title">🏢 Barberías afiliadas</div>
+            <div class="title"> Barberías afiliadas</div>
             <div class="toolbar">
-                <button id="refreshTenantsBtn">🔄 Actualizar</button>
+                <button id="refreshTenantsBtn"> Actualizar</button>
                 <span id="tenantsCount" style="color: var(--text-secondary); font-weight: 600;"></span>
             </div>
             <div id="tenantsTableWrap">
@@ -164,12 +164,12 @@
         </div>
 
         <div class="card">
-            <div class="title">💳 Cobros y suscripción</div>
+            <div class="title"> Cobros y suscripción</div>
             <div class="toolbar">
                 <select id="subscriptionTenantSelect" aria-label="Barbería para consultar la suscripción">
                     <option value="">Selecciona una barbería...</option>
                 </select>
-                <button id="loadSubscriptionBtn">🔍 Cargar</button>
+                <button id="loadSubscriptionBtn"> Cargar</button>
             </div>
             <div id="subscriptionPanel" style="display:none;">
                 <div class="toolbar" style="align-items:flex-end;">
@@ -196,7 +196,7 @@
                         <label for="subPeriodEnd" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
                         <input type="date" id="subPeriodEnd" />
                     </div>
-                    <button id="saveSubscriptionBtn">💾 Guardar</button>
+                    <button id="saveSubscriptionBtn"> Guardar</button>
                 </div>
                 <p id="subscriptionResult" style="margin-top:10px;color:var(--text-secondary);"></p>
                 <p style="color:var(--text-secondary);">La renovación es manual. Esta pantalla no procesa ni programa cargos; registra cada periodo después de confirmar que recibiste el pago. Para un plan pagado nuevo, guárdalo inactivo y regístralo en “Cobro recibido”; solo ese registro lo activa.</p>
@@ -217,14 +217,14 @@
         </div>
 
         <div class="card">
-            <div class="title">👥 Usuarios y permisos</div>
+            <div class="title"> Usuarios y permisos</div>
             <div class="toolbar">
                 <select id="tenantFilter" aria-label="Filtrar usuarios por barbería">
                     <option value="">Todas las barberías</option>
                 </select>
                 <input id="userSearch" type="search" aria-label="Buscar usuario por nombre o correo" placeholder="Nombre o correo">
                 <button id="userSearchBtn" type="button">Buscar</button>
-                <button id="refreshUsersBtn">🔄 Actualizar</button>
+                <button id="refreshUsersBtn"> Actualizar</button>
                 <span id="usersCount" style="color: var(--text-secondary); font-weight: 600;"></span>
                 <button id="previousUsersBtn" type="button" disabled>← Anterior</button>
                 <button id="nextUsersBtn" type="button" disabled>Siguiente →</button>
@@ -248,7 +248,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="title">🎧 Bandeja de soporte</div>
+            <div class="title"> Bandeja de soporte</div>
             <div class="toolbar">
                 <label for="supportTicketFilter">Estado</label>
                 <select id="supportTicketFilter">
@@ -259,7 +259,7 @@
                     <option value="closed">Cerrados</option>
                 </select>
                 <span id="supportOpenCount" role="status" aria-live="polite">Solicitudes abiertas: —</span>
-                <button id="refreshSupportTicketsBtn" type="button">🔄 Actualizar</button>
+                <button id="refreshSupportTicketsBtn" type="button"> Actualizar</button>
                 <span id="supportTicketsResult" role="status" style="color:var(--text-secondary);"></span>
                 <button id="previousSupportTicketsBtn" type="button" disabled>← Anterior</button>
                 <button id="nextSupportTicketsBtn" type="button" disabled>Siguiente →</button>
@@ -272,10 +272,10 @@
             </div>
         </div>
         <div class="card">
-            <div class="title">🧾 Auditoría de operaciones</div>
+            <div class="title"> Auditoría de operaciones</div>
             <div class="toolbar">
                 <select id="auditTenantFilter" aria-label="Filtrar auditoría por barbería"><option value="">Todas las barberías</option></select>
-                <button id="loadAuditBtn" type="button">🔄 Cargar historial</button>
+                <button id="loadAuditBtn" type="button"> Cargar historial</button>
                 <span id="auditResult" role="status" style="color:var(--text-secondary);"></span>
             </div>
             <div class="table-wrap">
@@ -286,7 +286,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="title">🤝 Programa de afiliados</div>
+            <div class="title"> Programa de afiliados</div>
             <form id="affiliateForm" class="toolbar">
                 <input id="affiliateFirstName" aria-label="Nombre del afiliado" required minlength="2" maxlength="100" placeholder="Nombre">
                 <input id="affiliateLastName" aria-label="Apellido del afiliado" required minlength="2" maxlength="100" placeholder="Apellido">

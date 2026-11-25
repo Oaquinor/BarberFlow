@@ -69,11 +69,27 @@ def public_barbershop(slug: str, db: Session = Depends(get_db)):
         slug=shop.slug,
         currency=shop.currency,
         timezone=shop.timezone,
+        phone=shop.phone,
+        address_line1=shop.address_line1,
+        city=shop.city,
+        state=shop.state,
+        opening_time=shop.opening_time,
+        closing_time=shop.closing_time,
         logo_url=shop.logo_url,
         cover_image_url=shop.cover_image_url,
         description=shop.description,
         gallery_images=shop.gallery_images or [],
         booking_questions=shop.booking_questions or [],
+        team=[
+            {"id": barber.id, "name": barber.full_name,
+             "bio": barber.bio, "avatar_url": barber.avatar_url}
+            for barber in db.query(User).filter(
+                User.barbershop_id == shop.id,
+                User.role == "barber",
+                User.is_active == True,
+                User.is_deleted == False,
+            ).order_by(User.first_name.asc(), User.last_name.asc())
+        ],
         primary_color=shop.primary_color,
         secondary_color=shop.secondary_color,
         public_theme=shop.public_theme or "light",

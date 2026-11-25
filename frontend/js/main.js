@@ -72,7 +72,7 @@ function updateActiveServiceTimer(startedAt, estimatedMinutes, nextAppointment) 
         if (progressBar) progressBar.style.width = `${progressPct}%`;
         const alerts = [];
         if (elapsedSeconds > durationSeconds) {
-            alerts.push('⚠️ El servicio superó su duración estimada.');
+            alerts.push('El servicio superó su duración estimada.');
         } else if (progressPct >= 80) {
             alerts.push(`⏰ ${Math.ceil(durationSeconds / 60 - elapsedSeconds / 60)} minutos restantes del tiempo estimado`);
         }
@@ -81,8 +81,7 @@ function updateActiveServiceTimer(startedAt, estimatedMinutes, nextAppointment) 
             : NaN;
         if (Number.isFinite(nextAppointmentAt)) {
             const minutesUntilNext = Math.max(0, Math.ceil((nextAppointmentAt - Date.now()) / 60000));
-            if (minutesUntilNext <= 10) alerts.push(`🚨 Próxima cita en ${minutesUntilNext} minutos`);
-            else if (minutesUntilNext <= 20) alerts.push(`⚠️ Próxima cita en ${minutesUntilNext} minutos`);
+            if (minutesUntilNext <= 20) alerts.push(`Próxima cita en ${minutesUntilNext} minutos`);
         }
         setText('activeServiceAlert', alerts.join(' · ') || `Servicio en curso · ${progressPct}% del tiempo estimado`);
     };
@@ -104,12 +103,14 @@ function setTrend(id, delta, suffix, currency = false) {
 }
 
 function renderNextAppointment(next) {
+    const startButton = document.getElementById('startNextAppointmentButton');
     if (!next) {
         setText('nextAppointmentTime', '--:--');
         setText('nextAppointmentEta', 'Sin próxima cita');
         setText('nextAppointmentClient', 'Agenda del día');
         setText('nextAppointmentService', 'No tienes citas próximas');
         setText('nextAppointmentDuration', '-- min estimados');
+        if (startButton) startButton.hidden = true;
         return;
     }
 
@@ -117,6 +118,13 @@ function renderNextAppointment(next) {
     setText('nextAppointmentClient', next.client_name || 'Cliente');
     setText('nextAppointmentService', next.service_type || 'Servicio');
     setText('nextAppointmentDuration', `${next.estimated_duration || 0} min estimados`);
+    const minutesUntil = Math.max(0, Math.ceil((new Date(next.scheduled_time).getTime() - Date.now()) / 60000));
+    if (startButton) {
+        startButton.dataset.appointmentId = String(Number(next.id));
+        startButton.hidden = false;
+        startButton.disabled = minutesUntil > 15;
+        startButton.textContent = minutesUntil > 15 ? 'Disponible 15 min antes' : 'Iniciar cita';
+    }
     const etaEl = document.getElementById('nextAppointmentEta');
     if (etaEl) {
         const minutesUntil = Math.max(0, Math.round((new Date(next.scheduled_time) - new Date()) / 60000));
@@ -282,12 +290,12 @@ function getGoalLabel(goal) {
 
 function labelStatus(status) {
     const map = {
-        pending: '📅 Pendiente',
-        confirmed: '📅 Confirmada',
+        pending: 'Pendiente',
+        confirmed: 'Confirmada',
         in_progress: 'En servicio',
-        completed: '✅ Completada',
-        cancelled: '❌ Cancelada',
-        no_show: '🚫 No asistió'
+        completed: 'Completada',
+        cancelled: 'Cancelada',
+        no_show: 'No asistió'
     };
     return map[status] || status;
 }
@@ -521,9 +529,9 @@ async function loadShareLink() {
             copyBtn.onclick = async () => {
                 try {
                     await navigator.clipboard.writeText(data.client_link);
-                    showToast('✅ Link copiado', 'info');
+                    showToast('Link copiado', 'info');
                 } catch (_) {
-                    showToast('⚠️ No se pudo copiar automáticamente');
+                    showToast('No se pudo copiar automáticamente');
                 }
             };
         }
@@ -573,7 +581,7 @@ async function createBarberSlots() {
             return;
         }
 
-        if (result) result.textContent = `✅ Turnos creados: ${data.created_slots}`;
+        if (result) result.textContent = `Turnos creados: ${data.created_slots}`;
         await loadBarberDashboardData();
         await loadCashSummary();
     } catch (error) {
@@ -908,17 +916,17 @@ function renderServiceCatalog(services) {
 
     list.innerHTML = visibleServices.map((service) => `
         <div class="service-item ${service.category === 'combo' ? 'featured' : ''}">
-            <div class="service-icon">✂️</div>
+            <div class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg></div>
             <div class="service-info">
                 <h4>${escapeHtml(service.name)}</h4>
                 <p>${escapeHtml(service.description || 'Servicio personalizado de la barbería')}</p>
                 <div class="service-meta">
                     <span class="tag">${escapeHtml(service.category || 'General')}</span>
-                    <span>⏱️ ${service.duration_minutes || 0} min</span>
+                    <span>${service.duration_minutes || 0} min</span>
                 </div>
             </div>
             <div class="service-price">${fmtMoneyFromCents(service.price_cents || 0)}</div>
-            ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}">✏️</button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}">🗑️</button>` : ''}
+            ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l11.9-11.9a2.5 2.5 0 0 0-3.5-3.5L4 16Z"/><path d="m14.5 6.5 3.5 3.5"/></svg></button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-13 0 .7 13h8.6L17 7M9 7V4h6v3m-4 4v5m2-5v5"/></svg></button>` : ''}
         </div>
     `).join('');
 }
@@ -975,6 +983,8 @@ async function loadBarberDashboardData() {
         const finishServiceButton = document.getElementById('finishServiceButton');
         const activeServiceStatus = document.getElementById('activeServiceStatus');
         if (finishServiceButton) finishServiceButton.disabled = !active;
+        const startNextButton = document.getElementById('startNextAppointmentButton');
+        if (startNextButton && active) startNextButton.hidden = true;
         if (active) {
             if (activeServiceStatus) {
                 activeServiceStatus.textContent = 'En servicio';
@@ -1000,6 +1010,10 @@ async function loadBarberDashboardData() {
         }
 
         renderNextAppointment(data.next_appointment);
+        if (active) {
+            const startNextButton = document.getElementById('startNextAppointmentButton');
+            if (startNextButton) startNextButton.hidden = true;
+        }
 
         if (selectedAppointmentsView === 'day' && selectedAppointmentsDate === businessDate) {
             renderAppointmentDay(businessDate, data.appointments);
@@ -1989,8 +2003,8 @@ async function sendLoginSupportRequest() {
         }
 
         result.textContent = data.notification_sent
-            ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
-            : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
+            ? `Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+            : `Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
     } catch (error) {
         console.error('Error sending login support:', error);
         result.textContent = 'Error de conexión al enviar soporte.';
@@ -2026,7 +2040,7 @@ async function testConnection() {
             resultDiv.replaceChildren();
             const message = document.createElement('p');
             message.className = 'success-message';
-            message.textContent = `✅ Conexión Exitosa · API: ${data.status} · MySQL: ${data.database}`;
+            message.textContent = `Conexión correcta · API: ${data.status} · MySQL: ${data.database}`;
             resultDiv.append(message);
         } else {
             resultDiv.textContent = response.status === 503
@@ -2034,7 +2048,7 @@ async function testConnection() {
                 : `El backend respondió con estado HTTP ${response.status}.`;
         }
     } catch (error) {
-        resultDiv.textContent = `❌ No se puede conectar al backend ${API_ROOT}. Verifica que esté corriendo.`;
+        resultDiv.textContent = `No se puede conectar al backend ${API_ROOT}. Verifica que esté corriendo.`;
     }
 }
 
@@ -2198,7 +2212,7 @@ function logout() {
     KingFlowAuth.logout();
     resetSessionInterface();
 
-    showToast('👋 Sesión cerrada exitosamente', 'info');
+    showToast('Sesión cerrada exitosamente', 'info');
 }
 
 function finishService() {
@@ -2522,6 +2536,10 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (newServiceBtn) newServiceBtn.hidden = currentUser.role !== 'barbershop_owner';
         const ownerTabButton = document.getElementById('ownerManagementTabButton');
         if (ownerTabButton) ownerTabButton.hidden = currentUser.role !== 'barbershop_owner';
+        const achievementsButton = document.getElementById('achievementsTabButton');
+        const achievementsPanel = document.getElementById('achievementsTab');
+        if (achievementsButton) achievementsButton.hidden = currentUser.role !== 'barber';
+        if (achievementsPanel) achievementsPanel.hidden = currentUser.role !== 'barber';
         const financialReportPanel = document.getElementById('ownerFinancialReport');
         if (financialReportPanel) financialReportPanel.hidden = currentUser.role !== 'barbershop_owner';
         const walkInBarberSelect = document.getElementById('walkInBarberSelect');
@@ -2639,6 +2657,13 @@ if (sessionStorage.getItem('kingflow-password-changed') === '1') {
 
 document.getElementById('logoutButton')?.addEventListener('click', logout);
 document.getElementById('finishServiceButton')?.addEventListener('click', finishService);
+document.getElementById('startNextAppointmentButton')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    const appointmentId = Number(button.dataset.appointmentId);
+    if (!button.disabled && Number.isInteger(appointmentId) && appointmentId > 0) {
+        void updateAppointmentStatus(appointmentId, 'in_progress');
+    }
+});
 document.getElementById('quickStatsButton')?.addEventListener('click', () => showTab('performance'));
 document.getElementById('quickAgendaButton')?.addEventListener('click', () => showTab('appointments'));
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
@@ -2668,5 +2693,5 @@ document.getElementById('servicesList')?.addEventListener('click', (event) => {
     if (button.dataset.action === 'delete') void deleteService(serviceId);
 });
 
-console.log('🚀 KingFlow Barber Frontend Ready');
-console.log('📍 API Base:', API_ROOT);
+console.log('KingFlow Barber Frontend Ready');
+console.log('API Base:', API_ROOT);

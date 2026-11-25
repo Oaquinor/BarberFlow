@@ -7,19 +7,19 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="stylesheet" href="/css/ui-feedback.css">
-  <link rel="stylesheet" href="/css/client.css">
+  <link rel="stylesheet" href="/css/client.css?v=20261125-studio-experience-1">
   <title>Reserva - KingFlow Barber</title>
 </head>
 <body>
   <div class="site-shell">
     <header class="site-header">
       <a class="brand-lockup" href="#inicio" aria-label="Inicio">
-        <span class="brand-mark" id="shopInitial">K</span><img id="shopLogo" class="brand-logo" alt="" hidden>
+        <span class="brand-mark" id="shopInitial" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 6v20M24 6 9 16l15 10"/><path d="M13 16h11"/></svg></span><img id="shopLogo" class="brand-logo" alt="" hidden>
         <span><strong id="shopName">Cargando barbería…</strong><small>BARBERÍA · RESERVAS</small></span>
       </a>
       <nav class="header-nav" aria-label="Navegación principal">
-        <a href="#servicios">Servicios</a><a href="#galeria">Galería</a>
-        <button id="themeToggle" type="button" class="nav-track" aria-label="Cambiar tema">☾ Tema oscuro</button>
+        <a href="#equipo">Equipo</a><a href="#servicios">Servicios</a><a href="#galeria">Galería</a>
+        <button id="themeToggle" type="button" class="nav-track" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span>Tema oscuro</span></button>
         <button id="showTrackBtn" type="button" class="nav-track">Consultar cita</button>
       </nav>
     </header>
@@ -37,6 +37,17 @@
           <span class="hero-photo-caption">PRECISIÓN · ESTILO · DETALLE</span>
         </div>
         <div class="hero-rule"><span>01 <i>ELIGE</i></span><span>02 <i>PERSONALIZA</i></span><span>03 <i>RESERVA</i></span></div>
+      </section>
+
+      <section class="shop-facts" aria-label="Información de la barbería">
+        <div><span class="fact-label">DÓNDE</span><strong id="shopAddress">Cargando ubicación</strong></div>
+        <div><span class="fact-label">HORARIO</span><strong id="shopHours">Consulta disponibilidad</strong></div>
+        <div><span class="fact-label">CONTACTO</span><a id="shopPhone" href="#reserva">Escríbenos</a></div>
+      </section>
+
+      <section class="section team-section" id="equipo">
+        <div class="section-heading"><div><p class="eyebrow">QUIÉNES TE ATIENDEN</p><h2>El equipo</h2></div><p>Conoce a las personas detrás de cada detalle.</p></div>
+        <div id="publicTeam" class="team-grid" aria-live="polite"><p class="loading-copy">Cargando equipo…</p></div>
       </section>
 
       <section class="section services-section" id="servicios">
@@ -103,6 +114,6 @@
     </main>
     <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
-  <script src="js/config.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-personalized-booking-1"></script>
+  <script src="js/config.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-studio-experience-1"></script>
 </body>
 </html>

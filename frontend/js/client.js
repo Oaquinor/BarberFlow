@@ -127,6 +127,12 @@ function renderServiceCards() {
       image.loading = 'lazy';
       image.className = 'service-photo';
       card.append(image);
+    } else {
+      const visual = document.createElement('span');
+      visual.className = 'service-visual';
+      visual.setAttribute('aria-hidden', 'true');
+      visual.innerHTML = '<svg viewBox="0 0 48 48"><path d="M9 9l30 30M39 9 9 39"/><circle cx="10" cy="10" r="5"/><circle cx="38" cy="38" r="5"/><path d="m28 12 8 8m-13 13 8 8"/></svg><span>ELIGE TU ESTILO</span>';
+      card.append(visual);
     }
     card.append(category, title, description, bottom);
     card.addEventListener('click', () => {
@@ -140,13 +146,65 @@ function renderServiceCards() {
   });
 }
 
+function renderPublicTeam(team) {
+  const container = document.getElementById('publicTeam');
+  if (!container) return;
+  const members = Array.isArray(team) ? team : [];
+  container.replaceChildren();
+  if (!members.length) {
+    const empty = document.createElement('article');
+    empty.className = 'team-empty';
+    empty.innerHTML = '<span class="team-empty-mark" aria-hidden="true">KF</span><div><strong>Atención personal en cada cita</strong><p>El equipo te ayudará a elegir el estilo que mejor se adapte a ti.</p></div>';
+    container.append(empty);
+    return;
+  }
+  members.forEach((member) => {
+    const card = document.createElement('article');
+    card.className = 'team-card';
+    const avatarUrl = trustedShopImage(member.avatar_url);
+    if (avatarUrl) {
+      const avatar = document.createElement('img');
+      avatar.className = 'team-avatar';
+      avatar.src = avatarUrl;
+      avatar.alt = `Foto de ${member.name}`;
+      avatar.loading = 'lazy';
+      card.append(avatar);
+    } else {
+      const monogram = document.createElement('span');
+      monogram.className = 'team-avatar team-monogram';
+      monogram.setAttribute('aria-hidden', 'true');
+      monogram.textContent = String(member.name || 'KF').split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+      card.append(monogram);
+    }
+    const name = document.createElement('h3');
+    name.textContent = member.name || 'Barbero';
+    const bio = document.createElement('p');
+    bio.textContent = member.bio || 'Especialista en cortes y cuidado personal.';
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'team-book-button';
+    action.dataset.barberId = String(Number(member.id));
+    action.textContent = 'Reservar con esta persona';
+    card.append(name, bio, action);
+    container.append(card);
+  });
+}
+
 function renderPublicGallery(images) {
   const section = document.getElementById('galeria');
   const container = document.getElementById('publicGallery');
   const trustedImages = (Array.isArray(images) ? images : []).map(trustedShopImage).filter(Boolean).slice(0, 8);
   if (!section || !container) return;
-  section.hidden = trustedImages.length === 0;
+  section.hidden = false;
   container.replaceChildren();
+  container.classList.toggle('gallery-grid-single', trustedImages.length === 1);
+  if (!trustedImages.length) {
+    const empty = document.createElement('div');
+    empty.className = 'gallery-empty';
+    empty.innerHTML = '<span class="gallery-empty-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="5" y="8" width="38" height="32" rx="5"/><circle cx="17" cy="19" r="4"/><path d="m9 35 11-10 7 6 5-5 7 9"/></svg></span><div><p class="eyebrow">PORTAFOLIO</p><h3>El próximo estilo puede ser tuyo.</h3><p>Estamos preparando una selección de nuestros cortes. Mientras tanto, conoce los servicios y cuéntanos qué tienes en mente.</p><a href="#reserva" class="gallery-empty-link">Explorar servicios <span aria-hidden="true">→</span></a></div>';
+    container.append(empty);
+    return;
+  }
   trustedImages.forEach((src, index) => {
     const image = document.createElement('img');
     image.src = src;
@@ -159,7 +217,7 @@ function renderPublicGallery(images) {
 
 async function loadShop() {
   if (!shopSlug) {
-    shopNameEl.textContent = '❌ Falta identificar la barbería';
+    shopNameEl.textContent = 'Falta identificar la barbería';
     return;
   }
   const retryButton = document.getElementById('retryShopBtn');
@@ -167,7 +225,7 @@ async function loadShop() {
   try {
     const res = await fetch(`${API_BASE}/public/${shopSlug}`);
     if (!res.ok) {
-      shopNameEl.textContent = '❌ Barbería no disponible';
+      shopNameEl.textContent = 'Barbería no disponible';
       if (retryButton) retryButton.hidden = false;
       return;
     }
@@ -178,8 +236,18 @@ async function loadShop() {
     shopNameEl.textContent = shop.name;
     const savedTheme = localStorage.getItem(`kingflow-theme:${shop.slug}`);
     applyPublicTheme(savedTheme || shop.public_theme || 'light');
-    const initial = document.getElementById('shopInitial');
-    if (initial) initial.textContent = String(shop.name || 'K').trim().charAt(0).toUpperCase() || 'K';
+    const location = [shop.address_line1, [shop.city, shop.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+    const address = document.getElementById('shopAddress');
+    if (address) address.textContent = location || 'Consulta la ubicación al reservar';
+    const hours = document.getElementById('shopHours');
+    if (hours) hours.textContent = shop.opening_time && shop.closing_time
+      ? `${String(shop.opening_time).slice(0, 5)} — ${String(shop.closing_time).slice(0, 5)}`
+      : 'Consulta los horarios disponibles';
+    const phone = document.getElementById('shopPhone');
+    if (phone && shop.phone) {
+      phone.href = `tel:${String(shop.phone).replace(/[^+\d]/g, '')}`;
+      phone.textContent = shop.phone;
+    }
     const description = document.getElementById('shopDescription');
     if (description && shop.description) description.textContent = shop.description;
     const coverUrl = trustedShopImage(shop.cover_image_url);
@@ -221,6 +289,7 @@ async function loadShop() {
       .join('');
     renderServiceCards();
     renderPublicGallery(shop.gallery_images);
+    renderPublicTeam(shop.team);
     renderCustomBookingQuestions(shop.booking_questions);
     if (serviceCatalog[0]) {
       document.querySelector(`.service-card[data-service-id="${Number(serviceCatalog[0].id)}"]`)?.classList.add('selected');
@@ -241,7 +310,8 @@ function applyPublicTheme(theme) {
   document.documentElement.dataset.theme = normalized;
   const button = document.getElementById('themeToggle');
   if (button) {
-    button.textContent = normalized === 'dark' ? '☀ Tema claro' : '☾ Tema oscuro';
+    const label = button.querySelector('span');
+    if (label) label.textContent = normalized === 'dark' ? 'Tema claro' : 'Tema oscuro';
     button.setAttribute('aria-label', normalized === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
   }
 }
@@ -376,6 +446,17 @@ document.getElementById('refreshSlotsBtn')?.addEventListener('click', async (eve
   }
 });
 document.getElementById('retryShopBtn')?.addEventListener('click', loadShop);
+document.getElementById('publicTeam')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-barber-id]');
+  if (!button) return;
+  const select = document.getElementById('barberSelect');
+  const option = [...(select?.options || [])].find(item => item.value === button.dataset.barberId);
+  if (option) {
+    select.value = option.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 async function bookAppointment() {
   const client_name = document.getElementById('clientName').value.trim();
@@ -426,11 +507,11 @@ async function bookAppointment() {
     }
 
     bookResult.replaceChildren();
-    bookResult.append(document.createTextNode(`✅ Cita creada (ID ${Number(data.appointment_id)}). `));
+    bookResult.append(document.createTextNode(`Cita creada (ID ${Number(data.appointment_id)}). `));
     const link = document.createElement('a');
     const trackingUrl = trustedTrackingUrl(data.tracking_link);
     if (!trackingUrl) {
-      bookResult.textContent = '✅ Cita creada. No fue posible abrir el enlace de seguimiento.';
+      bookResult.textContent = 'Cita creada. No fue posible abrir el enlace de seguimiento.';
       return;
     }
     link.href = trackingUrl.href;
@@ -597,8 +678,8 @@ async function sendSupport() {
     }
 
     result.textContent = data.notification_sent
-      ? `✅ Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
-      : `✅ Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
+      ? `Solicitud #${Number(data.ticket_id)} recibida; se envió un aviso al equipo.`
+      : `Solicitud #${Number(data.ticket_id)} recibida y guardada. El aviso por correo no está disponible ahora.`;
   } catch (_) {
     result.textContent = 'No pudimos confirmar el envío. Espera un momento y consulta con soporte antes de enviar otra solicitud.';
   } finally {

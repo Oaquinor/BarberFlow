@@ -338,14 +338,14 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-studio-experience-1">
 </head>
 <body>
     <div class="container">
         <!-- Header -->
         <header class="header">
             <div class="logo">
-                <span class="logo-mark" aria-hidden="true">K</span>
+                <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 6v20M24 6 9 16l15 10"/><path d="M13 16h11"/></svg></span>
                 <div><h1>KingFlow</h1>
                 <p class="subtitle">Gestión para barberías</p></div>
             </div>
@@ -435,7 +435,7 @@
                 <button class="tab active" data-tab="serviceMode"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.3 2"/></svg></span><span>Mi jornada</span></button>
                 <button class="tab" data-tab="appointments"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/></svg></span><span>Agenda</span></button>
                 <button class="tab" data-tab="performance"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/></svg></span><span>Rendimiento</span></button>
-                <button class="tab" data-tab="achievements"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4L12 14.7l-4.8 2.9 1.3-5.4-4.2-3.6 5.5-.5L12 3Z"/><path d="m5 17-1 4 4-1M19 17l1 4-4-1"/></svg></span><span>Logros</span></button>
+                <button class="tab" id="achievementsTabButton" data-tab="achievements"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4L12 14.7l-4.8 2.9 1.3-5.4-4.2-3.6 5.5-.5L12 3Z"/><path d="m5 17-1 4 4-1M19 17l1 4-4-1"/></svg></span><span>Logros</span></button>
                 <button class="tab" data-tab="services"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5c1-1 2.5.5 1.5 1.5L17 10M14 14l-2 2"/></svg></span><span>Servicios</span></button>
                 <button class="tab" data-tab="cashRegister"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2.5"/><path d="M3 10h18M7 15h4M16 15h.01"/></svg></span><span>Caja</span></button>
                 <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.3-5.5 5.5-5.5s5.5 2.3 5.5 5.5M16 5.2a3.1 3.1 0 0 1 0 5.8M17 14.8c2.2.4 3.5 2.1 3.5 4.8"/></svg></span><span>Equipo y clientes</span></button>
@@ -487,13 +487,13 @@
 
                     <div class="service-alerts">
                         <div class="alert alert-warning" id="activeServiceAlert">
-                            ⏳ Sin servicio activo en este momento
+                            Sin servicio activo en este momento
                         </div>
                     </div>
 
                 <section id="barberAvailabilityTools" hidden>
                 <div style="background:#f8f9fa; border:1px solid #e0e0e0; border-radius:12px; padding:14px; margin-top:14px;">
-                    <h4 style="margin-bottom:10px; color:#333;">🗓️ Configurar turnos del día</h4>
+                    <h4 style="margin-bottom:10px; color:#333;">Configurar turnos del día</h4>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px;">
                         <input type="date" id="slotDate" aria-label="Fecha de los turnos" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
                         <input type="time" id="slotStart" aria-label="Hora de inicio de disponibilidad" value="09:00" style="padding:10px; border:1px solid #ddd; border-radius:8px;">
@@ -536,7 +536,7 @@
 
                 <!-- Next Appointment -->
                 <div class="next-appointment-card">
-                    <h3>Próxima cita</h3>
+                    <div class="section-title-row"><h3>Próxima cita</h3><span class="next-appointment-kicker">SIGUIENTE EN AGENDA</span></div>
                     <div class="appointment-preview">
                         <div class="appointment-time">
                             <div class="time-big" id="nextAppointmentTime">--:--</div>
@@ -545,9 +545,10 @@
                         <div class="appointment-info">
                             <h4 id="nextAppointmentClient">Agenda del día</h4>
                             <p id="nextAppointmentService">Los datos se cargan desde tus citas reales</p>
-                            <p class="duration" id="nextAppointmentDuration">⏱️ -- min estimados</p>
+                            <p class="duration" id="nextAppointmentDuration">-- min estimados</p>
                         </div>
                     </div>
+                    <button id="startNextAppointmentButton" class="btn-start start-next-appointment" type="button" hidden>Iniciar cita</button>
                 </div>
 
                 <!-- Quick Actions -->
@@ -578,7 +579,7 @@
                 <h2>Agenda</h2>
 
                 <form id="walkInForm" style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:14px;margin-bottom:18px;">
-                    <h3 style="margin-bottom:10px;">🚶 Registrar cliente presencial</h3>
+                    <h3 style="margin-bottom:10px;">Registrar cliente presencial</h3>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
                         <input id="walkInClientName" aria-label="Nombre del cliente presencial" required minlength="2" maxlength="120" placeholder="Nombre del cliente">
                         <input id="walkInClientPhone" aria-label="Teléfono del cliente presencial" required minlength="6" maxlength="30" placeholder="Teléfono">
@@ -593,9 +594,9 @@
 
                 <div class="date-header">
                     <div class="calendar-controls">
-                        <button id="appointmentsPrevDay" class="btn-icon" type="button" aria-label="Periodo anterior">◀️</button>
+                        <button id="appointmentsPrevDay" class="btn-icon" type="button" aria-label="Periodo anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
                         <button id="appointmentsToday" class="btn-secondary" type="button">Hoy</button>
-                        <button id="appointmentsNextDay" class="btn-icon" type="button" aria-label="Periodo siguiente">▶️</button>
+                        <button id="appointmentsNextDay" class="btn-icon" type="button" aria-label="Periodo siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
                         <input id="appointmentsAnchorDate" type="date" aria-label="Fecha de referencia de agenda">
                         <select id="appointmentsView" aria-label="Vista de agenda">
                             <option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option>
@@ -639,19 +640,19 @@
                         <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01"/></svg></div>
                         <div class="stat-value" id="statsCompletedToday">0</div>
                         <div class="stat-label">Citas Completadas Hoy</div>
-                        <div class="stat-trend positive" id="statsCompletedTrend">↗️ 0 vs ayer</div>
+                        <div class="stat-trend positive" id="statsCompletedTrend">↑ 0 vs ayer</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18M7 15h4M16 14.5h.01"/></svg></div>
                         <div class="stat-value" id="statsRevenueToday">$0</div>
                         <div class="stat-label">Ingresos del Día</div>
-                        <div class="stat-trend positive" id="statsRevenueTrend">↗️ $0.00 vs ayer</div>
+                        <div class="stat-trend positive" id="statsRevenueTrend">↑ $0.00 vs ayer</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2M4.5 12h2M17.5 12h2"/></svg></div>
                         <div class="stat-value" id="statsEfficiency">0%</div>
                         <div class="stat-label">Eficiencia de Tiempo</div>
-                        <div class="stat-trend positive" id="statsEfficiencyTrend">↗️ 0% vs ayer</div>
+                        <div class="stat-trend positive" id="statsEfficiencyTrend">↑ 0% vs ayer</div>
                     </div>
                     <div class="stat-card highlight">
                         <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="17" rx="2.5"/><path d="M8 3v3M16 3v3M8 11h8M8 15h5"/></svg></div>
@@ -676,7 +677,7 @@
                     <div class="insights-list" id="insightsList"></div>
                 </div>
                 <section class="card" id="barberCommissionCard" hidden>
-                    <h3>💸 Mis comisiones</h3>
+                    <h3>Mis comisiones</h3>
                     <p id="barberCommissionSummary" role="status">Cargando…</p>
                 </section>
             </div>
@@ -709,8 +710,8 @@
                 <h2>Catálogo de servicios</h2>
 
                 <div class="services-header">
-                    <button id="newServiceBtn" class="btn-primary" type="button">➕ Nuevo Servicio</button>
-                    <input id="serviceSearch" aria-label="Buscar servicios" type="search" placeholder="🔍 Buscar servicio..." class="search-input">
+                    <button id="newServiceBtn" class="btn-primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuevo Servicio</button>
+                    <input id="serviceSearch" aria-label="Buscar servicios" type="search" placeholder="Buscar servicio..." class="search-input">
                 </div>
                 <form id="serviceForm" hidden style="max-width:640px; padding:16px; margin:12px 0; border:1px solid #ddd; border-radius:10px;">
                     <h3 id="serviceFormTitle">Nuevo servicio</h3>
@@ -940,7 +941,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-personalized-booking-1"></script>
+    <script src="js/main.js?v=20261125-studio-experience-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

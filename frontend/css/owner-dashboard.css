@@ -60,6 +60,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .notification-button { display:inline-flex; min-width:42px; align-items:center; justify-content:center; gap:6px; }
 .notification-button svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 .notification-button span { display:grid; min-width:19px; height:19px; place-items:center; border-radius:999px; color:#fff; background:#6f5033; font-size:.68rem; font-weight:750; }
+.logo-mark svg { width:24px; height:24px; fill:none; stroke:#d9b98e; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
 
 /* Login: editorial, photo-led two-column welcome. */
 .auth-section {
@@ -225,6 +226,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 #performanceChartCanvas { display:block; width:100%; height:232px; }
 .visually-hidden { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 .btn-success:disabled { color:#77736d; background:#e6e1d8; box-shadow:none; cursor:not-allowed; transform:none; }
+.service-icon { display:grid; width:48px; height:48px; flex:none; place-items:center; border:1px solid var(--kf-line); border-radius:12px; color:#8a6540; background:#f6f1e8; font-size:0; }
+.service-icon svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.service-action svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.section-title-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.section-title-row h3 { margin:0; }
+.next-appointment-kicker { color:#9a8060; font-size:.6rem; font-weight:800; letter-spacing:.12em; }
+.start-next-appointment { min-height:42px; margin-top:12px; padding:9px 15px; border:0; border-radius:9px; color:#171612; background:linear-gradient(135deg,#c39865,#ad7846); font-size:.8rem; font-weight:750; }
+.start-next-appointment:disabled { color:#77736d; background:#ece8e1; box-shadow:none; cursor:default; }
 #loginSupportPanel label { color:#4b4842 !important; }
 
 @media (max-width:900px) {
@@ -275,3 +284,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .appointments-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } }
+
+[hidden]{display:none!important}
+
+#newServiceBtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}

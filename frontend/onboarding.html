@@ -55,8 +55,10 @@
         }
 
         .step-icon {
-            font-size: 4em;
-            margin-bottom: 20px;
+            display: grid;
+            width: 46px; height: 46px; margin: 0 auto 18px; place-items: center;
+            border: 1px solid #ded8cf; border-radius: 50%; color: #775a3c;
+            background: #f5f1eb; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .08em;
         }
 
         .step-title {
@@ -218,9 +220,14 @@
         }
 
         .upload-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
+            display: grid; width: 48px; height: 48px; place-items: center; margin: 0 auto 15px;
+            border-radius: 12px; background: #f2eee8; color: #795d42;
         }
+        .upload-icon svg, .success-icon svg, .success-check svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+        .success-icon { display: grid; width: 72px; height: 72px; place-items: center; margin: 0 auto; border-radius: 50%; color: #52735c; background: #eaf1e9; }
+        .success-icon svg { width: 32px; height: 32px; }
+        .success-check { display: grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; border-radius: 50%; color: #52735c; background: #eaf1e9; }
+        .success-check svg { width: 14px; height: 14px; }
 
         .upload-text {
             color: #666;
@@ -471,7 +478,7 @@
         <!-- Step 1: Welcome -->
         <div id="step1" class="onboarding-content">
             <div class="step-header">
-                <div class="step-icon">👑</div>
+                <div class="step-icon">01</div>
                 <h1 class="step-title">¡Bienvenido a KingFlow Barber!</h1>
                 <p class="step-subtitle">Vamos a personalizar el sistema para tu barbería.<br>Solo tomará 3 minutos.</p>
             </div>
@@ -491,13 +498,13 @@
         <!-- Step 2: Logo -->
         <div id="step2" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">🎨</div>
+                <div class="step-icon">02</div>
                 <h1 class="step-title">Sube el logo de tu barbería</h1>
                 <p class="step-subtitle">Lo usaremos en todo el sistema</p>
             </div>
 
             <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" data-open-logo>
-                <div class="upload-icon">📁</div>
+                <div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7.5h7l2 2H21v9H3z"/><path d="M3 7.5V5h7l2 2"/><path d="M12 14v4m-2-2 2-2 2 2"/></svg></div>
                 <div class="upload-text">Arrastra tu logo aquí o haz click para seleccionar</div>
                 <div class="upload-hint">PNG o JPG • Máx 5MB</div>
             </div>
@@ -506,7 +513,7 @@
             <p id="logoUploadStatus" role="status" aria-live="polite"></p>
 
             <div class="tip-box">
-                <strong>✨ Tip:</strong>
+                <strong>Consejo</strong>
                 <p>Usaremos tu logo en notificaciones, recibos y todo el dashboard personalizado.</p>
             </div>
 
@@ -521,7 +528,7 @@
         <!-- Step 3: Colors -->
         <div id="step3" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">🎨</div>
+                <div class="step-icon">03</div>
                 <h1 class="step-title">¿Cuáles son los colores de tu marca?</h1>
                 <p class="step-subtitle">Personalizaremos toda la interfaz</p>
             </div>
@@ -560,7 +567,7 @@
         <!-- Step 4: Style -->
         <div id="step4" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">✨</div>
+                <div class="step-icon">04</div>
                 <h1 class="step-title">¿Cómo describirías el estilo de tu barbería?</h1>
                 <p class="step-subtitle">Esto nos ayuda a personalizar la experiencia</p>
             </div>
@@ -569,35 +576,35 @@
                 <label class="radio-option">
                     <input type="radio" name="style" value="classic">
                     <div class="option-content">
-                        <div class="option-title">🏛️ Clásica</div>
+                        <div class="option-title"> Clásica</div>
                         <div class="option-description">Tradición y experiencia</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="style" value="modern">
                     <div class="option-content">
-                        <div class="option-title">🌟 Moderna</div>
+                        <div class="option-title"> Moderna</div>
                         <div class="option-description">Tendencias y estilo actual</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="style" value="urban">
                     <div class="option-content">
-                        <div class="option-title">🎨 Urbana</div>
+                        <div class="option-title"> Urbana</div>
                         <div class="option-description">Streetwear y cultura urbana</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="style" value="premium">
                     <div class="option-content">
-                        <div class="option-title">💎 Premium</div>
+                        <div class="option-title"> Premium</div>
                         <div class="option-description">Lujo y exclusividad</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="style" value="family">
                     <div class="option-content">
-                        <div class="option-title">👨‍👩‍👧‍👦 Familiar</div>
+                        <div class="option-title"> Familiar</div>
                         <div class="option-description">Cercana y acogedora</div>
                     </div>
                 </label>
@@ -614,7 +621,7 @@
         <!-- Step 5: Primary Goal -->
         <div id="step5" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">🎯</div>
+                <div class="step-icon">05</div>
                 <h1 class="step-title">¿Qué es lo más importante para ti ahora?</h1>
                 <p class="step-subtitle">Personalizaremos tu dashboard según tu objetivo</p>
             </div>
@@ -623,49 +630,49 @@
                 <label class="radio-option">
                     <input type="radio" name="goal" value="more_clients">
                     <div class="option-content">
-                        <div class="option-title">📈 Conseguir más clientes</div>
+                        <div class="option-title"> Conseguir más clientes</div>
                         <div class="option-description">Crecimiento y nuevos clientes</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="goal" value="organization">
                     <div class="option-content">
-                        <div class="option-title">📅 Mejor organización</div>
+                        <div class="option-title"> Mejor organización</div>
                         <div class="option-description">Agenda y flujo de trabajo</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="goal" value="reduce_cancellations">
                     <div class="option-content">
-                        <div class="option-title">🎯 Reducir cancelaciones</div>
+                        <div class="option-title"> Reducir cancelaciones</div>
                         <div class="option-description">Menos no-shows y cancelaciones</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="goal" value="save_time">
                     <div class="option-content">
-                        <div class="option-title">⚡ Ahorrar tiempo</div>
+                        <div class="option-title"> Ahorrar tiempo</div>
                         <div class="option-description">Automatización y eficiencia</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="goal" value="better_service">
                     <div class="option-content">
-                        <div class="option-title">⭐ Mejorar atención</div>
+                        <div class="option-title">Mejorar atención</div>
                         <div class="option-description">Calidad y satisfacción</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="goal" value="productivity">
                     <div class="option-content">
-                        <div class="option-title">🔥 Aumentar productividad</div>
+                        <div class="option-title"> Aumentar productividad</div>
                         <div class="option-description">Más servicios por día</div>
                     </div>
                 </label>
             </div>
 
             <div class="tip-box">
-                <strong>💡 Tip:</strong>
+                <strong>Consejo</strong>
                 <p>Tu dashboard mostrará métricas enfocadas en este objetivo.</p>
             </div>
 
@@ -680,7 +687,7 @@
         <!-- Step 6: Team Size -->
         <div id="step6" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">👥</div>
+                <div class="step-icon">06</div>
                 <h1 class="step-title">¿Cuántos barberos trabajan contigo?</h1>
                 <p class="step-subtitle">Inclúyete si eres barbero</p>
             </div>
@@ -709,7 +716,7 @@
         <!-- Step 7: Service Duration -->
         <div id="step7" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">⏱️</div>
+                <div class="step-icon">07</div>
                 <h1 class="step-title">¿Cuál es la duración promedio de un servicio?</h1>
                 <p class="step-subtitle">Nos ayuda a optimizar tu agenda</p>
             </div>
@@ -739,7 +746,7 @@
         <!-- Step 8: Business Hours -->
         <div id="step8" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">🕐</div>
+                <div class="step-icon">08</div>
                 <h1 class="step-title">¿Cuáles son tus horarios?</h1>
                 <p class="step-subtitle">Horario general de lunes a viernes</p>
             </div>
@@ -766,7 +773,7 @@
         <!-- Step 9: Personality -->
         <div id="step9" class="onboarding-content hidden">
             <div class="step-header">
-                <div class="step-icon">💬</div>
+                <div class="step-icon">09</div>
                 <h1 class="step-title">¿Cuál es la personalidad de tu negocio?</h1>
                 <p class="step-subtitle">Ajustará el tono de los mensajes del sistema</p>
             </div>
@@ -775,28 +782,28 @@
                 <label class="radio-option">
                     <input type="radio" name="personality" value="professional">
                     <div class="option-content">
-                        <div class="option-title">💼 Profesional y seria</div>
+                        <div class="option-title"> Profesional y seria</div>
                         <div class="option-description">Formal y corporativa</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="personality" value="friendly">
                     <div class="option-content">
-                        <div class="option-title">😊 Amigable y relajada</div>
+                        <div class="option-title"> Amigable y relajada</div>
                         <div class="option-description">Cercana y casual</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="personality" value="energetic">
                     <div class="option-content">
-                        <div class="option-title">⚡ Energética y divertida</div>
+                        <div class="option-title"> Energética y divertida</div>
                         <div class="option-description">Dinámica y juvenil</div>
                     </div>
                 </label>
                 <label class="radio-option">
                     <input type="radio" name="personality" value="elegant">
                     <div class="option-content">
-                        <div class="option-title">✨ Elegante y sofisticada</div>
+                        <div class="option-title"> Elegante y sofisticada</div>
                         <div class="option-description">Refinada y exclusiva</div>
                     </div>
                 </label>
@@ -813,25 +820,25 @@
         <!-- Step 10: Success -->
         <div id="step10" class="onboarding-content hidden">
             <div class="success-animation">
-                <div class="success-icon">🎉</div>
+                <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></div>
                 <h1 class="success-title">¡Todo listo!</h1>
                 <p class="success-subtitle">Hemos personalizado el sistema para ti</p>
 
                 <div class="success-checklist">
                     <div class="success-item">
-                        <span style="font-size: 1.5em">✅</span>
+                        <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Logo y colores aplicados</span>
                     </div>
                     <div class="success-item">
-                        <span style="font-size: 1.5em">✅</span>
+                        <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Dashboard adaptado a tu objetivo</span>
                     </div>
                     <div class="success-item">
-                        <span style="font-size: 1.5em">✅</span>
+                        <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Horarios configurados</span>
                     </div>
                     <div class="success-item">
-                        <span style="font-size: 1.5em">✅</span>
+                        <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Mensajes personalizados activos</span>
                     </div>
                 </div>

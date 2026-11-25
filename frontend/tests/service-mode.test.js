@@ -75,5 +75,5 @@ test('dashboard clears the previous next appointment when there are no upcoming 
   assert.equal(nodeFor('nextAppointmentEta').textContent, 'Sin próxima cita');
   assert.equal(nodeFor('nextAppointmentClient').textContent, 'Agenda del día');
   assert.equal(nodeFor('nextAppointmentService').textContent, 'No tienes citas próximas');
-  assert.equal(nodeFor('nextAppointmentDuration').textContent, '⏱️ -- min estimados');
+  assert.equal(nodeFor('nextAppointmentDuration').textContent, '-- min estimados');
 });
