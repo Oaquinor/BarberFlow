@@ -46,3 +46,7 @@ class ClientAccountResendRequest(BaseModel):
 
 class ClientAppointmentClaimRequest(BaseModel):
     tracking_token: str = Field(..., min_length=32, max_length=128)
+
+
+class ClientAppointmentCancelRequest(BaseModel):
+    reason: str | None = Field(None, max_length=500)

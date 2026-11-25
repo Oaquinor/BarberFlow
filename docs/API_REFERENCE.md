@@ -20,6 +20,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `POST` | `/client-account/verify` | Público; activa una cuenta con token de 30 minutos, de un solo uso |
 | `GET` | `/client-account/appointments` | Cuenta cliente autenticada y correo verificado; hasta 100 citas vinculadas |
 | `POST` | `/client-account/appointments/claim` | Cuenta cliente autenticada y token privado de seguimiento; añade una cita a su historial |
+| `POST` | `/client-account/appointments/{appointment_id}/cancel` | Dueño autenticado de la cita mediante enlace CRM; aplica estado, anticipación de cancelación, libera el turno y encola notificaciones |
 | `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |
 | `POST` | `/billing/renewal-request` | Owner autenticado; crea o reutiliza una solicitud abierta en la bandeja de soporte. No cobra ni reactiva la cuenta |
 
@@ -44,6 +45,8 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 Reserva:
 
 La reserva autenticada acepta `Authorization: Bearer <access_token>` y no requiere repetir `client_name` ni `phone`; la identidad se toma de la cuenta y se vincula a un perfil CRM separado de la barbería. Sin token, ambos campos siguen siendo obligatorios para una reserva de invitado. La respuesta incluye `saved_to_account`.
+
+La cuenta cliente puede cancelar sus citas futuras `pending` o `confirmed` desde el historial. El API verifica el enlace de propiedad CRM, aplica la política de anticipación del negocio, cambia el estado y libera el turno en una transacción; confirma y notifica usando el outbox existente. Reprogramar desde la cuenta todavía no está habilitado.
 
 ```json
 {

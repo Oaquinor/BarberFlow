@@ -46,3 +46,36 @@ test("registration explains that an email verification link is required", async 
   await page.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(page.getByRole("status")).toContainText("enlace de verificación");
 });
+
+test("customer cancels an upcoming appointment only after an in-page confirmation", async ({ page }) => {
+  let cancelRequest;
+  let listCalls = 0;
+  await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
+    access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
+    user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+  } }));
+  await page.route("**/api/v1/client-account/appointments/42/cancel", async (route) => {
+    cancelRequest = route.request().postDataJSON();
+    await route.fulfill({ json: { success: true, appointment_id: 42, status: "cancelled" } });
+  });
+  await page.route("**/api/v1/client-account/appointments", async (route) => {
+    listCalls += 1;
+    const status = listCalls > 1 ? "cancelled" : "confirmed";
+    await route.fulfill({ json: { items: [{
+      appointment_id: 42, barbershop: "KingFlow de Prueba", service: "Corte clásico",
+      status, scheduled_time: "2026-12-02T15:00:00Z", barber: "Luis Barbero",
+    }] } });
+  });
+
+  await page.goto("/client-account.html");
+  await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
+  await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
+  await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+  await page.getByRole("button", { name: "Cancelar cita" }).click();
+  await expect(page.getByRole("button", { name: "Confirmar cancelación" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirmar cancelación" }).click();
+
+  await expect(page.getByRole("status")).toContainText("se canceló");
+  await expect(page.getByText("Corte clásico · Cancelada")).toBeVisible();
+  expect(cancelRequest).toEqual({});
+});

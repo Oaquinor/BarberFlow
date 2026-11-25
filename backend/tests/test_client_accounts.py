@@ -174,4 +174,36 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
     assert appointment.client_id != account.id
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
+    test_db.refresh(slot)
+    assert slot.is_booked is True
+    other_account = User(
+        email="other-verified-customer@example.com", password_hash="unused",
+        first_name="Otro", last_name="Cliente", role="client", is_active=True,
+        is_verified=True, barbershop_id=None,
+    )
+    test_db.add(other_account)
+    test_db.flush()
+    other_headers = {
+        "Authorization": f"Bearer {create_access_token({'sub': str(other_account.id), 'role': 'client'})}",
+    }
+    forbidden_cancel = client.post(
+        f"/api/v1/client-account/appointments/{appointment.id}/cancel",
+        headers=other_headers, json={},
+    )
+    assert forbidden_cancel.status_code == 404
+    assert test_db.get(Appointment, appointment.id).status == "pending"
+    cancelled = client.post(
+        f"/api/v1/client-account/appointments/{appointment.id}/cancel",
+        headers=headers,
+        json={"reason": "Cambio de planes"},
+    )
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["status"] == "cancelled"
+    test_db.refresh(appointment)
+    test_db.refresh(slot)
+    assert appointment.status == "cancelled"
+    assert appointment.cancellation_reason == "Cambio de planes"
+    assert slot.is_booked is False
+    history = client.get("/api/v1/client-account/appointments", headers=headers)
+    assert history.json()["items"][0]["status"] == "cancelled"
 

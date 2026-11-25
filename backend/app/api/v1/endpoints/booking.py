@@ -42,6 +42,7 @@ from app.schemas.platform import (
 )
 from app.services.subscription_service import count_monthly_appointments
 from app.services.booking_policy import enforce_public_change_window
+from app.services.customer_appointment_service import cancel_customer_appointment
 from app.services.client_account_service import get_or_create_shop_client
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.api.v1.endpoints.common import (
@@ -1005,28 +1006,14 @@ def public_cancel_appointment(
     ).with_for_update().first()
     if not appointment:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
-    if appointment.status not in {"pending", "confirmed"}:
-        raise HTTPException(status_code=409, detail="La cita ya no se puede cancelar")
-    if appointment.scheduled_time <= utc_now_naive():
-        raise HTTPException(status_code=409, detail="No se puede cancelar una cita que ya comenzó")
-    enforce_public_change_window(shop, appointment.scheduled_time, utc_now_naive())
-
-    appointment.status = "cancelled"
-    appointment.cancelled_by = appointment.client_id
-    appointment.cancellation_reason = data.reason
+    now = utc_now_naive()
+    cancel_customer_appointment(db, shop, appointment, data.reason, now)
     _notify_appointment_staff(
         db, appointment, "appointment_cancelled", "Cita cancelada por el cliente",
         f"{appointment.service_type} · {_utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop)).strftime('%d/%m/%Y %H:%M')}",
     )
     _audit(db, None, "appointment.cancelled_by_client", "appointment", appointment.id,
            shop.id, {"reason": data.reason})
-    db.query(BarberAvailability).filter(
-        BarberAvailability.barbershop_id == shop.id,
-        BarberAvailability.barber_id == appointment.barber_id,
-        BarberAvailability.slot_start == appointment.scheduled_time,
-        BarberAvailability.is_booked == True,
-        BarberAvailability.is_deleted == False,
-    ).update({BarberAvailability.is_booked: False}, synchronize_session=False)
     _queue_appointment_email(db, appointment, "cancellation", data.reason)
     if appointment.client and not appointment.client.is_deleted and appointment.client.phone:
         _queue_appointment_whatsapp(

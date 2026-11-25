@@ -10,8 +10,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
-from app.api.v1.endpoints.common import _normalize_phone
-from app.api.v1.endpoints.platform import _consume_public_token_quota, _public_booking_client_ip
+from app.api.v1.endpoints.common import _get_timezone, _normalize_phone, _utc_aware
+from app.api.v1.endpoints.platform import (
+    _consume_public_token_quota, _notify_appointment_staff, _public_booking_client_ip,
+    _queue_appointment_email, _queue_appointment_whatsapp,
+)
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security.password import hash_password
@@ -21,10 +24,11 @@ from app.models import (
 )
 from app.schemas.client_account import (
     ClientAccountRegisterRequest, ClientAccountResendRequest, ClientAccountVerifyRequest,
-    ClientAppointmentClaimRequest,
+    ClientAppointmentCancelRequest, ClientAppointmentClaimRequest,
 )
 from app.services.audit_service import record_audit
 from app.services.client_account_service import get_or_create_shop_client
+from app.services.customer_appointment_service import cancel_customer_appointment
 from app.services.notification_service import NotificationService
 from app.utils.datetime import utc_now_naive
 
@@ -209,6 +213,67 @@ def list_client_appointments(user: CurrentUser, db: Session = Depends(get_db)):
         "barber": appointment.barber.full_name if appointment.barber else "Equipo",
         "notes": appointment.client_notes,
     } for appointment in appointments]}
+
+
+@router.post("/appointments/{appointment_id}/cancel")
+def cancel_client_appointment(
+    appointment_id: int,
+    data: ClientAppointmentCancelRequest,
+    user: CurrentUser,
+    db: Session = Depends(get_db),
+):
+    _require_client_account(user)
+    appointment_ref = db.query(Appointment.barbershop_id).join(
+        ClientAccountShopLink,
+        ClientAccountShopLink.crm_client_user_id == Appointment.client_id,
+    ).filter(
+        Appointment.id == appointment_id,
+        ClientAccountShopLink.account_user_id == user.id,
+        ClientAccountShopLink.is_deleted == False,
+        Appointment.is_deleted == False,
+    ).first()
+    if not appointment_ref:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == appointment_ref.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    appointment = db.query(Appointment).join(
+        ClientAccountShopLink,
+        ClientAccountShopLink.crm_client_user_id == Appointment.client_id,
+    ).filter(
+        Appointment.id == appointment_id,
+        Appointment.barbershop_id == shop.id,
+        ClientAccountShopLink.account_user_id == user.id,
+        ClientAccountShopLink.is_deleted == False,
+        Appointment.is_deleted == False,
+    ).with_for_update().first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+    now = utc_now_naive()
+    cancel_customer_appointment(db, shop, appointment, data.reason, now)
+    local_time = _utc_aware(appointment.scheduled_time).astimezone(_get_timezone(shop))
+    _notify_appointment_staff(
+        db, appointment, "appointment_cancelled", "Cita cancelada por el cliente",
+        f"{appointment.service_type} · {local_time.strftime('%d/%m/%Y %H:%M')}",
+    )
+    record_audit(
+        db, user, "appointment.cancelled_by_client", "appointment", appointment.id,
+        shop.id, {"reason": data.reason, "channel": "client_account"},
+    )
+    _queue_appointment_email(db, appointment, "cancellation", data.reason)
+    if appointment.client and not appointment.client.is_deleted and appointment.client.phone:
+        _queue_appointment_whatsapp(
+            db, appointment, appointment.client.phone,
+            f"La cita en {shop.name} para {local_time.strftime('%d/%m/%Y %H:%M')} fue cancelada.",
+            "cancellation:client", recipient_user_id=appointment.client_id,
+        )
+    db.commit()
+    return {"success": True, "appointment_id": appointment.id, "status": appointment.status}
 
 
 @router.post("/appointments/claim")

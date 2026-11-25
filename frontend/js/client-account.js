@@ -48,6 +48,31 @@
       const barber = document.createElement("p");
       barber.textContent = `Atiende: ${item.barber || "Equipo"}`;
       card.append(title, details, date, barber);
+      if (["pending", "confirmed"].includes(item.status)) {
+        const cancelButton = document.createElement("button");
+        cancelButton.type = "button";
+        cancelButton.className = "account-action";
+        cancelButton.dataset.action = "start-cancel";
+        cancelButton.textContent = "Cancelar cita";
+        const confirmation = document.createElement("div");
+        confirmation.className = "cancel-confirmation";
+        confirmation.hidden = true;
+        const warning = document.createElement("p");
+        warning.textContent = "¿Quieres cancelar esta cita? La barbería recibirá una notificación.";
+        const confirmButton = document.createElement("button");
+        confirmButton.type = "button";
+        confirmButton.className = "account-action account-action-danger";
+        confirmButton.dataset.action = "confirm-cancel";
+        confirmButton.dataset.appointmentId = String(item.appointment_id);
+        confirmButton.textContent = "Confirmar cancelación";
+        const keepButton = document.createElement("button");
+        keepButton.type = "button";
+        keepButton.className = "button-secondary";
+        keepButton.dataset.action = "dismiss-cancel";
+        keepButton.textContent = "Conservar cita";
+        confirmation.append(warning, confirmButton, keepButton);
+        card.append(cancelButton, confirmation);
+      }
       appointmentsList.append(card);
     });
   }
@@ -58,6 +83,35 @@
     const data = await readJson(response);
     renderAppointments(data.items || []);
   }
+
+  appointmentsList.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    if (button.dataset.action === "start-cancel") {
+      const confirmation = button.nextElementSibling;
+      confirmation.hidden = false;
+      confirmation.querySelector("button[data-action=confirm-cancel]").focus();
+      return;
+    }
+    if (button.dataset.action === "dismiss-cancel") {
+      button.closest(".cancel-confirmation").hidden = true;
+      return;
+    }
+    if (button.dataset.action !== "confirm-cancel") return;
+    button.disabled = true;
+    message("");
+    try {
+      await readJson(await window.KingFlowAuth.fetch(
+        `${api}/appointments/${encodeURIComponent(button.dataset.appointmentId)}/cancel`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
+      ));
+      message("La cita se canceló y se liberó el horario.");
+      await loadAppointments();
+    } catch (error) {
+      message(error.message);
+      button.disabled = false;
+    }
+  });
 
   async function showAccount(user) {
     authPanel.hidden = true;
