@@ -60,8 +60,8 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_client_account_shop_lookup", table_name="client_account_shop_links")
+    # MySQL may rely on the composite lookup index to enforce the
+    # barbershop_id foreign key. DROP TABLE removes its indexes and constraints
+    # together without violating that dependency.
     op.drop_table("client_account_shop_links")
-    op.drop_index("ix_client_account_verifications_expires_at", table_name="client_account_verifications")
-    op.drop_index("ix_client_account_verifications_user_active", table_name="client_account_verifications")
     op.drop_table("client_account_verifications")
