@@ -186,6 +186,8 @@ def test_public_booking_tracking_and_cancel_are_connected(
     test_db.add(shop)
     test_db.commit()
     test_db.refresh(shop)
+    shop.booking_questions = ["¿Qué estilo quieres lograr?"]
+    test_db.commit()
 
     barber = User(
         email="booking-barber@example.com",
@@ -269,6 +271,10 @@ def test_public_booking_tracking_and_cancel_are_connected(
         "barber_id": preferred_barber.id,
         "scheduled_time": start.replace(tzinfo=timezone.utc).isoformat(),
         "notes": "Estilo buscado: Degradado / fade\nLargo actual: Medio\nAcabado preferido: Definir barba y contornos",
+        "booking_answers": {
+            "Estilo buscado": "Degradado / fade",
+            "¿Qué estilo quieres lograr?": "Mantener volumen arriba",
+        },
     }
     public_slots = client.get(f"/api/v1/public/{shop.slug}/slots?duration_minutes=30")
     same_time_slots = [
@@ -276,12 +282,16 @@ def test_public_booking_tracking_and_cancel_are_connected(
         if datetime.fromisoformat(row["slot_start"].replace("Z", "+00:00")) == start.replace(tzinfo=timezone.utc)
     ]
     assert {row["barber_id"] for row in same_time_slots} == {barber.id, preferred_barber.id}
+    stale_answers = {**payload, "booking_answers": {"Pregunta fuera de configuración": "Dato"}}
+    rejected_answers = client.post(f"/api/v1/public/{shop.slug}/appointments", json=stale_answers)
+    assert rejected_answers.status_code == 422
     response = client.post(f"/api/v1/public/{shop.slug}/appointments", json=payload)
     assert response.status_code == 200
     booking = response.json()
     booked_appointment = test_db.get(Appointment, booking["appointment_id"])
     assert booked_appointment.barber_id == preferred_barber.id
     assert booked_appointment.service_type == service.name
+    assert booked_appointment.booking_answers == payload["booking_answers"]
     public_client = test_db.get(User, booked_appointment.client_id)
     assert public_client.email.endswith("@client.invalid")
     assert public_client.is_verified is False
@@ -299,6 +309,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     )
     assert barber_agenda.status_code == 200
     assert barber_agenda.json()["appointments"][0]["client_notes"] == payload["notes"]
+    assert barber_agenda.json()["appointments"][0]["booking_answers"] == payload["booking_answers"]
     barber_inbox = client.get("/api/v1/notifications", headers=barber_headers)
     owner_inbox = client.get("/api/v1/notifications", headers=owner_headers)
     assert barber_inbox.status_code == owner_inbox.status_code == 200

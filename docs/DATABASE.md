@@ -50,6 +50,10 @@ La migración `034_client_account_favorites` almacena favoritos de barberos y se
 
 La migración `035_shop_favorites` permite guardar también la barbería. Al bajar a `034`, el `CHECK` permanece como superconjunto compatible para no borrar favoritos nuevos; la migración siguiente que baja a `033` elimina la tabla completa.
 
+### appointments.booking_answers
+
+La migración `036_booking_answers` agrega una columna JSON nullable a `appointments`. Guarda por separado las respuestas del cuestionario de estilo de la reserva pública. Las citas existentes mantienen `NULL`; una migración downgrade elimina solo la columna nueva y no reescribe sus notas libres.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

@@ -261,6 +261,18 @@ def public_create_appointment(
     if not shop:
         raise HTTPException(status_code=404, detail="Barbería no encontrada")
     subscription = _require_active_subscription(db, shop, lock=True)
+    supported_booking_questions = {
+        "Estilo buscado", "Largo actual", "Acabado preferido", "Referencia del cliente",
+    }
+    supported_booking_questions.update(
+        question.strip() for question in (shop.booking_questions or [])
+        if isinstance(question, str) and question.strip()
+    )
+    if set(data.booking_answers) - supported_booking_questions:
+        raise HTTPException(
+            status_code=422,
+            detail="Las preguntas de reserva cambiaron; actualiza la página e inténtalo de nuevo",
+        )
     if subscription.max_appointments_per_month is not None:
         used = count_monthly_appointments(db, shop)
         if used >= subscription.max_appointments_per_month:
@@ -421,6 +433,7 @@ def public_create_appointment(
         service_price=service.price,
         status="pending",
         client_notes=data.notes,
+        booking_answers=data.booking_answers or None,
         tracking_token_hash=hashlib.sha256(tracking_token.encode("utf-8")).hexdigest(),
     )
     db.add(appointment)

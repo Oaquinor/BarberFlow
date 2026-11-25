@@ -698,7 +698,7 @@ function renderAppointmentDay(businessDate, appointments) {
                     <span class="status-badge ${statusClassForStatus(appointment.status)}">${escapeHtml(labelStatus(appointment.status))}</span>
                 </div>
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
-                ${appointment.client_notes ? `<p class="appointment-notes"><strong>Preferencias del cliente:</strong><br>${escapeHtml(appointment.client_notes).replace(/\n/g, '<br>')}</p>` : ''}
+                ${renderAppointmentPreferences(appointment)}
                 <div class="appointment-meta">
                     <span>${Number(appointment.estimated_duration) || 0} min</span>
                     <span>${fmtMoneyFromCents(appointment.service_price || 0)}</span>
@@ -713,6 +713,22 @@ function renderAppointmentDay(businessDate, appointments) {
             </div>
         </div>
     `).join('');
+}
+
+function renderAppointmentPreferences(appointment) {
+    const answers = appointment.booking_answers && typeof appointment.booking_answers === 'object'
+        ? Object.entries(appointment.booking_answers).filter(([question, answer]) =>
+            typeof question === 'string' && typeof answer === 'string' && question.trim() && answer.trim())
+        : [];
+    const legacyNotes = typeof appointment.client_notes === 'string' ? appointment.client_notes.trim() : '';
+    if (!answers.length && !legacyNotes) return '';
+    const answerMarkup = answers.map(([question, answer]) =>
+        `<div><dt>${escapeHtml(question)}</dt><dd>${escapeHtml(answer)}</dd></div>`).join('');
+    const legacyMarkup = legacyNotes
+        ? `<p>${escapeHtml(legacyNotes).replace(/\n/g, '<br>')}</p>`
+        : '';
+    return `<section class="appointment-notes"><strong>Preferencias del cliente</strong>${legacyMarkup}` +
+        (answerMarkup ? `<dl class="appointment-question-answers">${answerMarkup}</dl>` : '') + '</section>';
 }
 
 function businessTodayDate() {

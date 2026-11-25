@@ -80,5 +80,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .gallery-grid.gallery-grid-single{grid-template-columns:minmax(0,1fr);max-width:820px}.gallery-grid-single .gallery-image{height:clamp(320px,45vw,560px);object-position:center 38%;border-radius:12px;box-shadow:0 16px 40px #0002}
 .cancellation-policy-notice{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--brand-primary);border-radius:9px;color:var(--copy);background:var(--soft);font-size:12px;line-height:1.55}
 
+#publicServices .service-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:18px}
+#publicServices>.service-card>.public-favorite-button{position:absolute;top:12px;right:12px;margin:0}
+#publicServices .service-select-trigger{flex:1 1 auto;width:100%;min-height:0;height:auto;overflow-wrap:anywhere}
+#publicServices .service-card.selected:after{content:none}
+#publicServices .service-bottom{display:flex;align-items:baseline;gap:12px;min-height:46px;margin-top:auto;padding:12px 0 4px}
+#publicServices .service-bottom strong{line-height:1.2}
+
 [hidden]{display:none!important}
  .header-nav .account-link,.booking-account-link{color:var(--selection);font-weight:750;text-decoration:underline;text-underline-offset:3px}.header-nav .account-link{display:inline-flex;align-items:center;white-space:nowrap}.booking-account-link{display:inline-block;margin-top:5px}

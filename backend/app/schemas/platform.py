@@ -3,7 +3,7 @@ Schemas para operación productiva: auth, cliente público, barbero y admin.
 """
 
 from datetime import datetime, time
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -142,6 +142,22 @@ class PublicCreateAppointmentRequest(BaseModel):
     barber_id: Optional[int] = Field(None, gt=0)
     scheduled_time: datetime
     notes: Optional[str] = Field(None, max_length=1000)
+    booking_answers: Dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("booking_answers")
+    @classmethod
+    def validate_booking_answers(cls, value: Dict[str, str]) -> Dict[str, str]:
+        if len(value) > 9:
+            raise ValueError("No se pueden enviar más de nueve respuestas de reserva")
+        normalized = {}
+        for question, answer in value.items():
+            question = question.strip()
+            answer = answer.strip()
+            if not question or len(question) > 120 or len(answer) > 700:
+                raise ValueError("La pregunta o respuesta no es válida")
+            if answer:
+                normalized[question] = answer
+        return normalized
 
     @field_validator("client_name")
     @classmethod

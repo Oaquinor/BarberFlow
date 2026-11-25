@@ -36,6 +36,8 @@ Los límites y consultas concurrentes deben respetar las garantías de MySQL. En
 
 Los routers se montan bajo `/api/v1`; la referencia de rutas y permisos está en `docs/API_REFERENCE.md`. El cliente público reserva sin crear una cuenta. El seguimiento, cancelación y reprogramación de la reserva requieren un token privado aleatorio cuyo hash se conserva en la base de datos.
 
+Las preferencias del cliente y las respuestas a preguntas configuradas por el negocio se validan frente al cuestionario público vigente y se persisten como JSON en `appointments.booking_answers`. Solo se incluyen en las respuestas de agenda autorizadas por rol y tenant; el frontend las inserta en DOM mediante escape HTML. `client_notes` permanece separado para notas libres heredadas.
+
 Los usuarios autenticados derivan el tenant de su identidad. Las operaciones de administración general que permiten elegir barbería lo hacen explícitamente y deben comprobar el rol autorizado. Las consultas y mutaciones del negocio restringen sus registros al tenant correspondiente. La ruta compartida de reprogramación acepta un token privado para el flujo público o una sesión cliente verificada junto con la cita CRM vinculada; el ID de cita no funciona como credencial.
 
 Los cobros se guardan como pagos reales y alimentan conciliación, rendimiento y reportes. El registro del pago y el cambio de estado de la cita se realizan dentro de una sola transacción. El sistema no debe presentar reservas pendientes como ingresos recibidos.

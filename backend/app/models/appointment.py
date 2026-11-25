@@ -4,7 +4,7 @@ Appointment model.
 Represents a booking/appointment between a client and barber.
 """
 
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text, Index
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Text, Index, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -42,6 +42,7 @@ class Appointment(BaseModel):
 
     # Notes
     client_notes = Column(Text, nullable=True)
+    booking_answers = Column(JSON, nullable=True)
     barber_notes = Column(Text, nullable=True)
 
     # Cancellation

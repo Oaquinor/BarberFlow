@@ -1874,6 +1874,7 @@ def barber_dashboard(
                 "progress_percent": _service_progress_percent(a, now) if a.status == "in_progress" else 0,
                 "service_price": a.service_price,
                 "client_notes": a.client_notes,
+                "booking_answers": a.booking_answers or {},
                 "status": a.status,
             }
             for a in appointments_today
@@ -1947,6 +1948,7 @@ def barber_appointments_for_date(
             "progress_percent": _service_progress_percent(item, now) if item.status == "in_progress" else 0,
             "service_price": item.service_price,
             "client_notes": item.client_notes,
+            "booking_answers": item.booking_answers or {},
             "status": item.status,
         } for item in appointments],
     }
@@ -2007,6 +2009,7 @@ def barber_appointments_calendar(
             "progress_percent": _service_progress_percent(item, now) if item.status == "in_progress" else 0,
             "service_price": item.service_price,
             "client_notes": item.client_notes,
+            "booking_answers": item.booking_answers or {},
             "status": item.status,
         })
     return {

@@ -190,6 +190,12 @@ def test_booking_requests_reject_invalid_dates_and_oversized_notes():
             client_name="Ana Prueba", phone="8095551234", service_id=1,
             scheduled_time=datetime(2026, 11, 20, 13, 0), notes="x" * 1001,
         )
+    with pytest.raises(ValueError):
+        PublicCreateAppointmentRequest(
+            client_name="Ana Prueba", phone="8095551234", service_id=1,
+            scheduled_time=datetime(2026, 11, 20, 13, 0),
+            booking_answers={"x" * 121: "Respuesta"},
+        )
 
 
 def test_business_timezone_converts_local_slots_to_utc():

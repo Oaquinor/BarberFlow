@@ -75,18 +75,32 @@ test('public booking lets a client choose a barber and submits the selected barb
   assert.match(clientScript, /value="\$\{Number\(s\.availability_id\)\}"/);
 });
 
-test('public experience shows the live catalog and sends consultation preferences with the booking', () => {
+test('public experience sends structured consultation answers with the booking', () => {
   const page = fs.readFileSync(path.join(__dirname, '..', 'client.html'), 'utf8');
   for (const id of ['publicServices', 'publicGallery', 'stylePreference', 'hairLength', 'finishPreference', 'consultationSummary']) {
     assert.match(page, new RegExp(`id="${id}"`));
   }
   assert.match(clientScript, /\['stylePreference', 'hairLength', 'finishPreference', 'clientNotes'\]/);
   assert.match(clientScript, /\['Estilo buscado', document\.getElementById\('stylePreference'\)\?\.value\]/);
-  assert.match(clientScript, /notes: preferences\.length \? preferences\.join\('\\n'\)\.slice\(0, 1000\) : null/);
+  assert.match(clientScript, /booking_answers: bookingAnswers/);
+  assert.match(clientScript, /bookingAnswers\[answer\.dataset\.bookingQuestion\] = value/);
   assert.match(clientScript, /gallery_images/);
   const dashboardScript = fs.readFileSync(path.join(__dirname, '..', 'js', 'main.js'), 'utf8');
-  assert.match(dashboardScript, /appointment\.client_notes/);
-  assert.match(dashboardScript, /escapeHtml\(appointment\.client_notes\)/);
+  const start = dashboardScript.indexOf('function renderAppointmentPreferences(');
+  const end = dashboardScript.indexOf('\nfunction businessTodayDate', start);
+  const sandbox = { escapeHtml: (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]) };
+  vm.runInNewContext(`${dashboardScript.slice(start, end)}\nthis.render = renderAppointmentPreferences;`, sandbox);
+  const markup = sandbox.render({
+    client_notes: 'Nota libre',
+    booking_answers: { 'Estilo <script>': '<img src=x onerror=alert(1)>' },
+  });
+  assert.match(markup, /Preferencias del cliente/);
+  assert.match(markup, /Nota libre/);
+  assert.match(markup, /&lt;script&gt;/);
+  assert.match(markup, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.doesNotMatch(markup, /<script>|<img/);
 });
 
 test('public gallery ignores missing and cross-origin image URLs', () => {

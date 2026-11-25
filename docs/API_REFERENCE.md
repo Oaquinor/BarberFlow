@@ -71,6 +71,8 @@ Las solicitudes de reserva para barberías con suscripción activa se limitan po
 
 El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su hash. No se acepta un ID de cita como sustituto de autorización. Para reprogramar envía `{"token":"<token privado>","availability_id":45}`; el sistema bloquea el nuevo turno, valida duración y conflictos, libera el anterior y registra el cambio atómicamente. Cancelación acepta `token` y `reason` opcional. Email/WhatsApp depende de configuración real del proveedor.
 
+La reserva pública acepta `booking_answers` como un mapa de las preguntas estándar de estilo y las preguntas actualmente configuradas por la barbería. El backend rechaza claves ajenas o desactualizadas; conserva las respuestas como JSON en MySQL y las devuelve solo en las agendas autorizadas del owner/barbero. Las respuestas se escapan al mostrarse. El campo `notes` permanece compatible para las notas libres históricas.
+
 Las rutas de consulta, servicios, disponibilidad y reserva requieren una suscripción activa. Cancelar una reserva futura no requiere iniciar sesión.
 
 Las cuentas de cliente son identidades globales (`role=client`, sin `barbershop_id`) y no sustituyen los registros tenant-scoped del CRM. El email debe verificarse antes de iniciar sesión. Las citas existentes se importan presentando el token privado de seguimiento; no se enlazan registros por teléfono. Al reclamar se crea un perfil CRM separado para ese cliente y barbería, y una cita ya vinculada a otra cuenta no se puede transferir con el mismo token. El endpoint de reprogramación también acepta el token privado sin sesión para conservar el flujo existente; alternativamente, permite `appointment_id` solo si una cuenta cliente verificada autenticada tiene el enlace CRM correspondiente.
@@ -234,6 +236,8 @@ El portal público envía la duración seleccionada al consultar turnos. Si no s
 El propietario define la tasa porcentual por barbero. Al registrar un pago de cita, el backend crea la comisión pendiente en la misma transacción usando el importe del servicio, sin incluir propina. El barbero solo ve sus registros; el propietario solo puede consultar y liquidar los de su barbería. La liquidación queda auditada y no se puede repetir. Los pagos de comisión en efectivo se registran como salidas en el efectivo esperado del cierre diario del propietario; no se aceptan después de cerrar esa caja.
 
 La ruta de calendario acepta `view=week` o `view=month`. Sus límites de fecha se calculan en la zona horaria del tenant; los resultados quedan filtrados por barbería y, para el rol barbero, por su usuario. La vista de día conserva operaciones para iniciar, cancelar y cobrar citas; las vistas agrupadas permiten abrir el día seleccionado.
+
+La agenda del día y el dashboard incluyen `booking_answers`; las preguntas y respuestas que un cliente envió al reservar aparecen separadas de las notas libres de citas anteriores.
 
 ## Administración de plataforma
 

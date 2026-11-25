@@ -116,6 +116,7 @@ function renderServiceCards() {
     selectButton.type = 'button';
     selectButton.className = 'service-select-trigger';
     selectButton.setAttribute('aria-label', `Elegir ${service.name}`);
+    selectButton.setAttribute('aria-pressed', 'false');
     const category = document.createElement('span');
     category.className = 'service-category';
     category.textContent = service.category || 'Servicio';
@@ -151,8 +152,12 @@ function renderServiceCards() {
     selectButton.addEventListener('click', () => {
       serviceSelect.value = String(Number(service.id));
       serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      container.querySelectorAll('.service-card').forEach((item) => item.classList.remove('selected'));
+      container.querySelectorAll('.service-card').forEach((item) => {
+        item.classList.remove('selected');
+        item.querySelector('.service-select-trigger')?.setAttribute('aria-pressed', 'false');
+      });
       card.classList.add('selected');
+      selectButton.setAttribute('aria-pressed', 'true');
       document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     container.append(card);
@@ -595,15 +600,15 @@ async function bookAppointment() {
   const slot = availableSlots.find(item => Number(item.availability_id) === Number(scheduledTimeSelect.value));
   const dt = slot?.slot_start;
   const notes = document.getElementById('clientNotes').value.trim();
-  const preferences = [
+  const bookingAnswers = Object.fromEntries([
     ['Estilo buscado', document.getElementById('stylePreference')?.value],
     ['Largo actual', document.getElementById('hairLength')?.value],
     ['Acabado preferido', document.getElementById('finishPreference')?.value],
     ['Referencia del cliente', notes],
-  ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
+  ].filter(([, value]) => value).map(([label, value]) => [label, value.trim()]));
   document.querySelectorAll('[data-booking-question]').forEach((answer) => {
     const value = answer.value.trim();
-    if (value) preferences.push(`${answer.dataset.bookingQuestion}: ${value}`);
+    if (value) bookingAnswers[answer.dataset.bookingQuestion] = value;
   });
 
   if (!client_name || !phone || !service_id || !dt) {
@@ -619,7 +624,8 @@ async function bookAppointment() {
     service_id,
     barber_id: slot.barber_id,
     scheduled_time: dt,
-    notes: preferences.length ? preferences.join('\n').slice(0, 1000) : null,
+    notes: null,
+    booking_answers: bookingAnswers,
   };
 
   bookBtn.disabled = true;
