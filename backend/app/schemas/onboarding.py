@@ -100,6 +100,7 @@ class BusinessSettingsUpdate(BaseModel):
     primary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     public_theme: str = Field(default="light", pattern=r"^(light|dark)$")
+    cancellation_window_hours: Optional[int] = Field(default=None, ge=0, le=168)
     booking_questions: Optional[List[str]] = Field(None, max_length=5)
 
     @field_validator("booking_questions")
@@ -146,6 +147,7 @@ class BarbershopProfile(BaseModel):
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     public_theme: str = "light"
+    cancellation_window_hours: int = Field(default=0, ge=0, le=168)
     style: Optional[str]
     primary_goal: Optional[str]
     team_size: Optional[int]

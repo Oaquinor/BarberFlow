@@ -1300,6 +1300,7 @@ async function loadOwnerManagement() {
         document.getElementById('businessBookingQuestions').value = (barbershopProfile.booking_questions || []).join('\n');
         document.getElementById('businessSettingsOpening').value = barbershopProfile.opening_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsClosing').value = barbershopProfile.closing_time?.slice(0, 5) || '';
+        document.getElementById('businessCancellationWindow').value = String(barbershopProfile.cancellation_window_hours ?? 0);
         document.getElementById('businessSettingsTimezone').value = barbershopProfile.timezone || '';
         document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#b98752';
         document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#5a4635';
@@ -1356,19 +1357,62 @@ function setupBrandPreview() {
     const theme = document.getElementById('businessSettingsTheme');
     const preview = document.getElementById('brandPreview');
     if (!primary || !secondary || !theme || !preview) return;
+    const name = document.getElementById('businessSettingsName');
+    const description = document.getElementById('businessSettingsDescription');
+    const presets = [...document.querySelectorAll('.brand-presets button')];
     const update = () => {
         preview.dataset.theme = theme.value;
         preview.style.setProperty('--preview-primary', primary.value);
         preview.style.setProperty('--preview-secondary', secondary.value);
+        preview.style.setProperty('--preview-soft', `${secondary.value}12`);
+        document.getElementById('brandPreviewName').textContent = name?.value.trim() || 'Tu barbería';
+        document.getElementById('brandPreviewMark').textContent = (name?.value.trim() || 'K').charAt(0).toUpperCase();
+        document.getElementById('brandPreviewDescription').textContent = description?.value.trim()
+            || 'La presentación de tu barbería aparecerá aquí.';
+        const trustedAsset = value => {
+            if (!value) return null;
+            try {
+                const url = new URL(value, API_ROOT);
+                const apiOrigin = new URL(API_ROOT, window.location.origin).origin;
+                return new Set([window.location.origin, apiOrigin]).has(url.origin)
+                    && ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+                    ? url.href : null;
+            } catch (_) { return null; }
+        };
+        const logo = document.getElementById('brandPreviewLogo');
+        const logoUrl = trustedAsset(barbershopProfile?.logo_url);
+        logo.hidden = !logoUrl;
+        if (logoUrl) logo.src = logoUrl;
+        else logo.removeAttribute('src');
+        document.getElementById('brandPreviewMark').hidden = Boolean(logoUrl);
+        const cover = document.getElementById('brandPreviewCover');
+        const coverUrl = trustedAsset(barbershopProfile?.cover_image_url);
+        cover.hidden = !coverUrl;
+        if (coverUrl) cover.src = coverUrl;
+        else cover.removeAttribute('src');
+        const featuredService = serviceCache.find(service => service.is_active !== false);
+        document.getElementById('brandPreviewService').textContent = featuredService?.name || 'Tus servicios';
+        document.getElementById('brandPreviewServiceMeta').textContent = featuredService
+            ? `${fmtMoneyFromCents(Number(featuredService.price_cents ?? featuredService.price ?? 0))} · ${Number(featuredService.duration_minutes) || 0} min`
+            : 'Los precios y duración se mostrarán desde tu catálogo.';
         const rgb = primary.value.match(/[\da-f]{2}/gi)?.map(v => parseInt(v, 16)) || [0, 0, 0];
         const luminance = rgb.map(v => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
         const darkText = luminance > 0.1791;
         const contrast = darkText ? (luminance + 0.05) / 0.05 : 1.05 / (luminance + 0.05);
         preview.style.setProperty('--preview-button-text', darkText ? '#161713' : '#ffffff');
-        document.getElementById('brandContrastNote').textContent = `Contraste del botón: ${contrast.toFixed(1)}:1 · tema ${theme.value === 'light' ? 'claro' : 'oscuro'}`;
+        const contrastNote = document.getElementById('brandContrastNote');
+        contrastNote.textContent = `Contraste del botón: ${contrast.toFixed(1)}:1 · ${contrast >= 4.5 ? 'cumple WCAG AA para texto normal' : 'bajo para texto normal; cambia el color principal'} · tema ${theme.value === 'light' ? 'claro' : 'oscuro'}`;
+        contrastNote.dataset.level = contrast >= 4.5 ? 'good' : 'low';
+        presets.forEach(button => button.setAttribute('aria-pressed', String(
+            button.dataset.primary.toLowerCase() === primary.value.toLowerCase()
+            && button.dataset.secondary.toLowerCase() === secondary.value.toLowerCase(),
+        )));
     };
-    [primary, secondary, theme].forEach(input => input.addEventListener('input', update));
-    document.querySelectorAll('.brand-presets button').forEach(button => button.addEventListener('click', () => {
+    [primary, secondary, theme, name, description].filter(Boolean).forEach(input => {
+        input.addEventListener('input', update);
+        input.addEventListener('change', update);
+    });
+    presets.forEach(button => button.addEventListener('click', () => {
         primary.value = button.dataset.primary;
         secondary.value = button.dataset.secondary;
         update();
@@ -1697,6 +1741,7 @@ async function saveBusinessSettings(event) {
         description: document.getElementById('businessSettingsDescription').value.trim() || null,
         opening_time: document.getElementById('businessSettingsOpening').value,
         closing_time: document.getElementById('businessSettingsClosing').value,
+        cancellation_window_hours: Number(document.getElementById('businessCancellationWindow').value),
         timezone: document.getElementById('businessSettingsTimezone').value.trim(),
         primary_color: document.getElementById('businessSettingsPrimary').value,
         secondary_color: document.getElementById('businessSettingsSecondary').value,

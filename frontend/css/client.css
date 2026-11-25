@@ -75,5 +75,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:560px){.site-header{height:auto;min-height:72px;flex-wrap:wrap;padding:10px 0}.header-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));width:100%;gap:6px 4px;overflow:visible;flex-wrap:initial;padding:4px 0 6px;font-size:11px}.header-nav>a{display:flex!important;grid-column:span 2;justify-content:center;min-width:0;padding:7px 2px;white-space:nowrap}.header-nav .nav-track{grid-column:span 3;display:flex;min-width:0;align-items:center;justify-content:center;gap:7px;padding:8px 6px;font-size:11px;white-space:nowrap}.header-nav .nav-track svg{width:16px;height:16px;flex:none}.team-grid{grid-template-columns:1fr}.team-card{min-height:195px}.gallery-empty{min-height:unset}.shop-facts{margin-top:0}}
 
 .gallery-grid.gallery-grid-single{grid-template-columns:minmax(0,1fr);max-width:820px}.gallery-grid-single .gallery-image{height:clamp(320px,45vw,560px);object-position:center 38%;border-radius:12px;box-shadow:0 16px 40px #0002}
+.cancellation-policy-notice{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--brand-primary);border-radius:9px;color:var(--copy);background:var(--soft);font-size:12px;line-height:1.55}
 
 [hidden]{display:none!important}

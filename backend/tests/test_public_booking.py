@@ -325,6 +325,22 @@ def test_public_booking_tracking_and_cancel_are_connected(
     tracking_token = parse_qs(urlparse(booking["tracking_link"]).query)["track_token"][0]
     assert urlparse(booking["tracking_link"]).netloc == "localhost:8000"
 
+    shop.cancellation_window_hours = 48
+    test_db.commit()
+    public_profile = client.get(f"/api/v1/public/{shop.slug}")
+    assert public_profile.json()["cancellation_window_hours"] == 48
+    limited_reschedule = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/reschedule",
+        json={"token": tracking_token, "availability_id": replacement_slot.id},
+    )
+    limited_cancel = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/cancel", json={"token": tracking_token},
+    )
+    assert limited_reschedule.status_code == limited_cancel.status_code == 409
+    assert "48 horas" in limited_reschedule.json()["detail"]
+    shop.cancellation_window_hours = 0
+    test_db.commit()
+
     duplicate = client.post(f"/api/v1/public/{shop.slug}/appointments", json=payload)
     assert duplicate.status_code in {400, 409}
     tracked = client.post(

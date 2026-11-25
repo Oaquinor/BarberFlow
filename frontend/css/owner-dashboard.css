@@ -321,17 +321,58 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   color:#514638; background:#fffefa; font-size:.77rem; font-weight:650; cursor:pointer;
 }
 #businessSettingsForm .brand-presets button:hover { border-color:#bd9a70; background:#f7f1e8; }
+#businessSettingsForm .brand-presets button[aria-pressed="true"] { border-color:#8f6941; color:#553d24; background:#f2e8d9; box-shadow:inset 0 0 0 1px #8f6941; }
 #businessSettingsForm .brand-preview {
-  display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin-top:14px; padding:14px 16px;
-  border:1px solid #e7dfd3; border-radius:12px; background:#faf8f4;
+  display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:14px; padding:16px;
+  border:1px solid #e7dfd3; border-radius:14px; background:#faf8f4;
 }
-#businessSettingsForm .brand-preview strong { flex:0 0 100%; color:#514638; font-size:.76rem; }
-#businessSettingsForm .brand-preview span { flex:1 1 180px; color:#514638; font-size:.83rem; }
-#businessSettingsForm .brand-preview button { width:auto; min-height:38px; margin:0; padding:8px 14px; border-radius:8px; font-size:.78rem; }
-#businessSettingsForm .brand-preview small { flex:0 0 100%; }
-#businessSettingsForm .settings-submit button { width:100%; min-height:48px; margin:0; }
+#businessSettingsForm .brand-preview > strong { color:#514638; font-size:.76rem; }
+#businessSettingsForm .brand-preview-card { display:grid; gap:13px; width:min(100%,560px); padding:16px; border:1px solid #e7dfd3; border-radius:12px; color:#25231f; background:#fffefa; box-shadow:0 8px 24px rgba(43,34,23,.06); }
+#businessSettingsForm .brand-preview[data-theme="dark"] .brand-preview-card { border-color:#35332f; color:#f3f1ea; background:#191917; }
+#businessSettingsForm .brand-preview-heading { display:flex; min-width:0; align-items:center; gap:11px; }
+#businessSettingsForm .brand-preview-cover { display:block; width:100%; height:108px; object-fit:cover; border-radius:9px; background:linear-gradient(120deg,#3a332a,#97734c); }
+#businessSettingsForm .brand-preview-mark { display:grid; width:38px; height:38px; flex:none; place-items:center; border-radius:10px; color:var(--preview-button-text,#181713); background:var(--preview-primary,#b98752); font:700 19px Georgia,serif; }
+#businessSettingsForm .brand-preview-logo { width:38px; height:38px; flex:none; object-fit:cover; border:1px solid #e8e3da; border-radius:10px; background:#fffefa; }
+#businessSettingsForm .brand-preview-heading b, #businessSettingsForm .brand-preview-heading small, #businessSettingsForm .brand-preview-service b, #businessSettingsForm .brand-preview-service small { display:block; }
+#businessSettingsForm .brand-preview-heading b { overflow:hidden; color:inherit; font-size:.9rem; text-overflow:ellipsis; white-space:nowrap; }
+#businessSettingsForm .brand-preview-heading small { margin-top:3px; color:#77746d; font-size:.57rem; letter-spacing:.1em; }
+#businessSettingsForm .brand-preview[data-theme="dark"] .brand-preview-heading small, #businessSettingsForm .brand-preview[data-theme="dark"] .brand-preview-service small { color:#b7b4ab; }
+#businessSettingsForm .brand-preview-card > p { min-height:2.8em; margin:0; overflow-wrap:anywhere; color:#77746d; font-size:.76rem; line-height:1.5; }
+#businessSettingsForm .brand-preview[data-theme="dark"] .brand-preview-card > p { color:#b7b4ab; }
+#businessSettingsForm .brand-preview-service { display:flex; min-width:0; align-items:center; gap:10px; padding:10px; border:1px solid #e8e3da; border-radius:9px; background:var(--preview-soft,#f3f0ea); }
+#businessSettingsForm .brand-preview[data-theme="dark"] .brand-preview-service { border-color:#30302b; background:#22221f; }
+#businessSettingsForm .brand-preview-service-mark { display:grid; width:32px; height:32px; flex:none; place-items:center; border-radius:8px; color:var(--preview-secondary,#5a4635); background:var(--preview-primary,#b98752); font-size:17px; }
+#businessSettingsForm .brand-preview-service-mark svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+#businessSettingsForm .brand-preview-service b { color:inherit; font-size:.76rem; }
+#businessSettingsForm .brand-preview-service small { margin-top:3px; color:#77746d; font-size:.66rem; line-height:1.35; }
+#businessSettingsForm .brand-preview-card button { display:flex; width:100%; min-height:40px; align-items:center; justify-content:space-between; margin:0; padding:9px 12px; border:0; border-radius:8px; color:var(--preview-button-text,#181713); background:var(--preview-primary,#b98752); font-size:.78rem; font-weight:750; }
+#businessSettingsForm .brand-preview > small { color:#625b50; font-size:.7rem; }
+#businessSettingsForm .brand-preview > small[data-level="good"] { color:#376345; }
+#businessSettingsForm .brand-preview > small[data-level="low"] { color:#9a4d28; }
+#businessSettingsForm > .settings-submit { display:block; }
+#businessSettingsForm .settings-submit > button { display:block; width:100%; min-height:48px; margin:0; padding:12px 16px; font-size:.92rem; }
+.tab-content form.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:14px 16px; }
+.tab-content form.grid > .field { display:flex; min-width:0; flex-direction:column; gap:7px; margin:0; }
+.tab-content form.grid > .field > label { display:block; margin:0; color:#514c44; font-size:.78rem; line-height:1.45; font-weight:700; }
+.tab-content form.grid > .field > input:not([type="checkbox"]), .tab-content form.grid > .field > select,
+.tab-content form.grid > .field > textarea { width:100%; min-width:0; margin:0; }
+.tab-content > .card > .field { display:grid; grid-template-columns:minmax(0,1fr); gap:7px; max-width:620px; margin:14px 0; }
+.tab-content > .card > .field > label { color:#514c44; font-size:.78rem; font-weight:700; }
+.tab-content form.grid > .field:has(>button) { flex-direction:row; flex-wrap:wrap; align-items:center; }
+.tab-content form.grid > .field:has(>button) > button { width:auto; flex:1 1 140px; min-height:42px; padding:9px 13px; font-size:.8rem; }
+.tab-content .services-header > .btn-primary { width:auto; min-height:40px; flex:none; padding:9px 14px; border-radius:9px; font-size:.82rem; box-shadow:0 5px 13px rgba(146,99,53,.14); }
+.public-logo-editor .field, .public-cover-editor .field, .public-gallery-editor .field { display:grid; grid-template-columns:minmax(0,1fr); gap:7px; margin:12px 0; }
+.public-logo-editor .field > label, .public-cover-editor .field > label, .public-gallery-editor .field > label { color:#514c44; font-size:.78rem; font-weight:700; }
+.public-logo-editor input[type="file"], .public-cover-editor input[type="file"], .public-gallery-editor input[type="file"] { width:100%; max-width:460px; min-height:44px; padding:7px; border:1px solid #ded9d0; border-radius:9px; color:#514c44; background:#fffefa; font-size:.78rem; }
+.public-logo-editor input[type="file"]::file-selector-button, .public-cover-editor input[type="file"]::file-selector-button,
+.public-gallery-editor input[type="file"]::file-selector-button { min-height:29px; margin-right:10px; padding:5px 10px; border:1px solid #ded8cf; border-radius:7px; color:#514638; background:#f7f3ec; font:inherit; font-weight:650; cursor:pointer; }
+.public-logo-editor input[type="file"]::file-selector-button:hover, .public-cover-editor input[type="file"]::file-selector-button:hover,
+.public-gallery-editor input[type="file"]::file-selector-button:hover { border-color:#bd9a70; background:#f0e7da; }
 @media(max-width:640px) {
   #businessSettingsForm { grid-template-columns:minmax(0,1fr); gap:15px; }
   #businessSettingsForm > .settings-wide { grid-column:1; }
-  #businessSettingsForm .brand-preview { align-items:flex-start; }
+  #businessSettingsForm .brand-preview { padding:12px; }
+  .tab-content form.grid { grid-template-columns:minmax(0,1fr); gap:12px; }
+  .tab-content .services-header { align-items:flex-start; }
+  .tab-content .services-header > .btn-primary { flex:none; }
 }

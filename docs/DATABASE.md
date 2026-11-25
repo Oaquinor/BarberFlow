@@ -96,6 +96,7 @@ Barbershop entities (tenants in multi-tenant architecture).
 | timezone | VARCHAR(50) | Timezone |
 | currency | VARCHAR(3) | Currency code (USD, EUR, etc.) |
 | appointment_duration_minutes | INTEGER | Default appointment duration |
+| cancellation_window_hours | INTEGER NOT NULL DEFAULT 0 | Minimum notice for public cancellation/rescheduling; 0 preserves unrestricted pre-start changes |
 | is_active | BOOLEAN | Is active |
 | is_verified | BOOLEAN | Is verified |
 | subscription_id | INTEGER | Foreign key to subscriptions |

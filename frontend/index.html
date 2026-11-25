@@ -338,7 +338,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-studio-experience-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-brand-preview-4">
 </head>
 <body>
     <div class="container">
@@ -756,13 +756,24 @@
                         <div class="field booking-question-editor settings-wide"><label for="businessBookingQuestions">Preguntas para preparar cada cita <span class="optional">HASTA 5</span></label><textarea id="businessBookingQuestions" maxlength="604" placeholder="¿Tienes una foto de referencia?&#10;¿Qué zonas quieres conservar?&#10;¿Tienes alguna sensibilidad que debamos considerar?"></textarea><small>Una pregunta por línea. Se mostrarán al reservar y las respuestas se adjuntarán a la cita para el barbero.</small></div>
                         <div class="field"><label for="businessSettingsOpening">Apertura</label><input id="businessSettingsOpening" type="time" required></div>
                         <div class="field"><label for="businessSettingsClosing">Cierre</label><input id="businessSettingsClosing" type="time" required></div>
+                        <div class="field"><label for="businessCancellationWindow">Anticipación mínima para cambios</label><input id="businessCancellationWindow" type="number" min="0" max="168" step="1" required aria-describedby="businessCancellationHelp"><small id="businessCancellationHelp">0 permite cancelar o reprogramar en cualquier momento antes de iniciar la cita. Máximo: 7 días.</small></div>
                         <div class="field"><label for="businessSettingsTimezone">Zona horaria IANA</label><input id="businessSettingsTimezone" required minlength="3" maxlength="50" placeholder="America/Santo_Domingo"></div>
                         <div class="field"><label for="businessSettingsPrimary">Color principal</label><input id="businessSettingsPrimary" type="color" required></div>
                         <div class="field"><label for="businessSettingsSecondary">Color secundario</label><input id="businessSettingsSecondary" type="color" required></div>
                         <div class="field"><label for="businessSettingsTheme">Tema de la página para clientes</label><select id="businessSettingsTheme"><option value="light">Claro</option><option value="dark">Oscuro</option></select></div>
-                        <div class="field settings-wide settings-brand-tools"><span>Paletas recomendadas (puedes personalizar los dos colores después)</span><div class="brand-presets" role="group" aria-label="Paletas de colores recomendadas">
-                            <button type="button" data-primary="#b98752" data-secondary="#5a4635">Madera y cobre</button><button type="button" data-primary="#d7b45a" data-secondary="#876728">Negro y dorado</button><button type="button" data-primary="#8aa6c8" data-secondary="#526b88">Azul y acero</button><button type="button" data-primary="#b98752" data-secondary="#5a4635">Oliva y lima</button>
-                        </div><div id="brandPreview" class="brand-preview" aria-live="polite"><strong>Vista previa</strong><span>Tu barbería · Corte clásico</span><button type="button" tabindex="-1">Reservar cita</button><small id="brandContrastNote">Texto optimizado para leer bien</small></div></div>
+                        <div class="field settings-wide settings-brand-tools"><span>Paletas recomendadas <small>Puedes ajustar ambos colores después.</small></span><div class="brand-presets" role="group" aria-label="Paletas de colores recomendadas">
+                            <button type="button" data-primary="#b98752" data-secondary="#5a4635" aria-pressed="false">Madera y cobre</button><button type="button" data-primary="#d7b45a" data-secondary="#876728" aria-pressed="false">Negro y dorado</button><button type="button" data-primary="#8aa6c8" data-secondary="#526b88" aria-pressed="false">Azul y acero</button><button type="button" data-primary="#9aa276" data-secondary="#47513a" aria-pressed="false">Oliva y lima</button>
+                        </div><div id="brandPreview" class="brand-preview" data-theme="light" aria-label="Vista previa de la página pública">
+                            <strong>Vista previa de tu página pública</strong>
+                            <article class="brand-preview-card">
+                                <img id="brandPreviewCover" class="brand-preview-cover" alt="" hidden>
+                                <div class="brand-preview-heading"><span id="brandPreviewMark" class="brand-preview-mark" aria-hidden="true">K</span><img id="brandPreviewLogo" class="brand-preview-logo" alt="" hidden><span><b id="brandPreviewName">Tu barbería</b><small>RESERVAS · ESTILO · DETALLE</small></span></div>
+                                <p id="brandPreviewDescription">La presentación de tu barbería aparecerá aquí.</p>
+                                <div class="brand-preview-service"><span class="brand-preview-service-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 20 4"/></svg></span><span><b id="brandPreviewService">Tus servicios</b><small id="brandPreviewServiceMeta">Los precios y duración se mostrarán desde tu catálogo.</small></span></div>
+                                <button type="button" tabindex="-1" aria-hidden="true">Reservar cita <span aria-hidden="true">→</span></button>
+                            </article>
+                            <small id="brandContrastNote" role="status" aria-live="polite">Contraste del botón</small>
+                        </div></div>
                         <div class="field settings-wide settings-submit"><button class="btn-primary" type="submit">Guardar configuración</button></div>
                     </form>
                     <p id="businessSettingsResult" role="status" aria-live="polite"></p>
@@ -941,7 +952,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-studio-experience-1"></script>
+    <script src="js/main.js?v=20261125-brand-preview-4"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

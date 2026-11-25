@@ -484,6 +484,7 @@ def update_business_settings(
         "timezone": shop.timezone,
         "primary_color": shop.primary_color,
         "secondary_color": shop.secondary_color,
+        "cancellation_window_hours": shop.cancellation_window_hours or 0,
         "booking_questions": shop.booking_questions or [],
     }
     shop.name = data.name
@@ -494,6 +495,8 @@ def update_business_settings(
     shop.primary_color = data.primary_color
     shop.secondary_color = data.secondary_color
     shop.public_theme = data.public_theme
+    if data.cancellation_window_hours is not None:
+        shop.cancellation_window_hours = data.cancellation_window_hours
     if data.booking_questions is not None:
         shop.booking_questions = data.booking_questions
     record_audit(db, current_user, "business.settings_updated", "barbershop", shop.id,
@@ -505,6 +508,7 @@ def update_business_settings(
                            "primary_color": data.primary_color,
                            "secondary_color": data.secondary_color,
                            "public_theme": data.public_theme,
+                           "cancellation_window_hours": shop.cancellation_window_hours,
                            "booking_questions": shop.booking_questions or []})
     db.commit()
     db.refresh(shop)

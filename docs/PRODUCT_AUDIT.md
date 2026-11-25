@@ -14,6 +14,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Catálogo público, disponibilidad, reserva de invitado y gestión con token | Implementado | API de booking; no requiere cuenta cliente |
 | Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial | Página pública y seguimiento de reserva; no hay experiencia autenticada integral de cliente |
 | Agenda, atención, turnos presenciales, cobro y conciliación | Implementado | Flujo de cita/pago y caja; el pago de servicio se registra manualmente |
+| Política por barbería para anticipación de cancelación/reprogramación | Implementado en este incremento | Columna MySQL versionada, rango 0–168h, aviso público y validación en ambos cambios |
 | Perfil público: marca, horarios, zona, tema, logo, portada, galería, preguntas | Implementado | Onboarding y opciones públicas; la calidad visual requiere revisión continua en varios anchos |
 | Servicios con fotografía | Implementado parcialmente | Confirmar cobertura de permisos, validación y flujo visual de extremo a extremo antes de publicitar como completo |
 | CRM básico, clientes e historial | Implementado | Alta/edición, paginación e historial tenant-scoped |
@@ -42,13 +43,15 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 - Se añadieron al catálogo API cuatro rutas activas de imagen de portada y galería que faltaban en la referencia.
 - Se reparó una expectativa obsoleta de expiración de sesión y dos pruebas con selectores/flujo de inicialización desactualizados.
 - El menú del portal público ahora se distribuye en una cuadrícula en móviles pequeños; las pruebas de navegador comprobaron 320 y 375 px.
+- El formulario de configuración del negocio ahora tiene una vista previa con el nombre, descripción, primer servicio real, logo/portada configurados y contraste calculado; se corrigieron los botones, campos e inputs de archivos que aparecían sin estructura en la captura de revisión. Las cuatro paletas tienen pares de color distintos y selección accesible.
+- Se añadió una política por tenant para la anticipación mínima de cancelación/reprogramación, con migración compatible, valor histórico cero y enforcement en la API pública.
+- Evidencia visual: [antes](evidence/owner-settings-before.png) y [después](evidence/owner-settings-after.png).
 - Nuevos documentos: arquitectura de permisos, sistema visual, estándar de desarrollo, decisiones de producto y revisión de seguridad.
 
 ## Validación local y límites
 
-- `python -m pytest backend/tests -q`: 66 passed, 99 skipped. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; la URL/base de prueba no estuvo disponible. No se modificó la base de datos de desarrollo.
-- `npm run test:browser -- --reporter=line`: 23 passed.
-- `frontend`: `npm test` 106 passed; `npm run test:browser -- --reporter=line` 23 passed.
+- `python -m pytest backend/tests -q`: 69 passed, 99 skipped. Las pruebas omitidas requieren `TEST_DATABASE_URL` y una base MySQL de pruebas; la URL/base de prueba no estuvo disponible. No se modificó la base de datos de desarrollo.
+- `frontend`: `npm test` 108 passed; `npm run test:browser -- --reporter=line` 24 passed, incluyendo la vista previa y prueba de anchos 320, 375, 390, 430, 768, 1024, 1366 y 1920 px.
 - `whatsapp-service`: `npm test` 8 passed. `npm audit` en ambos paquetes: cero vulnerabilidades reportadas.
 - `pip-audit` forma parte de CI; no está instalado localmente en este entorno, por lo que el análisis de dependencias Python no se considera validado aquí.
 - No se hizo prueba de penetración, prueba de carga, despliegue productivo ni verificación de entrega real con SMTP/WhatsApp.

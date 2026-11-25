@@ -41,6 +41,7 @@ from app.schemas.platform import (
     WalkInAppointmentRequest,
 )
 from app.services.subscription_service import count_monthly_appointments
+from app.services.booking_policy import enforce_public_change_window
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.api.v1.endpoints.common import (
     _audit, _cash_register_closed_for_user, _get_current_user, _get_timezone,
@@ -93,6 +94,7 @@ def public_barbershop(slug: str, db: Session = Depends(get_db)):
         primary_color=shop.primary_color,
         secondary_color=shop.secondary_color,
         public_theme=shop.public_theme or "light",
+        cancellation_window_hours=shop.cancellation_window_hours or 0,
         client_app_link=_build_client_link(shop.slug),
     )
 
@@ -983,6 +985,7 @@ def public_cancel_appointment(
         raise HTTPException(status_code=409, detail="La cita ya no se puede cancelar")
     if appointment.scheduled_time <= utc_now_naive():
         raise HTTPException(status_code=409, detail="No se puede cancelar una cita que ya comenzó")
+    enforce_public_change_window(shop, appointment.scheduled_time, utc_now_naive())
 
     appointment.status = "cancelled"
     appointment.cancelled_by = appointment.client_id
@@ -1091,6 +1094,7 @@ def public_reschedule_appointment(
         raise HTTPException(status_code=409, detail="La asignación de la cita cambió; vuelve a consultar")
     if appointment.status not in {"pending", "confirmed"} or appointment.scheduled_time <= utc_now_naive():
         raise HTTPException(status_code=409, detail="La cita ya no se puede reprogramar")
+    enforce_public_change_window(shop, appointment.scheduled_time, utc_now_naive())
 
     new_slot = db.query(BarberAvailability).filter(
         BarberAvailability.id == data.availability_id,

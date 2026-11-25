@@ -119,6 +119,7 @@ class PublicBarbershopResponse(BaseModel):
     primary_color: Optional[str]
     secondary_color: Optional[str]
     public_theme: str = "light"
+    cancellation_window_hours: int = Field(default=0, ge=0, le=168)
     client_app_link: str
 
 

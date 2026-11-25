@@ -233,6 +233,11 @@ async function loadShop() {
     const shop = await res.json();
     shopCurrency = shop.currency || 'USD';
     shopTimezone = shop.timezone || 'UTC';
+    const cancellationHours = Math.max(0, Number(shop.cancellation_window_hours) || 0);
+    const cancellationNotice = document.getElementById('cancellationPolicyNotice');
+    if (cancellationNotice) cancellationNotice.textContent = cancellationHours
+      ? `Puedes cancelar o reprogramar hasta ${cancellationHours} ${cancellationHours === 1 ? 'hora' : 'horas'} antes de tu cita. Después, contacta a la barbería.`
+      : 'Puedes cancelar o reprogramar tu cita en cualquier momento antes de que comience.';
     shopNameEl.textContent = shop.name;
     const savedTheme = localStorage.getItem(`kingflow-theme:${shop.slug}`);
     applyPublicTheme(savedTheme || shop.public_theme || 'light');

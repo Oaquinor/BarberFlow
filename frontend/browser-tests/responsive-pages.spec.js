@@ -157,11 +157,12 @@ test("tema público cambia, recuerda la preferencia y mantiene contraste en el b
     return route.fulfill({ json: {
       id: 1, name: "Barbería de prueba", slug: "theme-test", currency: "USD",
       timezone: "America/Santo_Domingo", primary_color: "#b98752",
-      secondary_color: "#71884a", public_theme: "light", gallery_images: [],
+      secondary_color: "#71884a", public_theme: "light", cancellation_window_hours: 4, gallery_images: [],
     } });
   });
   await page.goto("/client.html?shop=theme-test", { waitUntil: "networkidle" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await expect(page.locator("#cancellationPolicyNotice")).toContainText("4 horas antes");
   const ratio = await page.locator("#bookBtn").evaluate((button) => {
     const rgb = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number).map((n) => {
       const c = n / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;

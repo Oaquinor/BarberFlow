@@ -62,6 +62,7 @@ class Barbershop(BaseModel):
     timezone = Column(String(50), nullable=False, default="America/New_York")
     currency = Column(String(3), nullable=False, default="USD")
     appointment_duration_minutes = Column(Integer, nullable=False, default=30)
+    cancellation_window_hours = Column(Integer, nullable=False, default=0, server_default="0")
 
     # Status
     is_active = Column(Boolean, default=True, nullable=False)

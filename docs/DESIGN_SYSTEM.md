@@ -19,7 +19,7 @@ La experiencia está construida en HTML/CSS/JS estático. Los estilos del panel 
 | `--kf-canvas` | `#f3f0ea` | Fondo claro |
 | `--kf-dark` | `#29251f` | Superficie oscura |
 
-El portal público define tokens homónimos en su propia hoja y aplica variantes de color y tema. El panel de owner contiene tokens globales; antes de añadir modos/temas a otra página, inspeccionar su CSS: no todos los portales consumen un contrato único. Las preferencias guardadas por el negocio son personalización básica, no un editor visual completo.
+El portal público define tokens homónimos en su propia hoja y aplica variantes de color y tema. El panel de owner contiene tokens globales; antes de añadir modos/temas a otra página, inspeccionar su CSS: no todos los portales consumen un contrato único. La vista previa actual refleja los datos del perfil/catálogo disponibles en el panel y calcula el contraste del botón; las preferencias guardadas por el negocio son personalización básica, no un editor visual completo.
 
 ## Criterios de interfaz
 

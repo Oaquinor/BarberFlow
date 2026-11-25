@@ -151,6 +151,7 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
     updated = {
         "name": "KingFlow Downtown", "opening_time": "09:30", "closing_time": "19:00",
         "timezone": "America/New_York", "primary_color": "#AABBCC", "secondary_color": "#DDEEFF",
+        "cancellation_window_hours": 12,
     }
 
     profile = client.get("/api/v1/onboarding/profile", headers=owner_headers)
@@ -164,11 +165,14 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
     assert saved.json()["timezone"] == updated["timezone"]
     assert saved.json()["opening_time"].startswith("09:30")
     assert saved.json()["primary_color"] == updated["primary_color"]
+    assert saved.json()["cancellation_window_hours"] == 12
+    assert test_db.get(Barbershop, shop.id).cancellation_window_hours == 12
     public_profile = client.get(f"/api/v1/public/{shop.slug}")
     assert public_profile.status_code == 200
     assert public_profile.json()["name"] == updated["name"]
     assert public_profile.json()["timezone"] == updated["timezone"]
     assert public_profile.json()["primary_color"] == updated["primary_color"]
+    assert public_profile.json()["cancellation_window_hours"] == 12
 
     audit = test_db.query(AuditLog).filter_by(
         barbershop_id=shop.id, action="business.settings_updated", entity_id=shop.id,
