@@ -1,6 +1,7 @@
 """MySQL integration tests for public waitlist intake and owner follow-up."""
 
 from datetime import date, datetime, time, timedelta
+import re
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -8,8 +9,17 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.models import (
-    AuditLog, BarberAvailability, BarberAvailabilityBlock, Barbershop,
-    BookingWaitlistEntry, Service, Subscription, User,
+    Appointment,
+    AuditLog,
+    BarberAvailability,
+    BarberAvailabilityBlock,
+    Barbershop,
+    BookingWaitlistEntry,
+    BookingWaitlistOffer,
+    NotificationDelivery,
+    Service,
+    Subscription,
+    User,
 )
 from app.utils.datetime import utc_now_naive
 
@@ -133,35 +143,52 @@ def test_public_request_persists_and_owner_can_contact_and_close(
     blocked_start = datetime.combine(preferred_start, time(18))
     short_start = datetime.combine(preferred_start, time(19))
     good_slot = BarberAvailability(
-        barbershop_id=shop.id, barber_id=barber.id,
-        slot_start=good_start, slot_end=good_start + timedelta(minutes=45),
-        is_active=True, is_booked=False,
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=good_start,
+        slot_end=good_start + timedelta(minutes=45),
+        is_active=True,
+        is_booked=False,
     )
     blocked_slot = BarberAvailability(
-        barbershop_id=shop.id, barber_id=barber.id,
-        slot_start=blocked_start, slot_end=blocked_start + timedelta(minutes=45),
-        is_active=True, is_booked=False,
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=blocked_start,
+        slot_end=blocked_start + timedelta(minutes=45),
+        is_active=True,
+        is_booked=False,
     )
     short_slot = BarberAvailability(
-        barbershop_id=shop.id, barber_id=barber.id,
-        slot_start=short_start, slot_end=short_start + timedelta(minutes=20),
-        is_active=True, is_booked=False,
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=short_start,
+        slot_end=short_start + timedelta(minutes=20),
+        is_active=True,
+        is_booked=False,
     )
     test_db.add_all([good_slot, blocked_slot, short_slot])
-    test_db.add(BarberAvailabilityBlock(
-        barbershop_id=shop.id, barber_id=barber.id,
-        starts_at=blocked_start, ends_at=blocked_start + timedelta(minutes=45),
-        reason="Pausa",
-    ))
+    test_db.add(
+        BarberAvailabilityBlock(
+            barbershop_id=shop.id,
+            barber_id=barber.id,
+            starts_at=blocked_start,
+            ends_at=blocked_start + timedelta(minutes=45),
+            reason="Pausa",
+        )
+    )
     test_db.commit()
     matches = client.get(
-        f"/api/v1/owner/waitlist/{entry.id}/matches", headers=headers,
+        f"/api/v1/owner/waitlist/{entry.id}/matches",
+        headers=headers,
     )
     assert matches.status_code == 200
     assert matches.json()["service_name"] == service.name
     assert [item["availability_id"] for item in matches.json()["items"]] == [good_slot.id]
     assert matches.json()["items"][0]["barber_name"] == barber.full_name
-    assert f"service_id={service.id}&barber_id={barber.id}" in matches.json()["items"][0]["booking_url"]
+    assert (
+        f"service_id={service.id}&barber_id={barber.id}"
+        in matches.json()["items"][0]["booking_url"]
+    )
 
     contacted = client.put(
         f"/api/v1/owner/waitlist/{entry.id}/status",
@@ -216,9 +243,13 @@ def test_waitlist_rejects_foreign_resources_and_isolates_tenant_management(
 
     assert client.get("/api/v1/owner/waitlist").status_code == 401
     assert client.get("/api/v1/owner/waitlist", headers=_headers(other_owner)).json()["items"] == []
-    assert client.get(
-        f"/api/v1/owner/waitlist/{entry.id}/matches", headers=_headers(other_owner),
-    ).status_code == 404
+    assert (
+        client.get(
+            f"/api/v1/owner/waitlist/{entry.id}/matches",
+            headers=_headers(other_owner),
+        ).status_code
+        == 404
+    )
     cross_tenant_update = client.put(
         f"/api/v1/owner/waitlist/{entry.id}/status",
         headers=_headers(other_owner),
@@ -251,3 +282,156 @@ def test_waitlist_validates_date_range_and_status(client: TestClient, test_db: S
     )
     assert invalid_status.status_code == 422
 
+
+def test_waitlist_offer_is_delivered_and_acceptance_books_once_atomically(
+    client: TestClient,
+    test_db: Session,
+):
+    shop, owner, barber, service = _create_shop(test_db, "offer")
+    request_payload = {
+        "client_name": "Cliente Oferta",
+        "phone": "8095554789",
+        "service_id": service.id,
+        "barber_id": barber.id,
+        "idempotency_key": str(uuid4()),
+    }
+    assert (
+        client.post(
+            f"/api/v1/public/{shop.slug}/waitlist",
+            json=request_payload,
+        ).status_code
+        == 202
+    )
+    entry = test_db.query(BookingWaitlistEntry).filter_by(barbershop_id=shop.id).one()
+    start = utc_now_naive() + timedelta(days=5)
+    start = start.replace(second=0, microsecond=0)
+    slot = BarberAvailability(
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=start,
+        slot_end=start + timedelta(minutes=service.duration_minutes),
+        is_active=True,
+        is_booked=False,
+    )
+    test_db.add(slot)
+    test_db.commit()
+
+    created = client.post(
+        f"/api/v1/owner/waitlist/{entry.id}/offers",
+        headers=_headers(owner),
+        json={"availability_id": slot.id, "expires_in_minutes": 90},
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["delivery_queued"] is True
+    assert test_db.get(BookingWaitlistEntry, entry.id).status == "contacted"
+    assert (
+        test_db.query(AuditLog)
+        .filter_by(
+            action="booking.waitlist_offer_created",
+            entity_id=created.json()["id"],
+            barbershop_id=shop.id,
+        )
+        .count()
+        == 1
+    )
+    delivery = (
+        test_db.query(NotificationDelivery)
+        .filter_by(
+            barbershop_id=shop.id,
+            event_type="waitlist_offer",
+        )
+        .one()
+    )
+    assert delivery.status == "pending"
+    token_match = re.search(r"waitlist_offer=([A-Za-z0-9_-]+)", delivery.body)
+    assert token_match
+    token = token_match.group(1)
+    offer = test_db.query(BookingWaitlistOffer).filter_by(barbershop_id=shop.id).one()
+    assert token not in offer.token_hash
+    assert offer.expires_at > utc_now_naive()
+
+    preview = client.get(f"/api/v1/public/{shop.slug}/waitlist-offers/{token}")
+    assert preview.status_code == 200
+    assert preview.headers["cache-control"] == "no-store"
+    assert preview.json()["status"] == "pending"
+    assert preview.json()["service_name"] == service.name
+    assert client.get(f"/api/v1/public/another-shop/waitlist-offers/{token}").status_code == 404
+
+    accepted = client.post(
+        f"/api/v1/public/{shop.slug}/waitlist-offers/{token}/accept",
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.headers["cache-control"] == "no-store"
+    result = accepted.json()
+    assert result["accepted"] is True
+    assert result["appointment_id"]
+    assert "track_token=" in result["tracking_url"]
+    appointment = test_db.get(Appointment, result["appointment_id"])
+    assert appointment.barbershop_id == shop.id
+    assert appointment.client.full_name == "Cliente Oferta"
+    assert appointment.scheduled_time == start
+    assert appointment.status == "pending"
+    assert test_db.get(BarberAvailability, slot.id).is_booked is True
+    assert test_db.get(BookingWaitlistOffer, offer.id).status == "accepted"
+    assert test_db.get(BookingWaitlistOffer, offer.id).appointment_id == appointment.id
+    assert test_db.get(BookingWaitlistEntry, entry.id).status == "closed"
+
+    retry = client.post(
+        f"/api/v1/public/{shop.slug}/waitlist-offers/{token}/accept",
+    )
+    assert retry.status_code == 200
+    assert retry.json()["already_accepted"] is True
+    assert retry.json()["appointment_id"] == appointment.id
+    assert test_db.query(Appointment).filter_by(barbershop_id=shop.id).count() == 1
+
+
+def test_expired_waitlist_offer_cannot_claim_its_slot(client: TestClient, test_db: Session):
+    shop, owner, barber, service = _create_shop(test_db, "expired")
+    assert (
+        client.post(
+            f"/api/v1/public/{shop.slug}/waitlist",
+            json={
+                "client_name": "Cliente Test",
+                "phone": "8095554991",
+                "service_id": service.id,
+                "idempotency_key": str(uuid4()),
+            },
+        ).status_code
+        == 202
+    )
+    entry = test_db.query(BookingWaitlistEntry).filter_by(barbershop_id=shop.id).one()
+    start = (utc_now_naive() + timedelta(days=3)).replace(second=0, microsecond=0)
+    slot = BarberAvailability(
+        barbershop_id=shop.id,
+        barber_id=barber.id,
+        slot_start=start,
+        slot_end=start + timedelta(minutes=service.duration_minutes),
+        is_active=True,
+        is_booked=False,
+    )
+    test_db.add(slot)
+    test_db.commit()
+    created = client.post(
+        f"/api/v1/owner/waitlist/{entry.id}/offers",
+        headers=_headers(owner),
+        json={"availability_id": slot.id},
+    )
+    assert created.status_code == 201, created.text
+    offer = test_db.query(BookingWaitlistOffer).filter_by(barbershop_id=shop.id).one()
+    offer.expires_at = utc_now_naive() - timedelta(seconds=1)
+    test_db.commit()
+    delivery = (
+        test_db.query(NotificationDelivery)
+        .filter_by(
+            barbershop_id=shop.id,
+            event_type="waitlist_offer",
+        )
+        .one()
+    )
+    token = re.search(r"waitlist_offer=([A-Za-z0-9_-]+)", delivery.body).group(1)
+    response = client.post(
+        f"/api/v1/public/{shop.slug}/waitlist-offers/{token}/accept",
+    )
+    assert response.status_code == 410
+    assert test_db.get(BookingWaitlistOffer, offer.id).status == "expired"
+    assert test_db.get(BarberAvailability, slot.id).is_booked is False

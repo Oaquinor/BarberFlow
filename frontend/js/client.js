@@ -8,6 +8,7 @@ let serviceCatalog = [];
 let publicFavorites = new Map();
 let slotsRequestSequence = 0;
 let waitlistRequestKey = null;
+let waitlistOfferToken = null;
 
 function q(name) {
   return new URLSearchParams(window.location.search).get(name);
@@ -958,6 +959,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   showPanel('book');
   await loadShop();
 
+  waitlistOfferToken = q('waitlist_offer');
+  if (waitlistOfferToken && shopSlug) await loadWaitlistOffer();
+
   if (sessionStorage.getItem('token')) {
     try {
       const response = await window.KingFlowAuth.fetch(`${API_BASE}/auth/me`);
@@ -979,5 +983,53 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (trackingToken) {
     showPanel('track');
     await trackAppointments();
+  }
+});
+
+async function loadWaitlistOffer() {
+  const panel = document.getElementById('waitlistOfferPanel');
+  const details = document.getElementById('waitlistOfferDetails');
+  const button = document.getElementById('acceptWaitlistOfferBtn');
+  if (!panel || !details || !button) return;
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  try {
+    const response = await fetch(`${API_BASE}/public/${encodeURIComponent(shopSlug)}/waitlist-offers/${encodeURIComponent(waitlistOfferToken)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'No se pudo consultar la oferta.');
+    const date = new Date(data.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone, dateStyle: 'full', timeStyle: 'short' });
+    const status = data.status === 'pending' ? `Disponible hasta ${new Date(data.expires_at).toLocaleString('es-DO', { timeZone: shopTimezone })}` : 'Esta oferta ya no está vigente.';
+    details.innerHTML = `<p><strong>${escapeHtml(data.barbershop_name)}</strong></p><p>${escapeHtml(data.service_name)} · ${escapeHtml(data.barber_name)}</p><p>${escapeHtml(date)}</p><p>${escapeHtml(status)}</p>`;
+    button.hidden = data.status !== 'pending';
+  } catch (error) {
+    details.textContent = error.message || 'No se pudo consultar la oferta.';
+  }
+}
+
+document.getElementById('acceptWaitlistOfferBtn')?.addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  const result = document.getElementById('waitlistOfferResult');
+  if (!waitlistOfferToken || !shopSlug || !result) return;
+  button.disabled = true;
+  result.textContent = 'Confirmando y reservando el horario…';
+  try {
+    const response = await fetch(`${API_BASE}/public/${encodeURIComponent(shopSlug)}/waitlist-offers/${encodeURIComponent(waitlistOfferToken)}/accept`, { method: 'POST' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'No se pudo aceptar la oferta.');
+    button.hidden = true;
+    const trackingUrl = data.tracking_url ? trustedTrackingUrl(data.tracking_url) : null;
+    result.textContent = 'El horario quedó reservado. ';
+    if (trackingUrl) {
+      const link = document.createElement('a');
+      link.href = trackingUrl.href;
+      link.textContent = 'Consultar mi cita';
+      result.append(link);
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete('waitlist_offer');
+    window.history.replaceState({}, '', url);
+  } catch (error) {
+    result.textContent = error.message || 'No se pudo aceptar la oferta.';
+    button.disabled = false;
   }
 });

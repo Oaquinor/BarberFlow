@@ -68,6 +68,8 @@ Las filas de fotos guardan categoría (`reference`/`result`), MIME normalizado, 
 
 La migración `043_barber_live_state` agrega `barber_live_states`, con una fila por barbero y estado explícito disponible/descanso. La tabla es una proyección operacional, no sustituye el calendario de citas ni sus estados. El cambio queda auditado; el descanso no se permite durante atención y los endpoints de inicio de servicio validan ese estado.
 
+La migración `044_booking_waitlist_offers` registra ofertas manuales de lista de espera por barbería, solicitud y turno. Conserva solo el hash del token público, vencimiento, estado y cita aceptada; no bloquea el turno al emitir la oferta. El endpoint de aceptación vuelve a validar disponibilidad y marca el slot reservado junto con la creación de la cita en una transacción MySQL. Cerrar una solicitud o aceptar una oferta cancela las otras ofertas pendientes relacionadas.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.
@@ -287,6 +289,7 @@ La cadena vigente termina en `025_perf_day_unique` y todas las conexiones de la 
 | `025_perf_day_unique` | Garantiza una fila diaria por barbería/barbero/fecha; aborta sin borrar ni fusionar datos si detecta duplicados existentes |
 | `026_users_client_listing` | Índice compuesto para listados y conteos de usuarios por barbería, rol y estado de eliminación |
 | `027_appointment_monthly_usage` | Índice compuesto de barbería y fecha de creación para aplicar y mostrar los límites mensuales de citas |
+| `044_booking_waitlist_offers` | Ofertas tenant-scoped de lista de espera con turno, hash de token, estado, vencimiento y cita aceptada; índices de pendientes por solicitud y horario |
 
 `support_tickets` conserva el mensaje y los datos de contacto para que el equipo los consulte aunque falle SMTP. `notification_sent` indica si se notificó por correo; los cambios de estado requieren `super_admin` y se guardan en auditoría.
 

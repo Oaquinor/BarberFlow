@@ -58,7 +58,7 @@ test('owner waitlist renders escaped tenant data and safe WhatsApp links', async
   assert.equal(nodes.ownerWaitlistResult.textContent, '1 solicitud(es) · 1 en este filtro');
 });
 
-test('owner can offer a matching open slot through WhatsApp with a preselected booking link', async () => {
+test('owner matching slot shows the expiring-offer action', async () => {
   const start = mainScript.indexOf("document.getElementById('ownerWaitlistBody')?.addEventListener");
   const end = mainScript.indexOf('\nlet ownerInventoryProducts = [];', start);
   const listenerSource = mainScript.slice(start, end);
@@ -99,9 +99,39 @@ test('owner can offer a matching open slot through WhatsApp with a preselected b
 
   assert.deepEqual(calls, ['/owner/waitlist/17/matches']);
   assert.match(result.innerHTML, /El turno no queda reservado/);
-  assert.match(result.innerHTML, /Ofrecer horario por WhatsApp/);
-  assert.match(result.innerHTML, /service_id%3D4%26barber_id%3D8/);
+  assert.match(result.innerHTML, /Enviar oferta con vencimiento/);
+  assert.match(result.innerHTML, /owner-waitlist-offer/);
   assert.equal(button.disabled, false);
+});
+
+test('owner queues the selected slot offer through the WhatsApp outbox', async () => {
+  const start = mainScript.indexOf("document.getElementById('ownerWaitlistBody')?.addEventListener");
+  const end = mainScript.indexOf('\nlet ownerInventoryProducts = [];', start);
+  const listenerSource = mainScript.slice(start, end);
+  let clickHandler;
+  const result = { textContent: '' };
+  const offerButton = { dataset: { entryId: '17', availabilityId: '91' }, disabled: false };
+  const calls = [];
+  const sandbox = {
+    Date,
+    barbershopProfile: { timezone: 'America/Santo_Domingo' },
+    document: {
+      getElementById: (id) => id === 'ownerWaitlistBody'
+        ? { addEventListener(_type, handler) { clickHandler = handler; } }
+        : id === 'ownerWaitlistResult' ? result : null,
+    },
+    ownerFetch: async (url, options) => {
+      calls.push([url, options]);
+      return { expires_at: '2026-12-01T20:00:00Z' };
+    },
+    loadOwnerWaitlist: async () => {},
+  };
+  vm.runInNewContext(listenerSource, sandbox);
+  await clickHandler({ target: { closest: (selector) => selector === '.owner-waitlist-offer' ? offerButton : null } });
+  assert.equal(calls[0][0], '/owner/waitlist/17/offers');
+  assert.deepEqual(JSON.parse(calls[0][1].body), { availability_id: 91, expires_in_minutes: 120 });
+  assert.match(result.textContent, /cola de WhatsApp/);
+  assert.equal(offerButton.disabled, true);
 });
 
 test('waitlist requests are not fetched for other dashboard roles', async () => {

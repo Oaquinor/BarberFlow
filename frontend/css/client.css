@@ -89,3 +89,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 [hidden]{display:none!important}
  .header-nav .account-link,.booking-account-link{color:var(--selection);font-weight:750;text-decoration:underline;text-underline-offset:3px}.header-nav .account-link{display:inline-flex;align-items:center;white-space:nowrap}.booking-account-link{display:inline-block;margin-top:5px}
+
+.waitlist-offer-panel{width:min(680px,calc(100% - 40px));margin:30px auto;padding:clamp(22px,5vw,42px);border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);box-shadow:0 18px 55px #1112}.waitlist-offer-panel h2{margin:5px 0 16px;font:500 clamp(30px,5vw,46px)/1.08 var(--font-display);letter-spacing:-.04em}.waitlist-offer-panel [role=status] p{color:var(--copy);line-height:1.65}.waitlist-offer-panel .book-button{margin-top:12px}

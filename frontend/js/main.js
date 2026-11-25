@@ -1605,16 +1605,21 @@ async function loadOwnerWaitlist() {
             const dateRange = [entry.preferred_date_start, entry.preferred_date_end].filter(Boolean);
             const dateLabel = dateRange.length === 2 ? `${dateRange[0]} – ${dateRange[1]}` : dateRange[0] || 'Flexible';
             const statusLabel = { new: 'Pendiente', contacted: 'Contactado', closed: 'Cerrado' }[entry.status] || 'Desconocido';
+            const offerLabel = entry.offer
+                ? entry.offer.status === 'pending'
+                    ? `Oferta activa hasta ${new Date(entry.offer.expires_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })}`
+                    : 'La oferta anterior venció'
+                : '';
             const nextStatus = entry.status === 'new' ? 'contacted' : entry.status === 'contacted' ? 'closed' : 'new';
             const actionLabel = nextStatus === 'contacted' ? 'Marcar contactado' : nextStatus === 'closed' ? 'Cerrar solicitud' : 'Reabrir';
-            const matchesButton = entry.status === 'new'
+            const matchesButton = ['new', 'contacted'].includes(entry.status)
                 ? `<button class="btn-secondary owner-waitlist-matches" data-id="${Number(entry.id)}" type="button">Buscar horarios</button><div class="owner-waitlist-match-results" id="ownerWaitlistMatches${Number(entry.id)}" role="status" aria-live="polite"></div>`
                 : '';
             return `<tr><td data-label="Cliente">${escapeHtml(entry.client_name)}<br><a href="tel:${phone}">${escapeHtml(entry.phone)}</a></td>
                 <td data-label="Servicio">${escapeHtml(entry.service_name)}</td><td data-label="Barbero">${escapeHtml(entry.barber_name || 'Cualquiera')}</td>
                 <td data-label="Fechas preferidas">${escapeHtml(dateLabel)}</td><td data-label="Detalle">${escapeHtml(entry.notes || '—')}</td>
                 <td data-label="Recibida">${escapeHtml(new Date(entry.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
-                <td data-label="Estado">${escapeHtml(statusLabel)}</td><td data-label="Acciones">${matchesButton}${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
+                <td data-label="Estado">${escapeHtml(statusLabel)}${offerLabel ? `<br><small>${escapeHtml(offerLabel)}</small>` : ''}</td><td data-label="Acciones">${matchesButton}${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
                 <button class="btn-secondary owner-waitlist-status" data-id="${Number(entry.id)}" data-next-status="${nextStatus}" type="button">${actionLabel}</button></td></tr>`;
         }).join('');
         result.textContent = items.length ? `${items.length} solicitud(es) · ${Number(data.total)} en este filtro` : 'No hay solicitudes para mostrar.';
@@ -1636,22 +1641,39 @@ document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (e
         result.textContent = 'Buscando horarios disponibles…';
         try {
             const data = await ownerFetch(`/owner/waitlist/${id}/matches`);
-            const phone = matchesButton.closest('tr')?.querySelector('a[href^="tel:"]')?.getAttribute('href')?.slice(4) || '';
             const items = data.items || [];
             if (!items.length) {
                 result.textContent = 'No hay turnos compatibles disponibles por ahora.';
             } else {
                 result.innerHTML = `<p>${items.length} horario(s) compatibles. El turno no queda reservado y podría ocuparse antes de confirmar.</p>${items.map(item => {
                     const when = new Date(item.slot_start).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' });
-                    const message = `Hola, ${data.service_name} tiene disponibilidad ${when} con ${item.barber_name}. Puedes revisar y reservar aquí: ${item.booking_url}`;
-                    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-                    return `<p>${escapeHtml(when)} · ${escapeHtml(item.barber_name || 'Barbero')} <a class="btn-secondary" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">Ofrecer horario por WhatsApp</a></p>`;
+                    return `<p>${escapeHtml(when)} · ${escapeHtml(item.barber_name || 'Barbero')} <button class="btn-secondary owner-waitlist-offer" data-entry-id="${id}" data-availability-id="${Number(item.availability_id)}" type="button">Enviar oferta con vencimiento</button></p>`;
                 }).join('')}`;
             }
         } catch (error) {
             result.textContent = error.message || 'No se pudieron buscar horarios compatibles.';
         } finally {
             matchesButton.disabled = false;
+        }
+        return;
+    }
+    const offerButton = event.target.closest('.owner-waitlist-offer');
+    if (offerButton) {
+        const entryId = Number(offerButton.dataset.entryId);
+        const availabilityId = Number(offerButton.dataset.availabilityId);
+        if (!Number.isInteger(entryId) || entryId <= 0 || !Number.isInteger(availabilityId) || availabilityId <= 0) return;
+        offerButton.disabled = true;
+        try {
+            const data = await ownerFetch(`/owner/waitlist/${entryId}/offers`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ availability_id: availabilityId, expires_in_minutes: 120 }),
+            });
+            const expires = new Date(data.expires_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' });
+            await loadOwnerWaitlist();
+            document.getElementById('ownerWaitlistResult').textContent = `Oferta añadida a la cola de WhatsApp. Vence ${expires}.`;
+        } catch (error) {
+            offerButton.disabled = false;
+            document.getElementById('ownerWaitlistResult').textContent = error.message || 'No se pudo enviar la oferta.';
         }
         return;
     }

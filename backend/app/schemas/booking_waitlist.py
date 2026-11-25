@@ -51,3 +51,8 @@ class PublicWaitlistRequest(BaseModel):
 
 class WaitlistStatusUpdate(BaseModel):
     status: Literal["new", "contacted", "closed"]
+
+
+class WaitlistOfferCreate(BaseModel):
+    availability_id: int = Field(gt=0)
+    expires_in_minutes: int = Field(default=120, ge=15, le=1440)

@@ -2,9 +2,12 @@
 
 from datetime import datetime, time, timedelta, timezone as dt_timezone
 import hashlib
+import secrets
 from typing import Optional
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,31 +15,73 @@ from app.core import get_db
 from app.core.constants.enums import MAX_ADVANCE_BOOKING_DAYS
 from app.core.constants.enums import MAX_SERVICE_DURATION_MINUTES
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
+from app.models.booking_waitlist_offer import BookingWaitlistOffer
 from app.models.barbershop import Barbershop
 from app.models.appointment import Appointment
 from app.models.barber_availability import BarberAvailability
 from app.models.barber_availability_block import BarberAvailabilityBlock
 from app.models.service import Service
 from app.models.user import User
-from app.schemas.booking_waitlist import PublicWaitlistRequest, WaitlistStatusUpdate
+from app.schemas.booking_waitlist import (
+    PublicWaitlistRequest,
+    WaitlistOfferCreate,
+    WaitlistStatusUpdate,
+)
+from app.core.security.password import hash_password
+from app.services.notification_outbox import enqueue_delivery
+from app.services.subscription_service import count_monthly_appointments
 from app.utils.datetime import utc_now_naive
 from app.api.v1.endpoints.common import (
     _audit,
     _get_current_user,
     _get_timezone,
     _normalize_phone,
+    _cash_register_closed_for_user,
     _require_active_subscription,
     _utc_aware,
 )
 from app.api.v1.endpoints.platform import (
     _build_client_link,
     _consume_public_booking_quota,
+    _consume_public_token_quota,
     _get_public_shop,
+    _notify_appointment_staff,
     _public_booking_client_ip,
+    _queue_appointment_email,
+    _queue_appointment_whatsapp,
     _slot_available_for_duration,
+    PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT,
 )
 
 router = APIRouter(tags=["booking-waitlist"])
+
+
+def _offer_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _waitlist_owner(
+    db: Session,
+    authorization: Optional[str],
+    owner: User | None = None,
+) -> tuple[User, Barbershop]:
+    owner = owner or _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(
+            status_code=403, detail="Solo el propietario puede gestionar la lista de espera"
+        )
+    shop = (
+        db.query(Barbershop)
+        .filter(
+            Barbershop.id == owner.barbershop_id,
+            Barbershop.is_active == True,
+            Barbershop.is_deleted == False,
+        )
+        .first()
+    )
+    if not shop:
+        raise HTTPException(status_code=403, detail="Barbería inactiva")
+    return owner, shop
 
 
 @router.post("/public/{slug}/waitlist", status_code=202)
@@ -198,6 +243,24 @@ def owner_list_waitlist(
         .limit(limit)
         .all()
     )
+    active_offers = (
+        db.query(BookingWaitlistOffer)
+        .filter(
+            BookingWaitlistOffer.waitlist_entry_id.in_([row.id for row in rows] or [-1]),
+            BookingWaitlistOffer.is_deleted == False,
+            BookingWaitlistOffer.status == "pending",
+        )
+        .order_by(BookingWaitlistOffer.created_at.desc())
+        .all()
+    )
+    offers_by_entry = {}
+    now = utc_now_naive()
+    for offer in active_offers:
+        if offer.waitlist_entry_id not in offers_by_entry:
+            offers_by_entry[offer.waitlist_entry_id] = {
+                "status": "expired" if offer.expires_at <= now else offer.status,
+                "expires_at": offer.expires_at,
+            }
     return {
         "items": [
             {
@@ -213,6 +276,7 @@ def owner_list_waitlist(
                 "status": entry.status,
                 "contacted_at": entry.contacted_at,
                 "created_at": entry.created_at,
+                "offer": offers_by_entry.get(entry.id),
             }
             for entry in rows
         ],
@@ -234,28 +298,40 @@ def owner_waitlist_matches(
         raise HTTPException(
             status_code=403, detail="Solo el propietario puede consultar coincidencias"
         )
-    shop = db.query(Barbershop).filter(
-        Barbershop.id == owner.barbershop_id,
-        Barbershop.is_active == True,
-        Barbershop.is_deleted == False,
-    ).first()
+    shop = (
+        db.query(Barbershop)
+        .filter(
+            Barbershop.id == owner.barbershop_id,
+            Barbershop.is_active == True,
+            Barbershop.is_deleted == False,
+        )
+        .first()
+    )
     if not shop:
         raise HTTPException(status_code=403, detail="Barbería inactiva")
-    entry = db.query(BookingWaitlistEntry).filter(
-        BookingWaitlistEntry.id == entry_id,
-        BookingWaitlistEntry.barbershop_id == shop.id,
-        BookingWaitlistEntry.is_deleted == False,
-    ).first()
+    entry = (
+        db.query(BookingWaitlistEntry)
+        .filter(
+            BookingWaitlistEntry.id == entry_id,
+            BookingWaitlistEntry.barbershop_id == shop.id,
+            BookingWaitlistEntry.is_deleted == False,
+        )
+        .first()
+    )
     if not entry:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
-    if entry.status != "new":
+    if entry.status not in {"new", "contacted"}:
         raise HTTPException(status_code=409, detail="La solicitud ya no está pendiente")
-    service = db.query(Service).filter(
-        Service.id == entry.service_id,
-        Service.barbershop_id == shop.id,
-        Service.is_active == True,
-        Service.is_deleted == False,
-    ).first()
+    service = (
+        db.query(Service)
+        .filter(
+            Service.id == entry.service_id,
+            Service.barbershop_id == shop.id,
+            Service.is_active == True,
+            Service.is_deleted == False,
+        )
+        .first()
+    )
     if not service:
         return {"items": [], "service_name": entry.service_name_snapshot}
 
@@ -284,28 +360,39 @@ def owner_waitlist_matches(
     )
     if entry.barber_id:
         slots_query = slots_query.filter(BarberAvailability.barber_id == entry.barber_id)
-    slots = slots_query.order_by(BarberAvailability.slot_start, BarberAvailability.id).limit(300).all()
+    slots = (
+        slots_query.order_by(BarberAvailability.slot_start, BarberAvailability.id).limit(300).all()
+    )
     if not slots:
         return {"items": [], "service_name": service.name}
 
     barber_ids = {slot.barber_id for slot in slots}
     first_start = min(slot.slot_start for slot in slots)
     last_end = max(slot.slot_end for slot in slots)
-    appointments = db.query(Appointment).filter(
-        Appointment.barbershop_id == shop.id,
-        Appointment.barber_id.in_(barber_ids),
-        Appointment.status.in_(("pending", "confirmed", "in_progress")),
-        Appointment.is_deleted == False,
-        Appointment.scheduled_time >= first_start - timedelta(minutes=MAX_SERVICE_DURATION_MINUTES),
-        Appointment.scheduled_time < last_end,
-    ).all()
-    blocks = db.query(BarberAvailabilityBlock).filter(
-        BarberAvailabilityBlock.barbershop_id == shop.id,
-        BarberAvailabilityBlock.barber_id.in_(barber_ids),
-        BarberAvailabilityBlock.is_deleted == False,
-        BarberAvailabilityBlock.starts_at < last_end,
-        BarberAvailabilityBlock.ends_at > first_start,
-    ).all()
+    appointments = (
+        db.query(Appointment)
+        .filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.barber_id.in_(barber_ids),
+            Appointment.status.in_(("pending", "confirmed", "in_progress")),
+            Appointment.is_deleted == False,
+            Appointment.scheduled_time
+            >= first_start - timedelta(minutes=MAX_SERVICE_DURATION_MINUTES),
+            Appointment.scheduled_time < last_end,
+        )
+        .all()
+    )
+    blocks = (
+        db.query(BarberAvailabilityBlock)
+        .filter(
+            BarberAvailabilityBlock.barbershop_id == shop.id,
+            BarberAvailabilityBlock.barber_id.in_(barber_ids),
+            BarberAvailabilityBlock.is_deleted == False,
+            BarberAvailabilityBlock.starts_at < last_end,
+            BarberAvailabilityBlock.ends_at > first_start,
+        )
+        .all()
+    )
     appointments_by_barber: dict[int, list[Appointment]] = {}
     blocks_by_barber: dict[int, list[BarberAvailabilityBlock]] = {}
     for appointment in appointments:
@@ -326,18 +413,550 @@ def owner_waitlist_matches(
             service.duration_minutes,
         ):
             continue
-        matches.append({
-            "availability_id": slot.id,
-            "slot_start": _utc_aware(slot.slot_start),
-            "barber_id": slot.barber_id,
-            "barber_name": barbers.get(slot.barber_id),
-            "booking_url": (
-                f"{booking_base}&service_id={service.id}&barber_id={slot.barber_id}"
-            ),
-        })
+        matches.append(
+            {
+                "availability_id": slot.id,
+                "slot_start": _utc_aware(slot.slot_start),
+                "barber_id": slot.barber_id,
+                "barber_name": barbers.get(slot.barber_id),
+                "booking_url": (
+                    f"{booking_base}&service_id={service.id}&barber_id={slot.barber_id}"
+                ),
+            }
+        )
         if len(matches) == 8:
             break
     return {"items": matches, "service_name": service.name}
+
+
+@router.post("/owner/waitlist/{entry_id}/offers", status_code=201)
+def owner_create_waitlist_offer(
+    entry_id: int,
+    data: WaitlistOfferCreate,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Issue a private, expiring offer and queue its WhatsApp delivery."""
+    owner = _get_current_user(db, authorization)
+    owner, shop = _waitlist_owner(db, authorization, owner)
+    _require_active_subscription(db, shop)
+    entry = (
+        db.query(BookingWaitlistEntry)
+        .filter(
+            BookingWaitlistEntry.id == entry_id,
+            BookingWaitlistEntry.barbershop_id == shop.id,
+            BookingWaitlistEntry.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if entry.status not in {"new", "contacted"}:
+        raise HTTPException(status_code=409, detail="La solicitud está cerrada")
+    now = utc_now_naive()
+    slot = (
+        db.query(BarberAvailability)
+        .filter(
+            BarberAvailability.id == data.availability_id,
+            BarberAvailability.barbershop_id == shop.id,
+            BarberAvailability.is_active == True,
+            BarberAvailability.is_booked == False,
+            BarberAvailability.is_deleted == False,
+            BarberAvailability.slot_start >= now,
+        )
+        .with_for_update()
+        .first()
+    )
+    service = (
+        db.query(Service)
+        .filter(
+            Service.id == entry.service_id,
+            Service.barbershop_id == shop.id,
+            Service.is_active == True,
+            Service.is_deleted == False,
+        )
+        .first()
+    )
+    if not slot or not service or (entry.barber_id and entry.barber_id != slot.barber_id):
+        raise HTTPException(
+            status_code=409, detail="El turno ya no está disponible para esta solicitud"
+        )
+    if slot.slot_end - slot.slot_start < timedelta(minutes=service.duration_minutes):
+        raise HTTPException(
+            status_code=409, detail="El turno no tiene duración suficiente para el servicio"
+        )
+    local_today = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+    local_slot_date = _utc_aware(slot.slot_start).astimezone(_get_timezone(shop)).date()
+    if (
+        slot.slot_start > now + timedelta(days=MAX_ADVANCE_BOOKING_DAYS)
+        or local_slot_date < (entry.preferred_date_start or local_today)
+        or local_slot_date
+        > (entry.preferred_date_end or local_today + timedelta(days=MAX_ADVANCE_BOOKING_DAYS))
+    ):
+        raise HTTPException(
+            status_code=409, detail="El turno no coincide con las fechas solicitadas"
+        )
+    active_appointments = (
+        db.query(Appointment)
+        .filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.barber_id == slot.barber_id,
+            Appointment.status.in_(("pending", "confirmed", "in_progress")),
+            Appointment.is_deleted == False,
+        )
+        .with_for_update()
+        .all()
+    )
+    blocks = (
+        db.query(BarberAvailabilityBlock)
+        .filter(
+            BarberAvailabilityBlock.barbershop_id == shop.id,
+            BarberAvailabilityBlock.barber_id == slot.barber_id,
+            BarberAvailabilityBlock.is_deleted == False,
+            BarberAvailabilityBlock.starts_at < slot.slot_end,
+            BarberAvailabilityBlock.ends_at > slot.slot_start,
+        )
+        .all()
+    )
+    if not _slot_available_for_duration(
+        slot, blocks, active_appointments, service.duration_minutes
+    ):
+        raise HTTPException(status_code=409, detail="El turno dejó de estar disponible")
+
+    existing_offers = (
+        db.query(BookingWaitlistOffer)
+        .filter(
+            BookingWaitlistOffer.barbershop_id == shop.id,
+            BookingWaitlistOffer.availability_id == slot.id,
+            BookingWaitlistOffer.status == "pending",
+            BookingWaitlistOffer.is_deleted == False,
+        )
+        .with_for_update()
+        .all()
+    )
+    for old_offer in existing_offers:
+        if old_offer.expires_at > now:
+            raise HTTPException(status_code=409, detail="Este turno ya tiene una oferta vigente")
+        old_offer.status = "expired"
+
+    token = secrets.token_urlsafe(32)
+    expires_at = now + timedelta(minutes=data.expires_in_minutes)
+    local_expiry = _utc_aware(expires_at).astimezone(_get_timezone(shop))
+    offer = BookingWaitlistOffer(
+        barbershop_id=shop.id,
+        waitlist_entry_id=entry.id,
+        availability_id=slot.id,
+        token_hash=_offer_hash(token),
+        status="pending",
+        expires_at=expires_at,
+    )
+    db.add(offer)
+    db.flush()
+    entry.status = "contacted"
+    entry.contacted_at = now
+    local_start = _utc_aware(slot.slot_start).astimezone(_get_timezone(shop))
+    offer_url = f"{_build_client_link(shop.slug)}&{urlencode({'waitlist_offer': token})}"
+    message = (
+        f"💈 {shop.name}: Hola {entry.client_name}, se liberó un horario para {service.name}: "
+        f"{local_start.strftime('%d/%m/%Y %H:%M')} con {slot.barber.full_name if slot.barber else 'tu barbero'}. "
+        f"Puedes aceptarlo hasta {local_expiry.strftime('%d/%m/%Y %H:%M')} "
+        f"(hora de la barbería) aquí: {offer_url}. "
+        "El horario se confirma solo cuando completes la aceptación."
+    )
+    enqueue_delivery(
+        db,
+        barbershop_id=shop.id,
+        dedupe_key=f"waitlist-offer:{_offer_hash(token)}:whatsapp",
+        channel="whatsapp",
+        event_type="waitlist_offer",
+        recipient=entry.phone,
+        body=message,
+    )
+    _audit(
+        db,
+        owner,
+        "booking.waitlist_offer_created",
+        "booking_waitlist_offer",
+        offer.id,
+        shop.id,
+        {"entry_id": entry.id, "availability_id": slot.id, "expires_at": expires_at.isoformat()},
+    )
+    db.commit()
+    return {
+        "id": offer.id,
+        "status": offer.status,
+        "expires_at": expires_at,
+        "delivery_queued": True,
+    }
+
+
+@router.get("/public/{slug}/waitlist-offers/{token}")
+def public_waitlist_offer_preview(
+    slug: str,
+    token: str,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Return only the offer details needed by its token holder."""
+    response.headers["Cache-Control"] = "no-store"
+    shop = _get_public_shop(db, slug)
+    if not shop or len(token) < 32 or len(token) > 128:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    offer = (
+        db.query(BookingWaitlistOffer)
+        .filter(
+            BookingWaitlistOffer.barbershop_id == shop.id,
+            BookingWaitlistOffer.token_hash == _offer_hash(token),
+            BookingWaitlistOffer.is_deleted == False,
+        )
+        .first()
+    )
+    if not offer:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    if offer.status == "pending" and offer.expires_at <= utc_now_naive():
+        offer.status = "expired"
+        db.commit()
+    entry = (
+        db.query(BookingWaitlistEntry)
+        .filter(
+            BookingWaitlistEntry.id == offer.waitlist_entry_id,
+            BookingWaitlistEntry.barbershop_id == shop.id,
+            BookingWaitlistEntry.is_deleted == False,
+        )
+        .first()
+    )
+    slot = (
+        db.query(BarberAvailability)
+        .filter(
+            BarberAvailability.id == offer.availability_id,
+            BarberAvailability.barbershop_id == shop.id,
+            BarberAvailability.is_deleted == False,
+        )
+        .first()
+    )
+    if not entry or not slot:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    return {
+        "status": offer.status,
+        "expires_at": offer.expires_at,
+        "barbershop_name": shop.name,
+        "service_name": entry.service_name_snapshot,
+        "barber_name": slot.barber.full_name if slot.barber else "Barbero",
+        "slot_start": _utc_aware(slot.slot_start),
+        "currency": shop.currency,
+    }
+
+
+@router.post("/public/{slug}/waitlist-offers/{token}/accept")
+def public_accept_waitlist_offer(
+    slug: str,
+    token: str,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Accept once, atomically claim the slot and create its real appointment."""
+    response.headers["Cache-Control"] = "no-store"
+    shop = _get_public_shop(db, slug)
+    if not shop or len(token) < 32 or len(token) > 128:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    _consume_public_token_quota(
+        db,
+        "waitlist-offer",
+        _public_booking_client_ip(request),
+        utc_now_naive(),
+        PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT,
+    )
+    offer_identity = (
+        db.query(BookingWaitlistOffer)
+        .filter(
+            BookingWaitlistOffer.barbershop_id == shop.id,
+            BookingWaitlistOffer.token_hash == _offer_hash(token),
+            BookingWaitlistOffer.is_deleted == False,
+        )
+        .first()
+    )
+    if not offer_identity:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    entry = (
+        db.query(BookingWaitlistEntry)
+        .filter(
+            BookingWaitlistEntry.id == offer_identity.waitlist_entry_id,
+            BookingWaitlistEntry.barbershop_id == shop.id,
+            BookingWaitlistEntry.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    offer = (
+        db.query(BookingWaitlistOffer)
+        .filter(
+            BookingWaitlistOffer.id == offer_identity.id,
+            BookingWaitlistOffer.barbershop_id == shop.id,
+            BookingWaitlistOffer.token_hash == _offer_hash(token),
+            BookingWaitlistOffer.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not offer:
+        raise HTTPException(status_code=404, detail="La oferta no está disponible")
+    now = utc_now_naive()
+    if offer.status == "accepted" and offer.appointment_id:
+        appointment = db.query(Appointment).filter(Appointment.id == offer.appointment_id).first()
+        return {
+            "accepted": True,
+            "already_accepted": True,
+            "appointment_id": offer.appointment_id,
+            "status": appointment.status if appointment else "pending",
+        }
+    if offer.status != "pending":
+        raise HTTPException(status_code=410, detail="La oferta ya no está vigente")
+    if offer.expires_at <= now:
+        offer.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=410, detail="La oferta venció")
+
+    if not entry or entry.status == "closed":
+        offer.status = "cancelled"
+        db.commit()
+        raise HTTPException(status_code=410, detail="La solicitud de espera ya se cerró")
+    shop = (
+        db.query(Barbershop)
+        .filter(
+            Barbershop.id == shop.id,
+            Barbershop.is_active == True,
+            Barbershop.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    subscription = _require_active_subscription(db, shop, lock=True)
+    if (
+        subscription.max_appointments_per_month is not None
+        and count_monthly_appointments(db, shop) >= subscription.max_appointments_per_month
+    ):
+        raise HTTPException(
+            status_code=402, detail="La barbería alcanzó el límite de citas de su plan"
+        )
+    service = (
+        db.query(Service)
+        .filter(
+            Service.id == entry.service_id,
+            Service.barbershop_id == shop.id,
+            Service.is_active == True,
+            Service.is_deleted == False,
+        )
+        .first()
+    )
+    slot = (
+        db.query(BarberAvailability)
+        .filter(
+            BarberAvailability.id == offer.availability_id,
+            BarberAvailability.barbershop_id == shop.id,
+            BarberAvailability.is_active == True,
+            BarberAvailability.is_booked == False,
+            BarberAvailability.is_deleted == False,
+            BarberAvailability.slot_start >= now,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not service or not slot or (entry.barber_id and entry.barber_id != slot.barber_id):
+        offer.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=409, detail="El horario ya no está disponible")
+    local_today = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+    local_slot_date = _utc_aware(slot.slot_start).astimezone(_get_timezone(shop)).date()
+    if (
+        slot.slot_start > now + timedelta(days=MAX_ADVANCE_BOOKING_DAYS)
+        or local_slot_date < (entry.preferred_date_start or local_today)
+        or local_slot_date
+        > (entry.preferred_date_end or local_today + timedelta(days=MAX_ADVANCE_BOOKING_DAYS))
+    ):
+        offer.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=409, detail="El horario ya no coincide con la solicitud")
+    barber = (
+        db.query(User)
+        .filter(
+            User.id == slot.barber_id,
+            User.barbershop_id == shop.id,
+            User.role == "barber",
+            User.is_active == True,
+            User.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not barber or slot.slot_end - slot.slot_start < timedelta(minutes=service.duration_minutes):
+        raise HTTPException(status_code=409, detail="El horario ya no permite este servicio")
+    appointment_end = slot.slot_start + timedelta(minutes=service.duration_minutes)
+    blocks = (
+        db.query(BarberAvailabilityBlock)
+        .filter(
+            BarberAvailabilityBlock.barbershop_id == shop.id,
+            BarberAvailabilityBlock.barber_id == barber.id,
+            BarberAvailabilityBlock.is_deleted == False,
+            BarberAvailabilityBlock.starts_at < appointment_end,
+            BarberAvailabilityBlock.ends_at > slot.slot_start,
+        )
+        .all()
+    )
+    appointments = (
+        db.query(Appointment)
+        .filter(
+            Appointment.barbershop_id == shop.id,
+            Appointment.barber_id == barber.id,
+            Appointment.status.in_(("pending", "confirmed", "in_progress")),
+            Appointment.is_deleted == False,
+        )
+        .with_for_update()
+        .all()
+    )
+    if not _slot_available_for_duration(slot, blocks, appointments, service.duration_minutes):
+        offer.status = "expired"
+        db.commit()
+        raise HTTPException(status_code=409, detail="El horario dejó de estar disponible")
+    local_day = _utc_aware(now).astimezone(_get_timezone(shop)).date()
+    if _utc_aware(slot.slot_start).astimezone(
+        _get_timezone(shop)
+    ).date() == local_day and _cash_register_closed_for_user(
+        db,
+        barber,
+        shop.id,
+        datetime.combine(local_day, time.min),
+    ):
+        raise HTTPException(status_code=409, detail="La barbería no acepta reservas para hoy")
+    phone = _normalize_phone(entry.phone)
+    client = (
+        db.query(User)
+        .filter(
+            User.phone == phone,
+            User.barbershop_id == shop.id,
+            User.role == "client",
+            User.is_deleted == False,
+        )
+        .with_for_update()
+        .first()
+    )
+    if client and not client.is_active:
+        raise HTTPException(status_code=409, detail="El perfil de cliente está desactivado")
+    if not client:
+        if (
+            subscription.max_clients is not None
+            and db.query(User.id)
+            .filter(
+                User.barbershop_id == shop.id,
+                User.role == "client",
+                User.is_deleted == False,
+            )
+            .count()
+            >= subscription.max_clients
+        ):
+            raise HTTPException(
+                status_code=402, detail="La barbería alcanzó el límite de clientes del plan"
+            )
+        parts = entry.client_name.split()
+        client = User(
+            email=f"client-{shop.id}-{secrets.token_hex(16)}@client.invalid",
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+            first_name=parts[0],
+            last_name=" ".join(parts[1:]) or "Cliente",
+            phone=phone,
+            role="client",
+            is_active=True,
+            is_verified=False,
+            barbershop_id=shop.id,
+        )
+        db.add(client)
+        db.flush()
+    tracking_token = secrets.token_urlsafe(32)
+    appointment = Appointment(
+        barbershop_id=shop.id,
+        client_id=client.id,
+        barber_id=barber.id,
+        scheduled_time=slot.slot_start,
+        estimated_duration=service.duration_minutes,
+        service_type=service.name,
+        service_price=service.price,
+        status="pending",
+        client_notes=entry.notes,
+        tracking_token_hash=hashlib.sha256(tracking_token.encode("utf-8")).hexdigest(),
+    )
+    db.add(appointment)
+    claimed = db.execute(
+        update(BarberAvailability)
+        .where(
+            BarberAvailability.id == slot.id,
+            BarberAvailability.barbershop_id == shop.id,
+            BarberAvailability.is_booked == False,
+            BarberAvailability.is_active == True,
+            BarberAvailability.is_deleted == False,
+        )
+        .values(is_booked=True)
+    )
+    if claimed.rowcount != 1:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Este horario acaba de ser reservado")
+    db.flush()
+    offer.status = "accepted"
+    offer.accepted_at = now
+    offer.appointment_id = appointment.id
+    entry.status = "closed"
+    db.query(BookingWaitlistOffer).filter(
+        BookingWaitlistOffer.waitlist_entry_id == entry.id,
+        BookingWaitlistOffer.id != offer.id,
+        BookingWaitlistOffer.status == "pending",
+        BookingWaitlistOffer.is_deleted == False,
+    ).update({BookingWaitlistOffer.status: "cancelled"}, synchronize_session=False)
+    local_time = _utc_aware(slot.slot_start).astimezone(_get_timezone(shop))
+    _notify_appointment_staff(
+        db,
+        appointment,
+        "appointment_booked",
+        "Nueva cita desde lista de espera",
+        f"{client.full_name} · {service.name} · {local_time.strftime('%d/%m/%Y %H:%M')}",
+    )
+    _audit(
+        db,
+        None,
+        "booking.waitlist_offer_accepted",
+        "booking_waitlist_offer",
+        offer.id,
+        shop.id,
+        {"entry_id": entry.id, "appointment_id": appointment.id, "availability_id": slot.id},
+    )
+    _audit(
+        db,
+        None,
+        "appointment.booked_from_waitlist",
+        "appointment",
+        appointment.id,
+        shop.id,
+        {"barber_id": barber.id, "service_id": service.id, "availability_id": slot.id},
+    )
+    tracking_url = f"{_build_client_link(shop.slug)}&{urlencode({'track_token': tracking_token})}"
+    _queue_appointment_email(db, appointment, "booking_received")
+    _queue_appointment_whatsapp(
+        db,
+        appointment,
+        phone,
+        f"💈 {shop.name}: tu cita quedó reservada para {local_time.strftime('%d/%m/%Y %H:%M')} "
+        f"con {barber.full_name}. Seguimiento: {tracking_url}",
+        "confirmation:client",
+        recipient_user_id=client.id,
+    )
+    db.commit()
+    return {
+        "accepted": True,
+        "appointment_id": appointment.id,
+        "status": appointment.status,
+        "tracking_url": tracking_url,
+    }
 
 
 @router.put("/owner/waitlist/{entry_id}/status")
@@ -382,6 +1001,12 @@ def owner_update_waitlist_status(
         entry.contacted_at = utc_now_naive()
     elif data.status == "new":
         entry.contacted_at = None
+    if data.status in {"new", "closed"}:
+        db.query(BookingWaitlistOffer).filter(
+            BookingWaitlistOffer.waitlist_entry_id == entry.id,
+            BookingWaitlistOffer.status == "pending",
+            BookingWaitlistOffer.is_deleted == False,
+        ).update({BookingWaitlistOffer.status: "cancelled"}, synchronize_session=False)
     _audit(
         db,
         owner,
@@ -393,4 +1018,3 @@ def owner_update_waitlist_status(
     )
     db.commit()
     return {"id": entry.id, "status": entry.status, "contacted_at": entry.contacted_at}
-

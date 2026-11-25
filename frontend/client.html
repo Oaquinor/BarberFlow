@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="stylesheet" href="/css/ui-feedback.css">
-  <link rel="stylesheet" href="/css/client.css?v=20261125-booking-answers-2">
+  <link rel="stylesheet" href="/css/client.css?v=20261125-waitlist-offer-1">
   <title>Reserva - KingFlow Barber</title>
 </head>
 <body>
@@ -133,8 +133,15 @@
         </div>
       </section>
     </main>
+    <section id="waitlistOfferPanel" class="booking-card waitlist-offer-panel" aria-labelledby="waitlistOfferTitle" hidden>
+      <p class="eyebrow">UN HORARIO PARA TI</p>
+      <h2 id="waitlistOfferTitle">Oferta de lista de espera</h2>
+      <div id="waitlistOfferDetails" role="status" aria-live="polite">Consultando la oferta…</div>
+      <button id="acceptWaitlistOfferBtn" class="book-button" type="button" hidden>Aceptar horario <span>→</span></button>
+      <p id="waitlistOfferResult" class="result-message" role="status"></p>
+    </section>
     <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
-  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-waitlist-1"></script>
+  <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-waitlist-offer-1"></script>
 </body>
 </html>

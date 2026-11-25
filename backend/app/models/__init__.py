@@ -28,6 +28,7 @@ from app.models.client_account import (
 )
 from app.models.style_passport import StylePassportEntry, StylePassportPhoto
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
+from app.models.booking_waitlist_offer import BookingWaitlistOffer
 from app.models.barber_live_state import BarberLiveState
 from app.models.inventory_product import InventoryProduct
 from app.models.inventory_movement import InventoryMovement
@@ -69,6 +70,7 @@ __all__ = [
     "StylePassportEntry",
     "StylePassportPhoto",
     "BookingWaitlistEntry",
+    "BookingWaitlistOffer",
     "BarberLiveState",
     "InventoryProduct",
     "InventoryMovement",
