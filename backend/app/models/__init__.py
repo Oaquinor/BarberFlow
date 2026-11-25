@@ -29,6 +29,7 @@ from app.models.client_account import (
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
 from app.models.inventory_product import InventoryProduct
 from app.models.inventory_movement import InventoryMovement
+from app.models.retail_sale import RetailSale, RetailSaleLine
 
 __all__ = [
     "BaseModel",
@@ -65,4 +66,6 @@ __all__ = [
     "BookingWaitlistEntry",
     "InventoryProduct",
     "InventoryMovement",
+    "RetailSale",
+    "RetailSaleLine",
 ]

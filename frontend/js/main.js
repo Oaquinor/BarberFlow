@@ -1456,6 +1456,14 @@ async function loadOwnerInventory() {
             ownerFetch('/owner/inventory/movements?limit=100'),
         ]);
         ownerInventoryProducts = products.items || [];
+        const saleProduct = document.getElementById('retailProduct');
+        if (saleProduct) {
+            const selectedSaleProduct = saleProduct.value;
+            saleProduct.replaceChildren(new Option('Selecciona un producto', ''));
+            ownerInventoryProducts.filter(product => product.is_active && Number(product.unit_price_cents) > 0 && Number(product.stock_quantity) > 0)
+                .forEach(product => saleProduct.add(new Option(`${product.name} · ${fmtMoneyFromCents(product.unit_price_cents)} · ${product.stock_quantity} disponibles`, String(product.id))));
+            if ([...saleProduct.options].some(option => option.value === selectedSaleProduct)) saleProduct.value = selectedSaleProduct;
+        }
         productsBody.innerHTML = ownerInventoryProducts.map(product => `<tr>
             <td data-label="Producto">${escapeHtml(product.name)}<br><small>${escapeHtml(product.category)} · ${escapeHtml(product.unit)}</small></td>
             <td data-label="Código">${escapeHtml(product.barcode || '—')}</td>
@@ -1470,7 +1478,7 @@ async function loadOwnerInventory() {
         });
         if ([...movementProduct.options].some(option => option.value === selected)) movementProduct.value = selected;
         const productNames = new Map(ownerInventoryProducts.map(product => [Number(product.id), product.name]));
-        const labels = { receipt: 'Recepción', return: 'Devolución', consumption: 'Consumo', adjustment: 'Ajuste' };
+        const labels = { receipt: 'Recepción', return: 'Devolución', consumption: 'Consumo', adjustment: 'Ajuste', sale: 'Venta' };
         movementsBody.innerHTML = (movements.items || []).map(item => `<tr>
             <td data-label="Fecha">${escapeHtml(new Date(item.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
             <td data-label="Producto">${escapeHtml(productNames.get(Number(item.product_id)) || `#${Number(item.product_id)}`)}</td>
@@ -1513,6 +1521,47 @@ document.getElementById('ownerInventoryProductForm')?.addEventListener('submit',
         await loadOwnerInventory();
     } catch (error) {
         result.textContent = error.message || 'No se pudo crear el producto.';
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.getElementById('retailSaleForm')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const result = document.getElementById('retailSaleResult');
+    const button = form.querySelector('[type="submit"]');
+    const payload = {
+        method: document.getElementById('retailPaymentMethod').value,
+        items: [{ product_id: Number(document.getElementById('retailProduct').value), quantity: Number(document.getElementById('retailQuantity').value) }],
+    };
+    if (!Number.isInteger(payload.items[0].product_id) || payload.items[0].product_id <= 0 || !Number.isInteger(payload.items[0].quantity) || payload.items[0].quantity < 1) {
+        result.textContent = 'Selecciona un producto y una cantidad válida.';
+        return;
+    }
+    const signature = JSON.stringify(payload);
+    if (form.dataset.requestSignature !== signature) {
+        form.dataset.requestSignature = signature;
+        form.dataset.requestKey = crypto.randomUUID();
+    }
+    payload.idempotency_key = form.dataset.requestKey;
+    button.disabled = true;
+    result.textContent = 'Registrando venta y actualizando existencias…';
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/owner/inventory/sales`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'No se pudo registrar la venta.');
+        const amount = new Intl.NumberFormat('es-DO', { style: 'currency', currency: data.currency || cashCurrency }).format(data.total_cents / 100);
+        result.textContent = `Venta #${data.id} registrada por ${amount}. Se descontaron las existencias.`;
+        form.reset();
+        delete form.dataset.requestSignature;
+        delete form.dataset.requestKey;
+        document.getElementById('retailQuantity').value = '1';
+        await Promise.allSettled([loadOwnerInventory(), loadCashSummary()]);
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo registrar la venta.';
     } finally {
         button.disabled = false;
     }
@@ -2613,6 +2662,9 @@ async function loadCashSummary() {
         setText('cashTotalToday', format(data.total_cents));
         setText('cashExpectedToday', format(data.expected_cash_cents));
         setText('cashPaymentCount', String(data.payment_count || 0));
+        const pos = document.getElementById('retailPointOfSale');
+        if (pos) pos.hidden = currentUser?.role !== 'barbershop_owner' || data.closed;
+        if (currentUser?.role === 'barbershop_owner') await loadOwnerInventory();
         const methods = document.getElementById('cashMethods');
         if (methods) {
             const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };
@@ -2684,8 +2736,11 @@ async function loadFinancialReport() {
         document.getElementById('financialReportSummary').innerHTML = [
             ['Cobros recibidos', format(data.gross_cents)],
             ['Servicios', format(data.service_revenue_cents)],
+            ['Productos', format(data.retail_revenue_cents)],
+            ['Ventas de productos', String(data.retail_sale_count)],
             ['Propinas', format(data.tip_cents)],
-            ['Pagos', String(data.payment_count)],
+            ['Transacciones', String(data.payment_count)],
+            ['Pagos de servicios', String(data.service_payment_count)],
         ].map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`).join('');
 
         const sections = [
@@ -2695,10 +2750,10 @@ async function loadFinancialReport() {
         ];
         document.getElementById('financialReportBreakdowns').innerHTML = sections.map(([title, rows]) => `
             <h4>${escapeHtml(title)}</h4>
-            <table><thead><tr><th>Grupo</th><th>Pagos</th><th>Servicios</th><th>Propinas</th><th>Total</th></tr></thead>
-            <tbody>${rows.length ? rows.map((row) => `<tr><td data-label="Grupo">${escapeHtml(row.label)}</td><td data-label="Pagos">${Number(row.payment_count)}</td><td data-label="Servicios">${format(row.service_revenue_cents)}</td><td data-label="Propinas">${format(row.tip_cents)}</td><td data-label="Total">${format(row.gross_cents)}</td></tr>`).join('') : '<tr><td colspan="5" data-label="Informe">Sin cobros en el rango.</td></tr>'}</tbody></table>
+            <table><thead><tr><th>Grupo</th><th>Transacciones</th><th>Servicios</th><th>Productos</th><th>Propinas</th><th>Total</th></tr></thead>
+            <tbody>${rows.length ? rows.map((row) => `<tr><td data-label="Grupo">${escapeHtml(row.label)}</td><td data-label="Transacciones">${Number(row.payment_count)}</td><td data-label="Servicios">${format(row.service_revenue_cents)}</td><td data-label="Productos">${format(row.retail_revenue_cents)}</td><td data-label="Propinas">${format(row.tip_cents)}</td><td data-label="Total">${format(row.gross_cents)}</td></tr>`).join('') : '<tr><td colspan="6" data-label="Informe">Sin cobros en el rango.</td></tr>'}</tbody></table>
         `).join('');
-        result.textContent = `${data.payment_count} pagos · ${data.start_date} a ${data.end_date} (${data.timezone})`;
+        result.textContent = `${data.payment_count} transacciones · ${data.start_date} a ${data.end_date} (${data.timezone})`;
     } catch (error) {
         result.textContent = error.message || 'Error de conexión al consultar el reporte.';
     }

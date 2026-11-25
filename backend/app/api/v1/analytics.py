@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.ai.demand_forecast import DemandForecastService
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models import Barbershop, Payment, User
+from app.models import Barbershop, Payment, RetailSale, User
 from app.schemas.analytics import (
     DemandForecastResponse,
     FinancialReportResponse,
@@ -70,14 +70,22 @@ def get_financial_report(
         Payment.received_at < end_utc,
     ).order_by(Payment.received_at.asc(), Payment.id.asc()).all()
 
+    sales = db.query(RetailSale).filter(
+        RetailSale.barbershop_id == shop.id,
+        RetailSale.is_deleted == False,
+        RetailSale.sold_at >= start_utc,
+        RetailSale.sold_at < end_utc,
+    ).order_by(RetailSale.sold_at.asc(), RetailSale.id.asc()).all()
+
     def new_total(label: str) -> dict:
-        return {"label": label, "payment_count": 0, "service_revenue_cents": 0, "tip_cents": 0}
+        return {"label": label, "payment_count": 0, "service_revenue_cents": 0,
+                "retail_revenue_cents": 0, "retail_sale_count": 0, "tip_cents": 0}
 
     daily: dict[str, dict] = defaultdict(lambda: new_total(""))
     methods: dict[str, dict] = {}
     barbers: dict[str, dict] = {}
     method_labels = {"cash": "Efectivo", "card": "Tarjeta", "transfer": "Transferencia", "other": "Otro"}
-    service_revenue = tip_total = 0
+    service_revenue = retail_revenue = tip_total = 0
     for payment, first_name, last_name in payments:
         local_day = payment.received_at.replace(tzinfo=timezone.utc).astimezone(business_tz).date().isoformat()
         day_total = daily[local_day]
@@ -93,9 +101,21 @@ def get_financial_report(
         service_revenue += payment.amount_cents
         tip_total += payment.tip_cents
 
+    for sale in sales:
+        local_day = sale.sold_at.replace(tzinfo=timezone.utc).astimezone(business_tz).date().isoformat()
+        day_total = daily[local_day]
+        day_total["label"] = local_day
+        method = sale.payment_method
+        methods.setdefault(method, new_total(method_labels.get(method, method)))
+        for aggregate in (day_total, methods[method]):
+            aggregate["payment_count"] += 1
+            aggregate["retail_sale_count"] += 1
+            aggregate["retail_revenue_cents"] += sale.total_cents
+        retail_revenue += sale.total_cents
+
     def rows(values: dict[str, dict]) -> list[FinancialReportRow]:
         return [
-            FinancialReportRow(key=key, **item, gross_cents=item["service_revenue_cents"] + item["tip_cents"])
+            FinancialReportRow(key=key, **item, gross_cents=item["service_revenue_cents"] + item["retail_revenue_cents"] + item["tip_cents"])
             for key, item in sorted(values.items())
         ]
 
@@ -104,10 +124,13 @@ def get_financial_report(
         end_date=end_date,
         timezone=shop.timezone,
         currency=shop.currency,
-        payment_count=len(payments),
+        payment_count=len(payments) + len(sales),
+        service_payment_count=len(payments),
         service_revenue_cents=service_revenue,
+        retail_revenue_cents=retail_revenue,
+        retail_sale_count=len(sales),
         tip_cents=tip_total,
-        gross_cents=service_revenue + tip_total,
+        gross_cents=service_revenue + retail_revenue + tip_total,
         by_day=rows(daily),
         by_method=rows(methods),
         by_barber=rows(barbers),

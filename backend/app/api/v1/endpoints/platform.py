@@ -39,6 +39,7 @@ from app.models.barber_availability_block import BarberAvailabilityBlock
 from app.models.user import UserFeatureFlag
 from app.models.refresh_session import RefreshSession
 from app.models.payment import Payment, CashRegisterClose
+from app.models.retail_sale import RetailSale
 from app.models.barber_commission import BarberCommission
 from app.models.in_app_notification import InAppNotification
 from app.models.login_attempt import LoginAttempt
@@ -1446,6 +1447,16 @@ def barber_cash_today(
     by_method = {}
     for payment in payments:
         by_method[payment.method] = by_method.get(payment.method, 0) + payment.amount_cents + payment.tip_cents
+    retail_sales = []
+    if user.role in {"barbershop_owner", "super_admin"}:
+        retail_sales = db.query(RetailSale).filter(
+            RetailSale.barbershop_id == shop.id,
+            RetailSale.sold_at >= start,
+            RetailSale.sold_at < end,
+            RetailSale.is_deleted == False,
+        ).all()
+        for sale in retail_sales:
+            by_method[sale.payment_method] = by_method.get(sale.payment_method, 0) + sale.total_cents
     cash_commissions_paid = 0
     if user.role in {"barbershop_owner", "super_admin"}:
         cash_commissions_paid = db.query(func.coalesce(func.sum(BarberCommission.amount_cents), 0)).filter(
@@ -1475,7 +1486,9 @@ def barber_cash_today(
     return {
         "business_date": _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date().isoformat(),
         "currency": shop.currency,
-        "payment_count": len(payments),
+        "payment_count": len(payments) + len(retail_sales),
+        "service_payment_count": len(payments),
+        "retail_sale_count": len(retail_sales),
         "total_cents": sum(by_method.values()),
         "by_method": by_method,
         "cash_commissions_paid_cents": int(cash_commissions_paid),
@@ -1571,6 +1584,15 @@ def barber_close_cash_register(
     if user.role == "barber":
         payment_query = payment_query.filter(Payment.barber_id == user.id)
     cash_payments = payment_query.all()
+    retail_cash_sales = []
+    if user.role in {"barbershop_owner", "super_admin"}:
+        retail_cash_sales = db.query(RetailSale).filter(
+            RetailSale.barbershop_id == shop.id,
+            RetailSale.payment_method == "cash",
+            RetailSale.sold_at >= start,
+            RetailSale.sold_at < end,
+            RetailSale.is_deleted == False,
+        ).with_for_update().all()
     cash_commissions_paid = 0
     if user.role in {"barbershop_owner", "super_admin"}:
         paid_cash_commissions = db.query(BarberCommission.amount_cents).filter(
@@ -1582,7 +1604,9 @@ def barber_close_cash_register(
             BarberCommission.is_deleted == False,
         ).with_for_update().all()
         cash_commissions_paid = sum(int(amount) for (amount,) in paid_cash_commissions)
-    expected = sum(item.amount_cents + item.tip_cents for item in cash_payments) - int(cash_commissions_paid)
+    expected = sum(item.amount_cents + item.tip_cents for item in cash_payments) + sum(
+        sale.total_cents for sale in retail_cash_sales
+    ) - int(cash_commissions_paid)
     close = CashRegisterClose(
         barbershop_id=shop.id,
         closed_by_user_id=user.id,
@@ -1590,7 +1614,7 @@ def barber_close_cash_register(
         expected_cash_cents=expected,
         declared_cash_cents=data.declared_cash_cents,
         difference_cents=data.declared_cash_cents - expected,
-        payment_count=len(cash_payments),
+        payment_count=len(cash_payments) + len(retail_cash_sales),
         notes=data.notes,
         closed_at=utc_now_naive(),
     )
@@ -1614,6 +1638,7 @@ def barber_close_cash_register(
         "declared_cash_cents": close.declared_cash_cents,
         "difference_cents": close.difference_cents,
         "payment_count": close.payment_count,
+        "retail_sale_count": len(retail_cash_sales),
         "cash_commissions_paid_cents": int(cash_commissions_paid),
     }
 

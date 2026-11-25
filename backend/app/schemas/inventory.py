@@ -63,3 +63,24 @@ class InventoryMovementCreate(BaseModel):
         if value == 0:
             raise ValueError("La cantidad del movimiento no puede ser cero")
         return value
+
+
+class InventorySaleLineRequest(BaseModel):
+    product_id: int = Field(gt=0)
+    quantity: int = Field(gt=0, le=100_000)
+
+
+class InventorySaleCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    idempotency_key: UUID
+    method: Literal["cash", "card", "transfer", "other"]
+    items: list[InventorySaleLineRequest] = Field(min_length=1, max_length=50)
+
+    @field_validator("items")
+    @classmethod
+    def reject_duplicate_products(cls, items: list[InventorySaleLineRequest]):
+        product_ids = [item.product_id for item in items]
+        if len(product_ids) != len(set(product_ids)):
+            raise ValueError("Combina cada producto en una sola línea")
+        return items

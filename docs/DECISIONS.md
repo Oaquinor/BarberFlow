@@ -30,4 +30,4 @@
 
 **Decisión:** las cantidades no se editan directamente; el owner registra movimientos con clave idempotente, costo snapshot, actor y motivo. El saldo y el movimiento se guardan en una transacción MySQL con auditoría.
 
-**Motivo:** evita ajustes sin rastro y recepciones duplicadas. La venta POS no se habilita hasta integrar cada línea de venta con caja, ingreso, costo e inventario en la misma transacción.
+**Motivo:** evita ajustes sin rastro y recepciones duplicadas. La venta POS se conserva separada de las citas y cada línea guarda snapshots; venta, cobro, costo y decremento de inventario se confirman en la misma transacción MySQL. Impuestos, descuentos, devoluciones, compra y comisión de productos quedan fuera hasta que tengan política explícita.

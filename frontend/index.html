@@ -906,6 +906,17 @@
                     <div class="stat-card"><div class="stat-value" id="cashPaymentCount">—</div><div class="stat-label">Pagos registrados</div></div>
                 </div>
                 <div id="cashMethods" style="margin:16px 0;"></div>
+                <section class="card owner-only" id="retailPointOfSale" hidden aria-labelledby="retailPosTitle" style="margin:18px 0;">
+                    <h3 id="retailPosTitle">Venta rápida de productos</h3>
+                    <p>La venta descuenta existencias y se suma al método de pago y al cierre del día.</p>
+                    <form id="retailSaleForm" class="toolbar" style="align-items:flex-end;">
+                        <label for="retailProduct">Producto <select id="retailProduct" required></select></label>
+                        <label for="retailQuantity">Cantidad <input id="retailQuantity" type="number" min="1" max="100000" value="1" required></label>
+                        <label for="retailPaymentMethod">Cobro <select id="retailPaymentMethod"><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="transfer">Transferencia</option><option value="other">Otro</option></select></label>
+                        <button class="btn-primary" type="submit">Registrar venta</button>
+                    </form>
+                    <p id="retailSaleResult" role="status" aria-live="polite"></p>
+                </section>
                 <form id="cashCloseForm" style="max-width:520px;">
                     <label for="cashDeclared">Efectivo contado</label>
                     <input id="cashDeclared" type="number" min="0" step="0.01" required style="padding:10px; margin:8px 0; width:100%;">
@@ -988,7 +999,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261126-inventory-1"></script>
+    <script src="js/main.js?v=20261126-retail-pos-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

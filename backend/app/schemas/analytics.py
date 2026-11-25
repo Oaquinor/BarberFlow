@@ -45,6 +45,8 @@ class FinancialReportRow(BaseModel):
     label: str
     payment_count: int
     service_revenue_cents: int
+    retail_revenue_cents: int
+    retail_sale_count: int
     tip_cents: int
     gross_cents: int
 
@@ -55,7 +57,10 @@ class FinancialReportResponse(BaseModel):
     timezone: str
     currency: str
     payment_count: int
+    service_payment_count: int
     service_revenue_cents: int
+    retail_revenue_cents: int
+    retail_sale_count: int
     tip_cents: int
     gross_cents: int
     by_day: list[FinancialReportRow]

@@ -19,7 +19,7 @@ test("owner tables switch to labeled cards on narrow screens", () => {
     "Nombre", "Correo", "Teléfono", "Comisión (%)", "Estado", "Acción",
     "Cliente", "Citas", "Completadas", "Última visita", "Total pagado", "Acciones",
     "Barbero", "Fecha", "Importe", "Tasa", "Liquidación",
-    "Grupo", "Pagos", "Servicios", "Propinas", "Total", "Informe",
+    "Grupo", "Transacciones", "Servicios", "Productos", "Propinas", "Total", "Informe",
   ]) {
     assert.ok(script.includes(`data-label="${label}"`), `mobile table must label ${label}`);
   }

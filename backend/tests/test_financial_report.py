@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
-from app.models import Appointment, Barbershop, Payment, User
+from app.models import Appointment, Barbershop, Payment, RetailSale, User
 
 
 def _user(email: str, role: str, shop_id: int) -> User:
@@ -75,6 +75,11 @@ def test_financial_report_uses_business_date_and_is_tenant_scoped(
             received_at=datetime(2026, 1, 10, 15), recorded_by_user_id=other_barber.id,
         ),
     ])
+    test_db.add(RetailSale(
+        barbershop_id=shop.id, sold_by_user_id=owner.id, payment_method="cash", currency="DOP",
+        subtotal_cents=600, total_cents=600, cost_total_cents=250,
+        sold_at=datetime(2026, 1, 10, 5), request_key_hash="a" * 64, request_payload_hash="b" * 64,
+    ))
     test_db.commit()
 
     owner_headers = {"Authorization": f"Bearer {create_access_token({'sub': str(owner.id), 'role': owner.role})}"}
@@ -87,13 +92,17 @@ def test_financial_report_uses_business_date_and_is_tenant_scoped(
     data = report.json()
     assert data["timezone"] == "America/Santo_Domingo"
     assert data["currency"] == "DOP"
-    assert data["payment_count"] == 2
+    assert data["payment_count"] == 3
+    assert data["service_payment_count"] == 2
     assert data["service_revenue_cents"] == 3500
+    assert data["retail_revenue_cents"] == 600
+    assert data["retail_sale_count"] == 1
     assert data["tip_cents"] == 200
-    assert data["gross_cents"] == 3700
+    assert data["gross_cents"] == 4300
     assert data["by_day"] == [{
-        "key": "2026-01-10", "label": "2026-01-10", "payment_count": 2,
-        "service_revenue_cents": 3500, "tip_cents": 200, "gross_cents": 3700,
+        "key": "2026-01-10", "label": "2026-01-10", "payment_count": 3,
+        "service_revenue_cents": 3500, "retail_revenue_cents": 600, "retail_sale_count": 1,
+        "tip_cents": 200, "gross_cents": 4300,
     }]
     assert {row["key"] for row in data["by_method"]} == {"cash", "card"}
     assert data["by_barber"][0]["key"] == str(barber.id)

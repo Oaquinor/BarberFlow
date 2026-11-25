@@ -19,6 +19,11 @@ function renderInventory({ products, movements, userRole = 'barbershop_owner' })
       add(option) { this.options.push(option); },
       replaceChildren(...options) { this.options = options; },
     },
+    retailProduct: {
+      value: '', options: [],
+      add(option) { this.options.push(option); },
+      replaceChildren(...options) { this.options = options; },
+    },
     ownerInventoryProductResult: { textContent: '' },
     ownerInventoryMovementResult: { textContent: '' },
   };
@@ -56,6 +61,8 @@ test('owner inventory renders escaped products and their immutable movement hist
   assert.match(nodes.ownerInventoryProductsBody.innerHTML, /Reponer/);
   assert.match(nodes.ownerInventoryMovementsBody.innerHTML, /&lt;b&gt;factura&lt;\/b&gt;/);
   assert.match(nodes.ownerInventoryMovementsBody.innerHTML, /\+3/);
+  assert.equal(nodes.retailProduct.options.length, 2);
+  assert.match(nodes.retailProduct.options[1].text, /Pomada|producto/);
   assert.equal(nodes.ownerInventorySummary.textContent, '1 producto(s) · 1 movimiento(s) recientes');
 });
 

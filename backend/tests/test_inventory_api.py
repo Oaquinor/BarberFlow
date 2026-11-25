@@ -7,7 +7,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
-from app.models import Barbershop, InventoryMovement, InventoryProduct, Subscription, User
+from app.models import (
+    Barbershop,
+    InventoryMovement,
+    InventoryProduct,
+    RetailSale,
+    Subscription,
+    User,
+)
 from app.utils.datetime import utc_now_naive
 
 
@@ -178,3 +185,50 @@ def test_inventory_owner_only_and_barcode_unique_per_tenant(client: TestClient, 
     assert denied.status_code == 403
     assert barber_shop.id
     assert client.get("/api/v1/owner/inventory/products").status_code == 401
+
+
+def test_retail_sale_is_idempotent_and_flows_into_cash_close(client: TestClient, test_db: Session):
+    shop, owner = _tenant(test_db, "pos")
+    headers = _headers(owner)
+    product = _product(client, headers)
+    receipt = client.post(
+        f"/api/v1/owner/inventory/products/{product['id']}/movements",
+        headers=headers,
+        json={"idempotency_key": str(uuid4()), "quantity_delta": 4, "reason": "receipt"},
+    )
+    assert receipt.status_code == 201, receipt.text
+    payload = {
+        "idempotency_key": str(uuid4()),
+        "method": "cash",
+        "items": [{"product_id": product["id"], "quantity": 2}],
+    }
+    created = client.post("/api/v1/owner/inventory/sales", headers=headers, json=payload)
+    retried = client.post("/api/v1/owner/inventory/sales", headers=headers, json=payload)
+    assert created.status_code == retried.status_code == 201
+    assert created.json()["id"] == retried.json()["id"]
+    assert created.json()["total_cents"] == 180000
+    assert created.json()["items"][0]["product_name"] == "Pomada"
+    assert test_db.query(RetailSale).filter_by(barbershop_id=shop.id).count() == 1
+    assert (
+        test_db.query(InventoryMovement).filter_by(barbershop_id=shop.id, reason="sale").count()
+        == 1
+    )
+
+    inventory = client.get("/api/v1/owner/inventory/products", headers=headers).json()
+    assert inventory["items"][0]["stock_quantity"] == 2
+    summary = client.get("/api/v1/barber/cash/today", headers=headers)
+    assert summary.status_code == 200
+    assert summary.json()["by_method"]["cash"] == 180000
+    assert summary.json()["retail_sale_count"] == 1
+
+    close = client.post(
+        "/api/v1/barber/cash/close",
+        headers=headers,
+        json={
+            "business_date": summary.json()["business_date"],
+            "declared_cash_cents": 180000,
+        },
+    )
+    assert close.status_code == 201, close.text
+    assert close.json()["expected_cash_cents"] == 180000
+    assert close.json()["retail_sale_count"] == 1

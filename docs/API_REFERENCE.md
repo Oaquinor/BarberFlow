@@ -158,11 +158,11 @@ Las rutas de escritura requieren rol owner; las que admiten `super_admin` exigen
 | Método | Ruta | Acceso | Función |
 |---|---|---|---|
 | `GET` | `/analytics/demand-forecast` | Owner autenticado | Estima el volumen de servicios por día y hora para los próximos siete días |
-| `GET` | `/analytics/financial-report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Owner autenticado | Resume pagos realmente recibidos, separados por día comercial, método y barbero |
+| `GET` | `/analytics/financial-report?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | Owner autenticado | Resume pagos de servicios y ventas minoristas realmente cobrados, separados por día comercial y método; por barbero muestra servicios |
 
 El pronóstico usa el promedio histórico de citas completadas por día de la semana y hora durante las 12 semanas anteriores, y lo combina con las reservas próximas conocidas. Es una referencia estadística explicable, no un modelo de aprendizaje automático. La respuesta incluye el periodo y tamaño de la muestra, reservas conocidas, horas pico y nivel de confianza; con poco historial se indica esa limitación y solo sirven de referencia las reservas existentes. Todos los datos se filtran por la barbería del owner autenticado.
 
-El reporte financiero exige un rango de fechas de hasta 366 días y lo interpreta en la zona horaria IANA del negocio. Se basa en cobros guardados, separa precio del servicio y propina, y expresa todos los importes en centavos y la moneda del tenant. No estima ingresos de citas aún no cobradas.
+El reporte financiero exige un rango de fechas de hasta 366 días y lo interpreta en la zona horaria IANA del negocio. Se basa en cobros guardados, separa servicios, productos y propinas, y expresa todos los importes en centavos y la moneda del tenant. Las ventas minoristas no se asignan a un barbero. No estima ingresos de citas aún no cobradas.
 
 Para iniciar servicio:
 
@@ -211,8 +211,10 @@ Todas estas rutas requieren sesión de propietario y derivan la barbería del us
 | `PATCH` | `/owner/inventory/products/{product_id}` | Owner del tenant del producto |
 | `POST` | `/owner/inventory/products/{product_id}/movements` | Owner; registra recepción, devolución, consumo o ajuste idempotente y evita stock negativo |
 | `GET` | `/owner/inventory/movements?product_id=&limit=50&offset=0` | Owner; consulta historial de su tenant |
+| `POST` | `/owner/inventory/sales` | Owner; cobra líneas de productos sin cita y descuenta existencias en una operación idempotente |
+| `GET` | `/owner/inventory/sales?limit=50&offset=0` | Owner; lista ventas de su tenant |
 
-Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. El módulo actual cubre catálogo y existencias; aún no procesa ventas minoristas, devoluciones financieras, compras/proveedores ni su conciliación con caja o comisiones.
+Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. La venta guarda snapshots de precio/costo, bloquea el tenant y los productos, impide existencias negativas y se refleja en efectivo esperado y reporte financiero. El POS actual no aplica impuestos/descuentos, no procesa reembolsos, compras/proveedores, transferencias entre sucursales ni comisiones de producto.
 
 ## Rendimiento y logros
 

@@ -25,6 +25,7 @@ class InventoryMovement(BaseModel):
 
     barbershop_id = Column(Integer, ForeignKey("barbershops.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("inventory_products.id"), nullable=False)
+    retail_sale_id = Column(Integer, ForeignKey("retail_sales.id", ondelete="RESTRICT"), nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     quantity_delta = Column(Integer, nullable=False)
     unit_cost_cents = Column(Integer, nullable=False)
