@@ -521,7 +521,7 @@ def owner_create_client(
         phone=phone,
         role="client",
         is_active=True,
-        is_verified=True,
+        is_verified=False,
         barbershop_id=shop.id,
     )
     db.add(client)

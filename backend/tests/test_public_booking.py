@@ -284,6 +284,7 @@ def test_public_booking_tracking_and_cancel_are_connected(
     assert booked_appointment.service_type == service.name
     public_client = test_db.get(User, booked_appointment.client_id)
     assert public_client.email.endswith("@client.invalid")
+    assert public_client.is_verified is False
     assert "8095550202" not in public_client.email
     assert test_db.query(AuditLog).filter(
         AuditLog.action == "appointment.booked",

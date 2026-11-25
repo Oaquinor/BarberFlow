@@ -419,6 +419,7 @@ def test_owner_can_manually_register_clients_with_tenant_limits(client: TestClie
     assert record.role == "client"
     assert record.barbershop_id == shop.id
     assert record.email.endswith("@client.invalid")
+    assert record.is_verified is False
     audit = test_db.query(AuditLog).filter_by(
         action="client.created", entity_id=record.id, barbershop_id=shop.id,
     ).one()

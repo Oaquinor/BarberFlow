@@ -379,7 +379,7 @@ def public_create_appointment(
             phone=phone,
             role="client",
             is_active=True,
-            is_verified=True,
+            is_verified=False,
             barbershop_id=shop.id,
         )
         db.add(client)
@@ -576,7 +576,7 @@ def create_walk_in_appointment(
             phone=phone,
             role="client",
             is_active=True,
-            is_verified=True,
+            is_verified=False,
             barbershop_id=shop.id,
         )
         db.add(client)

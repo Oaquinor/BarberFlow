@@ -55,6 +55,7 @@ def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     appointment = test_db.get(Appointment, payload["appointment_id"])
     assert appointment.actual_start_time is not None
     assert appointment.client.phone == "8095550502"
+    assert appointment.client.is_verified is False
 
     duplicate = client.post(
         "/api/v1/barber/appointments/walk-in",

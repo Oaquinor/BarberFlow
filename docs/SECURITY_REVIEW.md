@@ -9,6 +9,7 @@
 - Token aleatorio de gestión de reserva; documentar y probar límites de caducidad/uso según contrato actual.
 - Migraciones explícitas; pagos y cambio de estado usan transacción del flujo.
 - Carga de imagen con decodificación/re-encode y tipos/tamaños limitados (volver a comprobar cada endpoint de carga).
+- Los registros CRM generados por reservas, turnos presenciales o alta manual no verifican correo/teléfono; `users.is_verified` permanece falso. No vincular una cuenta de cliente al CRM solo por teléfono.
 - Cabeceras HTTP, CORS/secretos y validación de configuración productiva se establecen al arrancar.
 
 ## Riesgos / verificaciones pendientes
