@@ -24,6 +24,9 @@ function renderInventory({ products, movements, userRole = 'barbershop_owner' })
       add(option) { this.options.push(option); },
       replaceChildren(...options) { this.options = options; },
     },
+    retailCart: { innerHTML: '', addEventListener() {} },
+    retailAddCartItem: { addEventListener() {} },
+    retailSaleForm: { querySelector() { return { disabled: false }; } },
     ownerInventoryProductResult: { textContent: '' },
     ownerInventoryMovementResult: { textContent: '' },
   };
@@ -34,7 +37,10 @@ function renderInventory({ products, movements, userRole = 'barbershop_owner' })
     Date,
     Map,
     Option: function Option(text, value) { this.text = text; this.value = value; },
-    document: { getElementById: (id) => nodes[id] || null },
+    document: {
+      getElementById: (id) => nodes[id] || null,
+      querySelector: (selector) => selector === '#retailSaleForm [type="submit"]' ? { disabled: false } : null,
+    },
     escapeHtml: (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     })[char]),
@@ -63,6 +69,7 @@ test('owner inventory renders escaped products and their immutable movement hist
   assert.match(nodes.ownerInventoryMovementsBody.innerHTML, /\+3/);
   assert.equal(nodes.retailProduct.options.length, 2);
   assert.match(nodes.retailProduct.options[1].text, /Pomada|producto/);
+  assert.match(nodes.retailCart.innerHTML, /El carrito está vacío/);
   assert.equal(nodes.ownerInventorySummary.textContent, '1 producto(s) · 1 movimiento(s) recientes');
 });
 

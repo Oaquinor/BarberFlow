@@ -214,7 +214,7 @@ Todas estas rutas requieren sesión de propietario y derivan la barbería del us
 | `POST` | `/owner/inventory/sales` | Owner; cobra líneas de productos sin cita y descuenta existencias en una operación idempotente |
 | `GET` | `/owner/inventory/sales?limit=50&offset=0` | Owner; lista ventas de su tenant |
 
-Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. La venta guarda snapshots de precio/costo, bloquea el tenant y los productos, impide existencias negativas y se refleja en efectivo esperado y reporte financiero. El POS actual no aplica impuestos/descuentos, no procesa reembolsos, compras/proveedores, transferencias entre sucursales ni comisiones de producto.
+Cada movimiento conserva su costo unitario, actor, razón y nota; la idempotencia usa hash de clave y payload. La creación del movimiento, el saldo actualizado y la auditoría se confirman en una sola transacción MySQL. La venta guarda snapshots de precio/costo, bloquea el tenant y los productos, impide existencias negativas y se refleja en efectivo esperado y reporte financiero. El panel owner prepara un carrito de hasta 50 productos distintos, admite reintentos seguros y muestra las últimas diez ventas. El POS actual no aplica impuestos/descuentos, no procesa reembolsos, compras/proveedores, transferencias entre sucursales ni comisiones de producto.
 
 ## Rendimiento y logros
 

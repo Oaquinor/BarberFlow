@@ -379,3 +379,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .tab-content .services-header > .btn-primary { flex:none; }
 }
 .inventory-table-wrap { margin-top: 14px; }
+.retail-pos-controls { display:flex; flex-wrap:wrap; gap:12px; }
+.retail-pos-controls > label { flex:1 1 135px; min-width:0; }
+.retail-pos-controls > label > select,
+.retail-pos-controls > label > input { max-width:100%; }

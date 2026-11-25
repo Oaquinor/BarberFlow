@@ -66,6 +66,8 @@ class InventoryMovementCreate(BaseModel):
 
 
 class InventorySaleLineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     product_id: int = Field(gt=0)
     quantity: int = Field(gt=0, le=100_000)
 

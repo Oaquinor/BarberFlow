@@ -1435,6 +1435,7 @@ document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (e
 });
 
 let ownerInventoryProducts = [];
+let retailCart = [];
 
 function moneyInputToCents(value) {
     const match = String(value).trim().match(/^(\d{1,9})(?:\.(\d{1,2}))?$/);
@@ -1464,6 +1465,7 @@ async function loadOwnerInventory() {
                 .forEach(product => saleProduct.add(new Option(`${product.name} · ${fmtMoneyFromCents(product.unit_price_cents)} · ${product.stock_quantity} disponibles`, String(product.id))));
             if ([...saleProduct.options].some(option => option.value === selectedSaleProduct)) saleProduct.value = selectedSaleProduct;
         }
+        renderRetailCart();
         productsBody.innerHTML = ownerInventoryProducts.map(product => `<tr>
             <td data-label="Producto">${escapeHtml(product.name)}<br><small>${escapeHtml(product.category)} · ${escapeHtml(product.unit)}</small></td>
             <td data-label="Código">${escapeHtml(product.barcode || '—')}</td>
@@ -1489,6 +1491,75 @@ async function loadOwnerInventory() {
         summary.textContent = `${Number(products.total)} producto(s) · ${Number(movements.total)} movimiento(s) recientes`;
     } catch (error) {
         summary.textContent = error.message || 'No se pudo cargar el inventario.';
+    }
+}
+
+function renderRetailCart() {
+    const cart = document.getElementById('retailCart');
+    const submit = document.querySelector('#retailSaleForm [type="submit"]');
+    if (!cart) return;
+    const rows = retailCart.map(item => {
+        const product = ownerInventoryProducts.find(candidate => Number(candidate.id) === item.product_id);
+        if (!product) return '';
+        const unitPrice = Number(product.unit_price_cents) || 0;
+        return `<tr><td data-label="Producto">${escapeHtml(product.name)}</td><td data-label="Cantidad">${item.quantity}</td><td data-label="Precio">${fmtMoneyFromCents(unitPrice)}</td><td data-label="Subtotal">${fmtMoneyFromCents(unitPrice * item.quantity)}</td><td data-label="Acción"><button class="btn-secondary retail-cart-remove" type="button" data-product-id="${item.product_id}" aria-label="Quitar ${escapeHtml(product.name)}">Quitar</button></td></tr>`;
+    }).filter(Boolean);
+    const total = retailCart.reduce((sum, item) => {
+        const product = ownerInventoryProducts.find(candidate => Number(candidate.id) === item.product_id);
+        return sum + (Number(product?.unit_price_cents) || 0) * item.quantity;
+    }, 0);
+    cart.innerHTML = rows.length
+        ? `<table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th><th>Acción</th></tr></thead><tbody>${rows.join('')}</tbody><tfoot><tr><th colspan="3">Total</th><th>${fmtMoneyFromCents(total)}</th><td></td></tr></tfoot></table>`
+        : '<p>El carrito está vacío. Añade productos para preparar la venta.</p>';
+    if (submit) submit.disabled = !rows.length || total <= 0 || total > 2_000_000_000;
+}
+
+document.getElementById('retailAddCartItem')?.addEventListener('click', () => {
+    const productId = Number(document.getElementById('retailProduct').value);
+    const quantity = Number(document.getElementById('retailQuantity').value);
+    const product = ownerInventoryProducts.find(item => Number(item.id) === productId && item.is_active);
+    const result = document.getElementById('retailSaleResult');
+    if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 100_000) {
+        result.textContent = 'Selecciona un producto y una cantidad válida.';
+        return;
+    }
+    const cartLine = retailCart.find(item => item.product_id === productId);
+    const nextQuantity = (cartLine?.quantity || 0) + quantity;
+    if (nextQuantity > Number(product.stock_quantity)) {
+        result.textContent = `Solo hay ${Number(product.stock_quantity)} unidades disponibles de ${product.name}.`;
+        return;
+    }
+    if (!cartLine && retailCart.length >= 50) {
+        result.textContent = 'El carrito admite hasta 50 productos distintos por venta.';
+        return;
+    }
+    if (cartLine) cartLine.quantity = nextQuantity;
+    else retailCart.push({ product_id: productId, quantity });
+    result.textContent = '';
+    document.getElementById('retailQuantity').value = '1';
+    renderRetailCart();
+});
+
+document.getElementById('retailCart')?.addEventListener('click', event => {
+    const remove = event.target.closest('.retail-cart-remove');
+    if (!remove) return;
+    const productId = Number(remove.dataset.productId);
+    retailCart = retailCart.filter(item => item.product_id !== productId);
+    renderRetailCart();
+});
+
+async function loadOwnerRetailSales() {
+    const root = document.getElementById('retailRecentSales');
+    if (!root || currentUser?.role !== 'barbershop_owner') return;
+    try {
+        const data = await ownerFetch('/owner/inventory/sales?limit=10');
+        const methodLabels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };
+        const rows = data.items || [];
+        root.innerHTML = rows.length
+            ? `<table><thead><tr><th>Fecha</th><th>Venta</th><th>Artículos</th><th>Cobro</th><th>Total</th></tr></thead><tbody>${rows.map(sale => `<tr><td data-label="Fecha">${escapeHtml(new Date(sale.sold_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td><td data-label="Venta">#${Number(sale.id)}</td><td data-label="Artículos">${(sale.items || []).map(item => `${escapeHtml(item.product_name)} × ${Number(item.quantity)}`).join(', ')}</td><td data-label="Cobro">${escapeHtml(methodLabels[sale.payment_method] || sale.payment_method)}</td><td data-label="Total">${fmtMoneyFromCents(sale.total_cents)}</td></tr>`).join('')}</tbody></table>`
+            : '<p>Aún no hay ventas de productos.</p>';
+    } catch (error) {
+        root.textContent = error.message || 'No se pudo cargar el historial de ventas.';
     }
 }
 
@@ -1533,10 +1604,10 @@ document.getElementById('retailSaleForm')?.addEventListener('submit', async (eve
     const button = form.querySelector('[type="submit"]');
     const payload = {
         method: document.getElementById('retailPaymentMethod').value,
-        items: [{ product_id: Number(document.getElementById('retailProduct').value), quantity: Number(document.getElementById('retailQuantity').value) }],
+        items: retailCart.map(item => ({ ...item })),
     };
-    if (!Number.isInteger(payload.items[0].product_id) || payload.items[0].product_id <= 0 || !Number.isInteger(payload.items[0].quantity) || payload.items[0].quantity < 1) {
-        result.textContent = 'Selecciona un producto y una cantidad válida.';
+    if (!payload.items.length || payload.items.length > 50 || payload.items.some(item => !Number.isInteger(item.product_id) || item.product_id <= 0 || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 100_000)) {
+        result.textContent = 'Añade al menos un producto con una cantidad válida.';
         return;
     }
     const signature = JSON.stringify(payload);
@@ -1555,11 +1626,13 @@ document.getElementById('retailSaleForm')?.addEventListener('submit', async (eve
         if (!response.ok) throw new Error(data.detail || 'No se pudo registrar la venta.');
         const amount = new Intl.NumberFormat('es-DO', { style: 'currency', currency: data.currency || cashCurrency }).format(data.total_cents / 100);
         result.textContent = `Venta #${data.id} registrada por ${amount}. Se descontaron las existencias.`;
+        retailCart = [];
         form.reset();
         delete form.dataset.requestSignature;
         delete form.dataset.requestKey;
         document.getElementById('retailQuantity').value = '1';
-        await Promise.allSettled([loadOwnerInventory(), loadCashSummary()]);
+        renderRetailCart();
+        await loadCashSummary();
     } catch (error) {
         result.textContent = error.message || 'No se pudo registrar la venta.';
     } finally {
@@ -2664,7 +2737,10 @@ async function loadCashSummary() {
         setText('cashPaymentCount', String(data.payment_count || 0));
         const pos = document.getElementById('retailPointOfSale');
         if (pos) pos.hidden = currentUser?.role !== 'barbershop_owner' || data.closed;
-        if (currentUser?.role === 'barbershop_owner') await loadOwnerInventory();
+        if (currentUser?.role === 'barbershop_owner') {
+            await loadOwnerInventory();
+            await loadOwnerRetailSales();
+        }
         const methods = document.getElementById('cashMethods');
         if (methods) {
             const labels = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', other: 'Otro' };

@@ -191,6 +191,21 @@ def test_retail_sale_is_idempotent_and_flows_into_cash_close(client: TestClient,
     shop, owner = _tenant(test_db, "pos")
     headers = _headers(owner)
     product = _product(client, headers)
+    second_product_response = client.post(
+        "/api/v1/owner/inventory/products",
+        headers=headers,
+        json={
+            "name": "Champú",
+            "category": "Cuidado",
+            "barcode": "840000000002",
+            "unit": "unidad",
+            "unit_cost_cents": 40000,
+            "unit_price_cents": 70000,
+            "stock_minimum": 1,
+        },
+    )
+    assert second_product_response.status_code == 201, second_product_response.text
+    second_product = second_product_response.json()
     receipt = client.post(
         f"/api/v1/owner/inventory/products/{product['id']}/movements",
         headers=headers,
@@ -200,25 +215,29 @@ def test_retail_sale_is_idempotent_and_flows_into_cash_close(client: TestClient,
     payload = {
         "idempotency_key": str(uuid4()),
         "method": "cash",
-        "items": [{"product_id": product["id"], "quantity": 2}],
+        "items": [
+            {"product_id": product["id"], "quantity": 2},
+            {"product_id": second_product["id"], "quantity": 1},
+        ],
     }
     created = client.post("/api/v1/owner/inventory/sales", headers=headers, json=payload)
     retried = client.post("/api/v1/owner/inventory/sales", headers=headers, json=payload)
     assert created.status_code == retried.status_code == 201
     assert created.json()["id"] == retried.json()["id"]
-    assert created.json()["total_cents"] == 180000
-    assert created.json()["items"][0]["product_name"] == "Pomada"
+    assert created.json()["total_cents"] == 250000
+    assert {item["product_name"] for item in created.json()["items"]} == {"Pomada", "Champú"}
     assert test_db.query(RetailSale).filter_by(barbershop_id=shop.id).count() == 1
     assert (
         test_db.query(InventoryMovement).filter_by(barbershop_id=shop.id, reason="sale").count()
-        == 1
+        == 2
     )
 
     inventory = client.get("/api/v1/owner/inventory/products", headers=headers).json()
-    assert inventory["items"][0]["stock_quantity"] == 2
+    stock_by_product = {item["id"]: item["stock_quantity"] for item in inventory["items"]}
+    assert stock_by_product == {product["id"]: 2, second_product["id"]: 3}
     summary = client.get("/api/v1/barber/cash/today", headers=headers)
     assert summary.status_code == 200
-    assert summary.json()["by_method"]["cash"] == 180000
+    assert summary.json()["by_method"]["cash"] == 250000
     assert summary.json()["retail_sale_count"] == 1
 
     close = client.post(
@@ -226,9 +245,9 @@ def test_retail_sale_is_idempotent_and_flows_into_cash_close(client: TestClient,
         headers=headers,
         json={
             "business_date": summary.json()["business_date"],
-            "declared_cash_cents": 180000,
+            "declared_cash_cents": 250000,
         },
     )
     assert close.status_code == 201, close.text
-    assert close.json()["expected_cash_cents"] == 180000
+    assert close.json()["expected_cash_cents"] == 250000
     assert close.json()["retail_sale_count"] == 1

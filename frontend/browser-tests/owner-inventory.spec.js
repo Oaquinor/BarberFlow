@@ -5,7 +5,9 @@ test('owner creates a product and records a stock receipt from the inventory pan
   const requests = [];
   const products = [];
   const movements = [];
+  const sales = [];
   const pageErrors = [];
+  products.push({ id: 80, name: 'Champú', category: 'Cuidado', unit: 'unidad', barcode: null, unit_cost_cents: 400, unit_price_cents: 700, stock_quantity: 10, stock_minimum: 1, low_stock: false, is_active: true });
   page.on('pageerror', error => pageErrors.push(error.message));
   await page.addInitScript(() => sessionStorage.setItem('token', 'inventory-browser-owner'));
   await page.route('**/api/v1/**', async route => {
@@ -48,11 +50,16 @@ test('owner creates a product and records a stock receipt from the inventory pan
     } else if (path === '/owner/inventory/sales' && request.method() === 'POST') {
       const body = request.postDataJSON();
       requests.push({ path, method: request.method(), body });
-      const line = body.items[0];
-      const product = products.find(item => item.id === line.product_id);
-      product.stock_quantity -= line.quantity;
-      payload = { id: 101, currency: 'DOP', total_cents: product.unit_price_cents * line.quantity, items: [{ product_id: product.id, quantity: line.quantity }] };
+      const lines = body.items.map(line => {
+        const product = products.find(item => item.id === line.product_id);
+        product.stock_quantity -= line.quantity;
+        return { product_id: product.id, product_name: product.name, quantity: line.quantity };
+      });
+      payload = { id: 101, currency: 'DOP', total_cents: body.items.reduce((sum, line) => sum + products.find(item => item.id === line.product_id).unit_price_cents * line.quantity, 0), sold_at: new Date().toISOString(), payment_method: body.method, items: lines };
+      sales.unshift(payload);
       status = 201;
+    } else if (path === '/owner/inventory/sales') {
+      payload = { items: sales, total: sales.length };
     } else if (path === '/notifications/unread-count') {
       payload = { count: 0 };
     } else if (path === '/barber/share-link') {
@@ -96,16 +103,37 @@ test('owner creates a product and records a stock receipt from the inventory pan
   await expect(page.locator('#retailPointOfSale')).toBeVisible();
   await page.locator('#retailProduct').selectOption('81');
   await page.locator('#retailQuantity').fill('2');
-  await page.getByRole('button', { name: 'Registrar venta' }).click();
+  await page.locator('#retailAddCartItem').click();
+  await expect(page.locator('#retailCart')).toContainText('2');
+  await page.locator('#retailProduct').selectOption('80');
+  await page.locator('#retailQuantity').fill('1');
+  await page.locator('#retailAddCartItem').click();
+  await expect(page.locator('#retailCart')).toContainText('Champú');
+  await page.locator('#retailPointOfSale').screenshot({ path: path.join(evidenceDir, 'owner-pos-cart.png') });
+  await page.getByRole('button', { name: 'Cobrar productos' }).click();
   await expect(page.locator('#retailSaleResult')).toContainText('Venta #101 registrada');
   await expect(page.locator('#ownerInventoryProductsBody')).toContainText('6 unidad');
+  await expect(page.locator('#retailRecentSales')).toContainText('#101');
+  await page.setViewportSize({ width: 320, height: 800 });
+  const posGeometry = await page.locator('#retailPointOfSale').evaluate(section => ({
+    width: section.clientWidth,
+    scrollWidth: section.scrollWidth,
+    controlsFit: [...section.querySelectorAll('select, input, button')].every(control => {
+      const rect = control.getBoundingClientRect();
+      const bounds = section.getBoundingClientRect();
+      return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+    }),
+  }));
+  expect(posGeometry.scrollWidth).toBeLessThanOrEqual(posGeometry.width + 1);
+  expect(posGeometry.controlsFit).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.locator('#ownerManagementTabButton').click();
   await page.locator('[aria-labelledby="ownerInventoryHeading"]').screenshot({ path: path.join(evidenceDir, 'owner-inventory-after.png') });
   expect(requests[0].body).toMatchObject({ name: 'Pomada mate', category: 'Cabello', unit_cost_cents: 550, unit_price_cents: 900, stock_minimum: 3 });
   expect(requests[1].body).toMatchObject({ quantity_delta: 8, reason: 'receipt', unit_cost_cents: 475, note: 'Compra inicial' });
   expect(requests[1].body.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
   expect(requests[2]).toMatchObject({ path: '/owner/inventory/sales', method: 'POST' });
-  expect(requests[2].body).toMatchObject({ method: 'cash', items: [{ product_id: 81, quantity: 2 }] });
+  expect(requests[2].body).toMatchObject({ method: 'cash', items: [{ product_id: 81, quantity: 2 }, { product_id: 80, quantity: 1 }] });
   expect(requests[2].body.idempotency_key).toMatch(/^[0-9a-f-]{36}$/i);
   await page.setViewportSize({ width: 320, height: 800 });
   for (const id of ['ownerInventoryProductForm', 'ownerInventoryMovementForm']) {
