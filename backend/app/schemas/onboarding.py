@@ -100,6 +100,19 @@ class BusinessSettingsUpdate(BaseModel):
     primary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     secondary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     public_theme: str = Field(default="light", pattern=r"^(light|dark)$")
+    booking_questions: Optional[List[str]] = Field(None, max_length=5)
+
+    @field_validator("booking_questions")
+    @classmethod
+    def validate_booking_questions(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return None
+        questions = [question.strip() for question in value if question and question.strip()]
+        if len(questions) > 5:
+            raise ValueError("Puedes configurar hasta cinco preguntas")
+        if any(len(question) > 120 for question in questions):
+            raise ValueError("Cada pregunta admite hasta 120 caracteres")
+        return questions
 
     @model_validator(mode="after")
     def validate_hours(self):
@@ -129,6 +142,7 @@ class BarbershopProfile(BaseModel):
     cover_image_url: Optional[str] = None
     description: Optional[str] = None
     gallery_images: List[str] = Field(default_factory=list)
+    booking_questions: List[str] = Field(default_factory=list)
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
     public_theme: str = "light"
@@ -140,6 +154,11 @@ class BarbershopProfile(BaseModel):
     onboarding_completed: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("booking_questions", mode="before")
+    @classmethod
+    def normalize_booking_questions(cls, value):
+        return value or []
 
 
 class DashboardLayoutResponse(BaseModel):

@@ -41,6 +41,7 @@ class Barbershop(BaseModel):
     logo_url = Column(String(500), nullable=True)
     cover_image_url = Column(String(500), nullable=True)
     gallery_images = Column(JSON, nullable=False, default=list)
+    booking_questions = Column(JSON, nullable=True, default=list)
 
     # Personalización (Onboarding)
     primary_color = Column(String(7), nullable=True, default="#667eea")  # Hex color

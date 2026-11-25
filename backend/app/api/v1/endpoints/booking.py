@@ -73,6 +73,7 @@ def public_barbershop(slug: str, db: Session = Depends(get_db)):
         cover_image_url=shop.cover_image_url,
         description=shop.description,
         gallery_images=shop.gallery_images or [],
+        booking_questions=shop.booking_questions or [],
         primary_color=shop.primary_color,
         secondary_color=shop.secondary_color,
         public_theme=shop.public_theme or "light",

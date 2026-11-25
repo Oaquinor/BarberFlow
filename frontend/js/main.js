@@ -1283,6 +1283,7 @@ async function loadOwnerManagement() {
     if (settingsForm && barbershopProfile) {
         document.getElementById('businessSettingsName').value = barbershopProfile.name || '';
         document.getElementById('businessSettingsDescription').value = barbershopProfile.description || '';
+        document.getElementById('businessBookingQuestions').value = (barbershopProfile.booking_questions || []).join('\n');
         document.getElementById('businessSettingsOpening').value = barbershopProfile.opening_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsClosing').value = barbershopProfile.closing_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsTimezone').value = barbershopProfile.timezone || '';
@@ -1686,6 +1687,8 @@ async function saveBusinessSettings(event) {
         primary_color: document.getElementById('businessSettingsPrimary').value,
         secondary_color: document.getElementById('businessSettingsSecondary').value,
         public_theme: document.getElementById('businessSettingsTheme').value,
+        booking_questions: document.getElementById('businessBookingQuestions').value
+            .split(/\r?\n/).map(question => question.trim()).filter(Boolean),
     };
     if (payload.timezone !== barbershopProfile?.timezone && !await showConfirmation(
         'Cambiar la zona horaria cambiará cómo se muestran las horas de todas las citas existentes. ¿Continuar?'

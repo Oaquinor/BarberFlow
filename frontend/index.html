@@ -752,6 +752,7 @@
                     <form id="businessSettingsForm" class="grid">
                         <div class="field"><label for="businessSettingsName">Nombre del negocio</label><input id="businessSettingsName" required minlength="2" maxlength="200"></div>
                         <div class="field" style="grid-column:1/-1"><label for="businessSettingsDescription">Presentación para tus clientes</label><textarea id="businessSettingsDescription" maxlength="1000" placeholder="Cuéntales qué hace especial a tu barbería"></textarea></div>
+                        <div class="field booking-question-editor" style="grid-column:1/-1"><label for="businessBookingQuestions">Preguntas para preparar cada cita <span class="optional">HASTA 5</span></label><textarea id="businessBookingQuestions" maxlength="604" placeholder="¿Tienes una foto de referencia?&#10;¿Qué zonas quieres conservar?&#10;¿Tienes alguna sensibilidad que debamos considerar?"></textarea><small>Una pregunta por línea. Se mostrarán al reservar y las respuestas se adjuntarán a la cita para el barbero.</small></div>
                         <div class="field"><label for="businessSettingsOpening">Apertura</label><input id="businessSettingsOpening" type="time" required></div>
                         <div class="field"><label for="businessSettingsClosing">Cierre</label><input id="businessSettingsClosing" type="time" required></div>
                         <div class="field"><label for="businessSettingsTimezone">Zona horaria IANA</label><input id="businessSettingsTimezone" required minlength="3" maxlength="50" placeholder="America/Santo_Domingo"></div>
@@ -939,7 +940,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-professional-dashboard-2"></script>
+    <script src="js/main.js?v=20261125-personalized-booking-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

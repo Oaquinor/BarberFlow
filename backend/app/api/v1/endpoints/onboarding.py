@@ -142,6 +142,7 @@ def complete_onboarding(
         "primary_color": shop.primary_color,
         "secondary_color": shop.secondary_color,
         "public_theme": shop.public_theme,
+        "booking_questions": shop.booking_questions or [],
         "style": shop.style,
         "primary_goal": shop.primary_goal,
         "team_size": shop.team_size,
@@ -483,6 +484,7 @@ def update_business_settings(
         "timezone": shop.timezone,
         "primary_color": shop.primary_color,
         "secondary_color": shop.secondary_color,
+        "booking_questions": shop.booking_questions or [],
     }
     shop.name = data.name
     shop.description = data.description
@@ -492,6 +494,8 @@ def update_business_settings(
     shop.primary_color = data.primary_color
     shop.secondary_color = data.secondary_color
     shop.public_theme = data.public_theme
+    if data.booking_questions is not None:
+        shop.booking_questions = data.booking_questions
     record_audit(db, current_user, "business.settings_updated", "barbershop", shop.id,
                  shop.id, {"previous": previous, "name": data.name,
                            "description": data.description,
@@ -500,7 +504,8 @@ def update_business_settings(
                            "closing_time": data.closing_time.isoformat(),
                            "primary_color": data.primary_color,
                            "secondary_color": data.secondary_color,
-                           "public_theme": data.public_theme})
+                           "public_theme": data.public_theme,
+                           "booking_questions": shop.booking_questions or []})
     db.commit()
     db.refresh(shop)
     return BarbershopProfile.model_validate(shop)

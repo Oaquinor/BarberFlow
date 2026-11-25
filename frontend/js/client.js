@@ -221,6 +221,7 @@ async function loadShop() {
       .join('');
     renderServiceCards();
     renderPublicGallery(shop.gallery_images);
+    renderCustomBookingQuestions(shop.booking_questions);
     if (serviceCatalog[0]) {
       document.querySelector(`.service-card[data-service-id="${Number(serviceCatalog[0].id)}"]`)?.classList.add('selected');
     }
@@ -243,6 +244,34 @@ function applyPublicTheme(theme) {
     button.textContent = normalized === 'dark' ? '☀ Tema claro' : '☾ Tema oscuro';
     button.setAttribute('aria-label', normalized === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
   }
+}
+
+function renderCustomBookingQuestions(questions) {
+  const container = document.getElementById('customBookingQuestions');
+  if (!container) return;
+  const prompts = (Array.isArray(questions) ? questions : [])
+    .filter(question => typeof question === 'string' && question.trim()).slice(0, 5);
+  container.replaceChildren();
+  container.hidden = prompts.length === 0;
+  if (!prompts.length) return;
+  const heading = document.createElement('h4');
+  heading.textContent = 'Un detalle para preparar tu visita';
+  const intro = document.createElement('p');
+  intro.textContent = 'La barbería comparte estas preguntas para adaptar mejor tu servicio.';
+  container.append(heading, intro);
+  prompts.forEach((prompt, index) => {
+    const field = document.createElement('label');
+    field.className = 'field';
+    field.htmlFor = `customBookingQuestion-${index}`;
+    field.append(document.createTextNode(prompt));
+    const answer = document.createElement('textarea');
+    answer.id = `customBookingQuestion-${index}`;
+    answer.dataset.bookingQuestion = prompt;
+    answer.maxLength = 100;
+    answer.placeholder = 'Tu respuesta (opcional)';
+    field.append(answer);
+    container.append(field);
+  });
 }
 
 applyPublicTheme('light');
@@ -361,6 +390,10 @@ async function bookAppointment() {
     ['Acabado preferido', document.getElementById('finishPreference')?.value],
     ['Referencia del cliente', notes],
   ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`);
+  document.querySelectorAll('[data-booking-question]').forEach((answer) => {
+    const value = answer.value.trim();
+    if (value) preferences.push(`${answer.dataset.bookingQuestion}: ${value}`);
+  });
 
   if (!client_name || !phone || !service_id || !dt) {
     bookResult.textContent = 'Completa todos los campos requeridos.';
