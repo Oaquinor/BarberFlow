@@ -3,7 +3,7 @@
 from alembic import op
 
 
-revision = "035_client_account_barbershop_favorites"
+revision = "035_shop_favorites"
 down_revision = "034_client_account_favorites"
 branch_labels = None
 depends_on = None
