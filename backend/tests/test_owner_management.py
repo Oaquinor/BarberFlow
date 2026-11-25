@@ -183,12 +183,16 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
     assert public_profile.json()["primary_color"] == updated["primary_color"]
     assert public_profile.json()["cancellation_window_hours"] == 12
 
-    audit = test_db.query(AuditLog).filter_by(
+    audits = test_db.query(AuditLog).filter_by(
         barbershop_id=shop.id, action="business.settings_updated", entity_id=shop.id,
-    ).one()
+    ).order_by(AuditLog.id.asc()).all()
+    assert len(audits) == 2
+    audit = audits[0]
     assert audit.actor_user_id == owner.id
     assert audit.details["previous"]["timezone"] == "America/Santo_Domingo"
     assert audit.details["timezone"] == "America/New_York"
+    assert audit.details["style_passport_retention_days"] == 180
+    assert audits[1].details["previous"]["style_passport_retention_days"] == 180
 
     assert client.put(
         "/api/v1/onboarding/business-settings", headers=barber_headers, json=updated,
