@@ -32,6 +32,6 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_barber_live_states_barber_id", table_name="barber_live_states")
-    op.drop_index("ix_barber_live_states_barbershop_id", table_name="barber_live_states")
+    # MySQL treats the FK-supporting shop index as required until the
+    # constraints/table are removed. DROP TABLE removes both indexes safely.
     op.drop_table("barber_live_states")
