@@ -802,6 +802,12 @@ async function trackAppointments() {
       const cancelButton = ['pending', 'confirmed'].includes(item.status)
         ? `<button class="secondary cancel-booking" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
         : '';
+      const checkInButton = item.check_in_available && !item.checked_in_at
+        ? `<button class="primary check-in-booking" type="button" data-token="${escapeHtml(token)}">Ya llegué · confirmar llegada</button>`
+        : '';
+      const queueNotice = item.checked_in_at
+        ? `<p class="booking-queue">Llegada confirmada${item.queue_position ? ` · posición aproximada ${Number(item.queue_position)}` : ''}${item.estimated_wait_minutes != null && Number.isFinite(Number(item.estimated_wait_minutes)) ? ` · espera estimada ${Number(item.estimated_wait_minutes)} min` : ''}. Consulta de nuevo para actualizar.</p>`
+        : '';
       const canReschedule = ['pending', 'confirmed'].includes(item.status);
       const duration = Number(item.estimated_duration);
       let availableForService = [];
@@ -815,7 +821,7 @@ async function trackAppointments() {
             return `<option value="${Number(slot.availability_id)}">${label}</option>`;
           }).join('')}</select></label><button class="secondary reschedule-booking" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
         : '';
-      return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}<br>${rescheduleControls}<br>${cancelButton}</div>`;
+      return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}${queueNotice}<br>${checkInButton}<br>${rescheduleControls}<br>${cancelButton}</div>`;
     }));
     trackList.innerHTML = cards.join('');
   } catch (_) {
@@ -826,6 +832,30 @@ async function trackAppointments() {
 }
 
 trackList.addEventListener('click', async (event) => {
+  const checkInButton = event.target.closest('.check-in-booking');
+  if (checkInButton) {
+    checkInButton.disabled = true;
+    try {
+      const response = await fetch(`${API_BASE}/public/${shopSlug}/appointments/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: checkInButton.dataset.token }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        checkInButton.disabled = false;
+        showToast(data.detail || 'No se pudo confirmar tu llegada.');
+        return;
+      }
+    } catch (_) {
+      checkInButton.disabled = false;
+      showToast('No pudimos confirmar tu llegada. Comprueba la conexión e inténtalo de nuevo.');
+      return;
+    }
+    await trackAppointments();
+    showToast('Llegada confirmada. La barbería ya fue notificada.');
+    return;
+  }
   const rescheduleButton = event.target.closest('.reschedule-booking');
   if (rescheduleButton) {
     const card = rescheduleButton.closest('.item');

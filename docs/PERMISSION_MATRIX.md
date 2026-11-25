@@ -14,6 +14,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Registrar y consultar gastos del negocio | No | Solo su tenant; idempotente y auditado; sin edición/borrado financiero | No | No | No por defecto |
 | Registrar o consultar movimientos de existencias | No | Solo productos y movimientos de su tenant; deja auditoría | No | No | No por defecto |
 | Consultar/cancelar/reprogramar reserva guest con token privado | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva |
+| Check-in y estimación privada de cola | Solo con token de esa reserva; sin revelar otros clientes | Consulta su tenant en agenda; recibe aviso | Consulta según su agenda; recibe aviso si es barbero asignado | Solo su cita con token de seguimiento | No por defecto |
 | Agenda/estado/cobro/caja | No | Su negocio | Solo operaciones propias permitidas | No | Según endpoint administrativo explícito |
 | Consultar conciliación del día | No | Su negocio, incluye egresos operativos | Sus cobros y cierres permitidos; no ve el detalle de gastos del negocio | No | Solo conforme al tenant de su cuenta |
 | Crear/editar barberos, clientes y comisiones | No | Su tenant | No; consulta permitida de sus comisiones | No | Según endpoints administrativos explícitos |

@@ -29,7 +29,8 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Citas grupales o recurrentes | No implementado | No aparecen en rutas activas |
 | Multi-sucursal, renta de silla, empleo | No implementado | No afirmar soporte de sedes, contratos o nómina |
 | Style Passport | Parcial; flujo cliente/equipo y retención configurable integrados | Guarda preferencias vinculadas a citas completadas y fotos privadas de referencia/resultado. Owner y barbero del tenant pueden consultar y anotar solo registros compartidos; el consentimiento es opcional y revocable. El owner puede configurar 90/180/365/730 días; desactivada si deja "hasta que el cliente lo elimine". Worker MySQL con purga limitada y auditada. No usa reconocimiento facial ni publica fotos. |
-| Live Chair, Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
+| Live Chair | Parcial | El cliente confirma llegada por token privado y ve posición/espera aproximadas dentro de la cola del mismo barbero; no hay tablero en vivo, streaming ni avisos push |
+| Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
 | Pronóstico de demanda | Parcial | Promedio estadístico explicable; no es ML ni predicción comercial validada |
 | MFA, WebSocket, notificaciones push | No implementado | No hay MFA ni canal push/WebSocket activo |
 
@@ -102,6 +103,6 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Siguiente orden de entrega
 
-1. Diseñar Live Chair a partir de disponibilidad, check-in, estimación de espera y privacidad antes de elegir mecanismo realtime.
+1. Ampliar Live Chair con tablero operativo, actualización en tiempo real y políticas de precisión; el check-in y la estimación privada están implementados, pero no son una sala en vivo.
 2. Definir país, proveedor y modelo comercial antes de diseñar cobros online; automatizar la lista de espera y definir fidelidad/sucursales antes de esos dominios.
 3. Completar threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.

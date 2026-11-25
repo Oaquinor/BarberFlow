@@ -362,6 +362,32 @@ def test_public_booking_tracking_and_cancel_are_connected(
     assert len(tracked.json()["items"]) == 1
     assert tracked.json()["items"][0]["appointment_id"] == booking["appointment_id"]
     assert tracked.json()["items"][0]["estimated_duration"] == 30
+    tracked_appointment = test_db.get(Appointment, booking["appointment_id"])
+    tracked_appointment.status = "confirmed"
+    tracked_appointment.scheduled_time = utc_now_naive()
+    test_db.commit()
+    check_in = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/check-in", json={"token": tracking_token},
+    )
+    assert check_in.status_code == 200
+    assert check_in.json()["success"] is True
+    test_db.refresh(tracked_appointment)
+    check_in_time = tracked_appointment.checked_in_at
+    duplicate_check_in = client.post(
+        f"/api/v1/public/{shop.slug}/appointments/check-in", json={"token": tracking_token},
+    )
+    assert duplicate_check_in.status_code == 200
+    test_db.refresh(tracked_appointment)
+    assert tracked_appointment.checked_in_at == check_in_time
+    refreshed_tracking = client.post(
+        f"/api/v1/public/{shop.slug}/track", json={"token": tracking_token},
+    ).json()["items"][0]
+    assert refreshed_tracking["checked_in_at"]
+    assert refreshed_tracking["queue_position"] == 1
+    tracked_appointment.status = "pending"
+    tracked_appointment.scheduled_time = start
+    tracked_appointment.checked_in_at = None
+    test_db.commit()
 
     blocked_reschedule = client.post(
         f"/api/v1/public/{shop.slug}/appointments/reschedule",

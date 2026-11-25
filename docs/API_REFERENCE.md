@@ -57,12 +57,15 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
 | `POST` | `/public/{slug}/waitlist` | Registra una solicitud sin compromiso para que la barbería contacte al cliente; limita por negocio/IP y conserva snapshots del servicio/profesional en MySQL |
 | `POST` | `/public/{slug}/track` | Consulta con token privado |
+| `POST` | `/public/{slug}/appointments/check-in` | Confirma llegada con token privado desde 60 min antes hasta 30 min después de la cita |
 | `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado o sesión autenticada de la cuenta propietaria |
 | `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
 
 Reserva:
 
 La reserva autenticada acepta `Authorization: Bearer <access_token>` y no requiere repetir `client_name` ni `phone`; la identidad se toma de la cuenta y se vincula a un perfil CRM separado de la barbería. Sin token, ambos campos siguen siendo obligatorios para una reserva de invitado. La respuesta incluye `saved_to_account`.
+
+El seguimiento privado informa si el check-in está abierto, la hora de llegada y una posición/espera aproximadas para el cliente que ya confirmó su llegada. La estimación solo considera citas confirmadas que también hicieron check-in y citas en curso del mismo barbero; no revela nombres ni datos de otros clientes y se recalcula al volver a consultar. Reprogramar elimina el check-in anterior. No equivale a seguimiento en vivo ni envía notificaciones push.
 
 La cuenta cliente puede actualizar nombre/teléfono, descargar perfil e historial en JSON, cancelar y reprogramar sus citas futuras `pending` o `confirmed` desde el historial. El correo se mantiene verificado y no se cambia desde este formulario. Las respuestas de perfil, historial y exportación usan `Cache-Control: no-store`. El API verifica el enlace de propiedad CRM y aplica la política de anticipación. Cancelar actualiza estado y libera el turno; reprogramar requiere `appointment_id` junto con `availability_id` y un `Authorization: Bearer <access_token>` de cliente verificado. El ID por sí solo nunca autoriza el acceso. El flujo confirma el nuevo turno y libera el anterior dentro de la misma transacción, con validación de disponibilidad, conflictos, notificación y auditoría.
 

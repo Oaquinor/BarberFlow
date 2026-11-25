@@ -300,6 +300,10 @@ class PublicTrackAppointmentItem(BaseModel):
     service_type: str
     barber_name: Optional[str] = None
     estimated_duration: int
+    checked_in_at: Optional[datetime] = None
+    check_in_available: bool = False
+    queue_position: Optional[int] = None
+    estimated_wait_minutes: Optional[int] = None
 
 
 class PublicTrackAppointmentResponse(BaseModel):

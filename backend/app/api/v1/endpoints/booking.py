@@ -981,6 +981,7 @@ def public_track_appointments(
     if not appointment:
         return PublicTrackAppointmentResponse(items=[])
 
+    now = utc_now_naive()
     return PublicTrackAppointmentResponse(items=[
         PublicTrackAppointmentItem(
             appointment_id=appointment.id,
@@ -989,8 +990,80 @@ def public_track_appointments(
             service_type=appointment.service_type,
             barber_name=appointment.barber.full_name if appointment.barber else None,
             estimated_duration=appointment.estimated_duration,
+            checked_in_at=_utc_aware(appointment.checked_in_at) if appointment.checked_in_at else None,
+            check_in_available=(
+                appointment.status == "confirmed"
+                and now >= appointment.scheduled_time - timedelta(minutes=60)
+                and now <= appointment.scheduled_time + timedelta(minutes=30)
+            ),
+            **_public_queue_estimate(db, appointment, now),
         )
     ])
+
+
+def _public_queue_estimate(db: Session, appointment: Appointment, now: datetime) -> dict:
+    """Return an approximate private queue position without exposing other clients."""
+    if not appointment.checked_in_at and appointment.status != "in_progress":
+        return {"queue_position": None, "estimated_wait_minutes": None}
+    ahead = db.query(Appointment).filter(
+        Appointment.barbershop_id == appointment.barbershop_id,
+        Appointment.barber_id == appointment.barber_id,
+        Appointment.is_deleted == False,
+        Appointment.id != appointment.id,
+        Appointment.status.in_(("confirmed", "in_progress")),
+        Appointment.scheduled_time <= appointment.scheduled_time,
+    ).all()
+    ahead = [row for row in ahead if row.status == "in_progress" or row.checked_in_at is not None]
+    ahead.sort(key=lambda row: (row.scheduled_time, row.id))
+    ahead = [row for row in ahead if (row.scheduled_time, row.id) < (appointment.scheduled_time, appointment.id)]
+    wait = 0
+    for row in ahead:
+        if row.status == "in_progress" and row.actual_start_time:
+            remaining = max(0, int((row.actual_start_time + timedelta(minutes=row.estimated_duration) - now).total_seconds() // 60))
+            wait += remaining
+        else:
+            wait += max(0, int(row.estimated_duration or 0))
+    wait = max(wait, max(0, int((appointment.scheduled_time - now).total_seconds() // 60)))
+    return {"queue_position": len(ahead) + 1, "estimated_wait_minutes": wait}
+
+
+@router.post("/public/{slug}/appointments/check-in")
+def public_check_in_appointment(
+    slug: str,
+    data: PublicTrackAppointmentRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Let a customer privately confirm arrival near their appointment time."""
+    shop = _get_public_shop(db, slug)
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _consume_public_token_quota(
+        db, "appointment-change", _public_booking_client_ip(request),
+        utc_now_naive(), PUBLIC_APPOINTMENT_CHANGE_IP_LIMIT,
+    )
+    token_hash = hashlib.sha256(data.token.encode("utf-8")).hexdigest()
+    appointment = db.query(Appointment).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.tracking_token_hash == token_hash,
+        Appointment.is_deleted == False,
+    ).with_for_update().first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if appointment.status != "confirmed":
+        raise HTTPException(status_code=409, detail="El check-in está disponible para citas confirmadas")
+    now = utc_now_naive()
+    if now < appointment.scheduled_time - timedelta(minutes=60) or now > appointment.scheduled_time + timedelta(minutes=30):
+        raise HTTPException(status_code=409, detail="El check-in está disponible desde 60 minutos antes hasta 30 minutos después de la cita")
+    if appointment.checked_in_at is None:
+        appointment.checked_in_at = now
+        _notify_appointment_staff(
+            db, appointment, "appointment_checked_in", "Cliente llegó",
+            f"El cliente confirmó su llegada para {appointment.service_type}.",
+        )
+        _audit(db, None, "appointment.checked_in_by_client", "appointment", appointment.id, shop.id, {})
+    db.commit()
+    return {"success": True, "checked_in_at": _utc_aware(appointment.checked_in_at)}
 
 @router.post("/public/{slug}/appointments/cancel")
 def public_cancel_appointment(
@@ -1229,6 +1302,7 @@ def public_reschedule_appointment(
         BarberAvailability.is_deleted == False,
     ).update({BarberAvailability.is_booked: False}, synchronize_session=False)
     appointment.scheduled_time = new_start
+    appointment.checked_in_at = None
     appointment.barber_id = barber.id
     _notify_appointment_staff(
         db, appointment, "appointment_rescheduled", "Cita reprogramada",

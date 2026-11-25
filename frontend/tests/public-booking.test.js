@@ -190,6 +190,13 @@ test('appointment tracking requests replacement slots for each appointment durat
   assert.match(clientScript, /slotResults\.set\(duration, fetchSlots\(duration\)\)/);
 });
 
+test('appointment tracking offers private arrival check-in and labels queue estimates as approximate', () => {
+  assert.match(clientScript, /appointments\/check-in/);
+  assert.match(clientScript, /check_in_available && !item\.checked_in_at/);
+  assert.match(clientScript, /posición aproximada/);
+  assert.match(clientScript, /Consulta de nuevo para actualizar/);
+});
+
 test('appointment tracking handles network failures and allows another attempt', async () => {
   const start = clientScript.indexOf('async function trackAppointments()');
   const end = clientScript.indexOf('\ntrackList.addEventListener', start);
