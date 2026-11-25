@@ -116,6 +116,11 @@ def test_client_claims_only_a_private_token_and_sees_only_linked_shop_history(
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert history.status_code == 200
     assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
+    exported = client.get("/api/v1/client-account/export", headers=headers)
+    assert exported.status_code == 200
+    assert exported.json()["account"]["email"] == account.email
+    assert [item["appointment_id"] for item in exported.json()["appointments"]] == [appointment.id]
+    assert "tracking_token" not in str(exported.json())
 
 
 def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_account(
@@ -212,6 +217,9 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
         headers=other_headers, json={},
     )
     assert forbidden_cancel.status_code == 404
+    foreign_export = client.get("/api/v1/client-account/export", headers=other_headers)
+    assert foreign_export.status_code == 200
+    assert foreign_export.json()["appointments"] == []
     assert test_db.get(Appointment, appointment.id).status == "pending"
     forbidden_reschedule = client.post(
         f"/api/v1/public/{shop.slug}/appointments/reschedule",

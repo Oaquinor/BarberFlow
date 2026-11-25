@@ -20,6 +20,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `POST` | `/client-account/verify` | Público; activa una cuenta con token de 30 minutos, de un solo uso |
 | `GET` | `/client-account/profile` | Cliente autenticado y verificado; devuelve sus datos editables |
 | `PATCH` | `/client-account/profile` | Actualiza nombre y teléfono propios; email no editable; registra auditoría |
+| `GET` | `/client-account/export` | Cliente autenticado y verificado; descarga perfil e historial propio en JSON |
 | `GET` | `/client-account/appointments` | Cuenta cliente autenticada y correo verificado; hasta 100 citas vinculadas |
 | `POST` | `/client-account/appointments/claim` | Cuenta cliente autenticada y token privado de seguimiento; añade una cita a su historial |
 | `POST` | `/client-account/appointments/{appointment_id}/cancel` | Dueño autenticado de la cita mediante enlace CRM; aplica estado, anticipación de cancelación, libera el turno y encola notificaciones |
@@ -48,7 +49,7 @@ Reserva:
 
 La reserva autenticada acepta `Authorization: Bearer <access_token>` y no requiere repetir `client_name` ni `phone`; la identidad se toma de la cuenta y se vincula a un perfil CRM separado de la barbería. Sin token, ambos campos siguen siendo obligatorios para una reserva de invitado. La respuesta incluye `saved_to_account`.
 
-La cuenta cliente puede actualizar nombre/teléfono, cancelar y reprogramar sus citas futuras `pending` o `confirmed` desde el historial. El correo se mantiene verificado y no se cambia desde este formulario. El API verifica el enlace de propiedad CRM y aplica la política de anticipación. Cancelar actualiza estado y libera el turno; reprogramar requiere `appointment_id` junto con `availability_id` y un `Authorization: Bearer <access_token>` de cliente verificado. El ID por sí solo nunca autoriza el acceso. El flujo confirma el nuevo turno y libera el anterior dentro de la misma transacción, con validación de disponibilidad, conflictos, notificación y auditoría.
+La cuenta cliente puede actualizar nombre/teléfono, descargar perfil e historial en JSON, cancelar y reprogramar sus citas futuras `pending` o `confirmed` desde el historial. El correo se mantiene verificado y no se cambia desde este formulario. El API verifica el enlace de propiedad CRM y aplica la política de anticipación. Cancelar actualiza estado y libera el turno; reprogramar requiere `appointment_id` junto con `availability_id` y un `Authorization: Bearer <access_token>` de cliente verificado. El ID por sí solo nunca autoriza el acceso. El flujo confirma el nuevo turno y libera el anterior dentro de la misma transacción, con validación de disponibilidad, conflictos, notificación y auditoría.
 
 ```json
 {

@@ -7,7 +7,7 @@ import secrets
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import CurrentUser
 from app.api.v1.endpoints.common import _get_timezone, _normalize_phone, _utc_aware
@@ -230,16 +230,16 @@ def update_client_profile(
 @router.get("/appointments")
 def list_client_appointments(user: CurrentUser, db: Session = Depends(get_db)):
     _require_client_account(user)
-    links = db.query(ClientAccountShopLink).filter(
-        ClientAccountShopLink.account_user_id == user.id,
-        ClientAccountShopLink.is_deleted == False,
-    ).all()
-    client_ids = [link.crm_client_user_id for link in links]
-    if not client_ids:
-        return {"items": []}
     appointments = db.query(Appointment).filter(
-        Appointment.client_id.in_(client_ids),
+        Appointment.client_id.in_(
+            db.query(ClientAccountShopLink.crm_client_user_id).filter(
+                ClientAccountShopLink.account_user_id == user.id,
+                ClientAccountShopLink.is_deleted == False,
+            )
+        ),
         Appointment.is_deleted == False,
+    ).options(
+        joinedload(Appointment.barbershop), joinedload(Appointment.barber),
     ).order_by(Appointment.scheduled_time.desc()).limit(100).all()
     return {"items": [{
         "appointment_id": appointment.id,
@@ -253,6 +253,47 @@ def list_client_appointments(user: CurrentUser, db: Session = Depends(get_db)):
         "barber": appointment.barber.full_name if appointment.barber else "Equipo",
         "notes": appointment.client_notes,
     } for appointment in appointments]}
+
+
+@router.get("/export")
+def export_client_data(user: CurrentUser, db: Session = Depends(get_db)):
+    """Return the authenticated customer's profile and linked appointment data."""
+    _require_client_account(user)
+    appointments = db.query(Appointment).join(
+        ClientAccountShopLink,
+        ClientAccountShopLink.crm_client_user_id == Appointment.client_id,
+    ).filter(
+        ClientAccountShopLink.account_user_id == user.id,
+        ClientAccountShopLink.is_deleted == False,
+        Appointment.is_deleted == False,
+    ).options(
+        joinedload(Appointment.barbershop), joinedload(Appointment.barber),
+    ).order_by(Appointment.scheduled_time.desc()).all()
+    record_audit(
+        db, user, "client_account.data_exported", "user", user.id,
+        details={"appointment_count": len(appointments)},
+    )
+    db.commit()
+    return {
+        "exported_at": utc_now_naive(),
+        "account": {
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "phone": user.phone,
+        },
+        "appointments": [{
+            "appointment_id": appointment.id,
+            "barbershop": appointment.barbershop.name if appointment.barbershop else None,
+            "scheduled_time": appointment.scheduled_time,
+            "status": appointment.status,
+            "service": appointment.service_type,
+            "price_cents": appointment.service_price,
+            "duration_minutes": appointment.estimated_duration,
+            "barber": appointment.barber.full_name if appointment.barber else None,
+            "notes": appointment.client_notes,
+        } for appointment in appointments],
+    }
 
 
 @router.post("/appointments/{appointment_id}/cancel")

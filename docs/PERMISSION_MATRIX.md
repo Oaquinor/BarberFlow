@@ -17,6 +17,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Crear cuenta cliente y verificar correo | Sí | No | No | Reenvío solo durante verificación | No |
 | Consultar historial | No | No | No | Solo sus citas vinculadas; máximo 100 | No por defecto |
 | Consultar/editar perfil de cliente | No | No | No | Solo su nombre y teléfono; correo requiere verificación independiente | No por defecto |
+| Exportar sus datos | No | No | No | Solo perfil y citas vinculadas a su cuenta; descarga JSON y deja auditoría | No por defecto |
 | Reclamar cita guest en el historial | No sin autenticación + token privado | No | No | Sí, únicamente con su token privado | No por defecto |
 | Cancelar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta; respeta anticipación y libera turno | No por defecto |
 | Reprogramar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta verificada; respeta anticipación y disponibilidad | No por defecto |

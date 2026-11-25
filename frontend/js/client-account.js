@@ -320,6 +320,28 @@
     }
   });
 
+  document.getElementById("exportDataButton").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const data = await readJson(await window.KingFlowAuth.fetch(`${api}/export`));
+      const file = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const objectUrl = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "kingflow-mis-datos.json";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      message("Tu archivo con los datos de tu cuenta está listo.");
+    } catch (error) {
+      message(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   document.getElementById("logoutButton").addEventListener("click", async () => {
     await window.KingFlowAuth.logout();
     customerPanel.hidden = true;

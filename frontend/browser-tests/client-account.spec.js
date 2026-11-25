@@ -141,6 +141,11 @@ test("customer can update account name and phone while email remains verified an
     }
     await route.fulfill({ json: { email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213" } });
   });
+  await page.route("**/api/v1/client-account/export", (route) => route.fulfill({ json: {
+    exported_at: "2026-11-25T12:00:00Z",
+    account: { email: "ana@example.com", first_name: "Andrea", last_name: "Pérez", phone: "18095550099" },
+    appointments: [],
+  } }));
   await page.route("**/api/v1/client-account/appointments", (route) => route.fulfill({ json: { items: [] } }));
 
   await page.goto("/client-account.html");
@@ -157,4 +162,9 @@ test("customer can update account name and phone while email remains verified an
   await expect(page.getByRole("status")).toContainText("perfil se guardó");
   expect(profileUpdate).toEqual({ first_name: "Andrea", last_name: "Pérez", phone: "809 555 0099" });
   await expect(page.getByText("Hola, Andrea Pérez")).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Descargar mis datos" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("kingflow-mis-datos.json");
+  await expect(page.getByRole("status")).toContainText("archivo con los datos");
 });
