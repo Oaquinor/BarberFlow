@@ -34,7 +34,9 @@ class BookingWaitlistOffer(BaseModel):
         Integer, ForeignKey("booking_waitlist_entries.id", ondelete="RESTRICT"), nullable=False
     )
     availability_id = Column(
-        Integer, ForeignKey("barber_availability.id", ondelete="RESTRICT"), nullable=False
+        Integer,
+        ForeignKey("barber_availabilities.id", ondelete="RESTRICT"),
+        nullable=False,
     )
     appointment_id = Column(
         Integer, ForeignKey("appointments.id", ondelete="RESTRICT"), nullable=True

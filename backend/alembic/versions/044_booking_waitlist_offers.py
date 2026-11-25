@@ -34,7 +34,7 @@ def upgrade():
             ["waitlist_entry_id"], ["booking_waitlist_entries.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(
-            ["availability_id"], ["barber_availability.id"], ondelete="RESTRICT"
+            ["availability_id"], ["barber_availabilities.id"], ondelete="RESTRICT"
         ),
         sa.ForeignKeyConstraint(["appointment_id"], ["appointments.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
