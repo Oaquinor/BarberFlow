@@ -404,3 +404,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .barber-style-passport-notes textarea { width:100%; min-height:76px; padding:9px; border:1px solid #d9d3c9; border-radius:8px; color:#342f27; background:#fff; font:inherit; font-size:.8rem; }
 .barber-style-passport-notes button { grid-column:1 / -1; justify-self:start; }
 @media(max-width:640px) { .barber-style-passport-notes { grid-template-columns:minmax(0,1fr); } .barber-style-passport-notes button { grid-column:1; width:100%; } }
+.owner-live-chair-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:12px; margin:14px 0; }
+.owner-live-chair-card { min-width:0; padding:15px; border:1px solid var(--kf-line); border-radius:13px; background:var(--kf-paper); }
+.owner-live-chair-card h4 { margin:0; color:var(--kf-ink); font-size:.96rem; }
+.owner-live-chair-card p { margin:9px 0 0; color:var(--kf-muted); font-size:.8rem; line-height:1.45; overflow-wrap:anywhere; }
+.owner-live-chair-card-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.live-chair-state { display:inline-flex; align-items:center; min-height:26px; padding:4px 9px; border:1px solid #dfd5c7; border-radius:999px; color:#59462f; background:#f5eee4; font-size:.68rem; font-weight:750; }
+.live-chair-state-attending { color:#315747; border-color:#c8dfd0; background:#edf6ef; }
+.live-chair-state-delayed { color:#7a3d29; border-color:#e5c6bb; background:#fcf1ed; }
+.live-chair-state-waiting, .live-chair-state-up_next { color:#72531c; border-color:#ead9aa; background:#fbf6e6; }
+.live-chair-state-available { color:#3b5b76; border-color:#cbdbe9; background:#eff5fa; }
+.live-chair-progress { height:6px; margin-top:10px; overflow:hidden; border-radius:999px; background:#ece7df; }
+.live-chair-progress span { display:block; height:100%; border-radius:inherit; background:var(--brand-primary); }
+#ownerLiveChair > small { display:block; color:var(--kf-muted); font-size:.72rem; line-height:1.5; }
+@media(prefers-reduced-motion:reduce) { .live-chair-progress span { transition:none; } }

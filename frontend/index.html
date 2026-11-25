@@ -342,7 +342,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-style-retention-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-live-chair-1">
 </head>
 <body>
     <div class="container">
@@ -745,6 +745,12 @@
 
             <div id="ownerManagementTab" class="tab-content" style="display:none;">
                 <h2>Equipo y clientes</h2>
+                <section class="card owner-live-chair" id="ownerLiveChair" aria-labelledby="ownerLiveChairTitle" hidden>
+                    <div class="services-header"><div><h3 id="ownerLiveChairTitle">Live Chair · estado del equipo</h3><p>Atención, clientes que confirmaron llegada y siguiente turno. Se actualiza cada 30 segundos mientras esta sección esté abierta.</p></div><button id="refreshOwnerLiveChair" class="btn-secondary" type="button">Actualizar</button></div>
+                    <div id="ownerLiveChairGrid" class="owner-live-chair-grid" aria-live="polite"></div>
+                    <p id="ownerLiveChairResult" role="status" aria-live="polite">Abre esta sección para cargar el estado actual.</p>
+                    <small>Las esperas son aproximadas. Este panel no permite cambiar estados de trabajo y no muestra nombres ni notas de clientes.</small>
+                </section>
                 <section class="card" aria-labelledby="ownerSubscriptionTitle">
                     <div class="services-header"><h3 id="ownerSubscriptionTitle">Plan y uso</h3><button id="refreshOwnerSubscription" class="btn-secondary" type="button">Actualizar</button></div>
                     <div id="ownerSubscriptionSummary" role="status" aria-live="polite">Cargando suscripción…</div>

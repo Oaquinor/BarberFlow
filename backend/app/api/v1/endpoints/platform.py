@@ -19,7 +19,7 @@ from typing import Optional
 from time import sleep as sleep_seconds
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Request
-from sqlalchemy import func, or_, update
+from sqlalchemy import and_, func, or_, update
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
@@ -71,6 +71,7 @@ from app.api.v1.endpoints.common import (
     _cash_register_closed_for_user,
     _get_current_user,
     _get_timezone,
+    _require_active_subscription,
     _utc_aware,
 )
 
@@ -2011,6 +2012,127 @@ def barber_appointments_for_date(
             "status": item.status,
         } for item in appointments],
     }
+
+
+@router.get("/owner/live-chair")
+def owner_live_chair(
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return a privacy-conscious snapshot of today's chair and checked-in queues."""
+    owner = _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(status_code=403, detail="Solo el propietario puede consultar Live Chair")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == owner.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+    _require_active_subscription(db, shop)
+
+    now = utc_now_naive()
+    day_start, day_end, _, _ = _local_day_bounds(now, shop)
+    barbers = db.query(User).filter(
+        User.barbershop_id == shop.id,
+        User.role == "barber",
+        User.is_active == True,
+        User.is_deleted == False,
+    ).order_by(User.first_name, User.last_name, User.id).all()
+    if not barbers:
+        return {"updated_at": _utc_aware(now), "items": []}
+    barber_ids = [barber.id for barber in barbers]
+    appointments = db.query(Appointment).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.barber_id.in_(barber_ids),
+        Appointment.is_deleted == False,
+        or_(
+            Appointment.status == "in_progress",
+            and_(
+                Appointment.scheduled_time >= day_start,
+                Appointment.scheduled_time < day_end,
+                Appointment.status.in_(("pending", "confirmed")),
+            ),
+        ),
+    ).order_by(Appointment.scheduled_time, Appointment.id).all()
+    appointments_by_barber: dict[int, list[Appointment]] = {}
+    for appointment in appointments:
+        appointments_by_barber.setdefault(appointment.barber_id, []).append(appointment)
+    open_now = db.query(BarberAvailability.barber_id).filter(
+        BarberAvailability.barbershop_id == shop.id,
+        BarberAvailability.barber_id.in_(barber_ids),
+        BarberAvailability.is_active == True,
+        BarberAvailability.is_booked == False,
+        BarberAvailability.is_deleted == False,
+        BarberAvailability.slot_start <= now,
+        BarberAvailability.slot_end > now,
+    ).distinct().all()
+    open_barber_ids = {row[0] for row in open_now}
+
+    items = []
+    for barber in barbers:
+        own = appointments_by_barber.get(barber.id, [])
+        active = next((item for item in own if item.status == "in_progress"), None)
+        waiting = sorted(
+            (item for item in own if item.status == "confirmed" and item.checked_in_at is not None),
+            key=lambda item: (item.scheduled_time, item.id),
+        )
+        upcoming = next((
+            item for item in own
+            if item.status in {"pending", "confirmed"}
+            and item.checked_in_at is None
+            and item.scheduled_time >= now
+        ), None)
+
+        active_remaining = 0
+        active_elapsed = 0
+        active_service = None
+        if active:
+            actual_start = active.actual_start_time or now
+            active_elapsed = max(0, int((now - actual_start).total_seconds() // 60))
+            active_remaining = max(0, int(active.estimated_duration or 0) - active_elapsed)
+            active_service = {
+                "service_type": active.service_type,
+                "started_at": _utc_aware(actual_start),
+                "estimated_duration": active.estimated_duration,
+                "elapsed_minutes": active_elapsed,
+                "progress_percent": _service_progress_percent(active, now),
+            }
+
+        if active:
+            state = "delayed" if active_elapsed >= active.estimated_duration else "attending"
+        elif waiting:
+            state = "waiting"
+        elif upcoming:
+            state = "up_next"
+        elif barber.id in open_barber_ids:
+            state = "available"
+        else:
+            state = "unscheduled"
+
+        next_wait_minutes = None
+        if waiting:
+            next_wait_minutes = max(
+                active_remaining,
+                max(0, int((waiting[0].scheduled_time - now).total_seconds() // 60)),
+            )
+        elif upcoming:
+            next_wait_minutes = max(0, int((upcoming.scheduled_time - now).total_seconds() // 60))
+
+        items.append({
+            "barber_id": barber.id,
+            "barber_name": barber.full_name,
+            "state": state,
+            "active_service": active_service,
+            "checked_in_count": len(waiting),
+            "estimated_wait_minutes": next_wait_minutes,
+            "next_appointment": ({
+                "scheduled_time": _utc_aware(upcoming.scheduled_time),
+                "service_type": upcoming.service_type,
+            } if upcoming else None),
+        })
+    return {"updated_at": _utc_aware(now), "items": items}
 
 
 @router.get("/barber/appointments/calendar")

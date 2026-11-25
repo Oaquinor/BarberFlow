@@ -16,6 +16,8 @@ let dashboardRequestSequence = 0;
 let cashSummaryRequestSequence = 0;
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
+let liveChairRefreshTimer = null;
+let liveChairRequestInFlight = false;
 let serviceTimerInterval = null;
 let performanceChartResizeObserver = null;
 const ownerClientCache = new Map();
@@ -2213,6 +2215,63 @@ document.getElementById('ownerClientSearch')?.addEventListener('input', (event) 
     ownerClientsSearchTimer = setTimeout(loadOwnerClients, 250);
 });
 
+async function loadOwnerLiveChair() {
+    const panel = document.getElementById('ownerLiveChair');
+    const grid = document.getElementById('ownerLiveChairGrid');
+    const result = document.getElementById('ownerLiveChairResult');
+    if (!panel || !grid || !result || currentUser?.role !== 'barbershop_owner' || liveChairRequestInFlight) return;
+    liveChairRequestInFlight = true;
+    const refreshButton = document.getElementById('refreshOwnerLiveChair');
+    if (refreshButton) refreshButton.disabled = true;
+    result.textContent = 'Actualizando estado del equipo…';
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/owner/live-chair`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo consultar Live Chair.');
+        const stateLabels = {
+            attending: 'En servicio', delayed: 'Servicio con retraso', waiting: 'Cliente en espera',
+            up_next: 'Próxima cita', available: 'Disponible', unscheduled: 'Sin turno registrado',
+        };
+        const items = Array.isArray(data.items) ? data.items : [];
+        grid.innerHTML = items.map((item) => {
+            const state = stateLabels[item.state] ? item.state : 'unscheduled';
+            const active = item.active_service;
+            const next = item.next_appointment;
+            const nextAt = next?.scheduled_time
+                ? new Date(next.scheduled_time).toLocaleTimeString('es-DO', {
+                    timeZone: barbershopProfile?.timezone || 'UTC', hour: 'numeric', minute: '2-digit',
+                })
+                : '';
+            const wait = item.estimated_wait_minutes == null
+                ? 'Sin estimación'
+                : item.estimated_wait_minutes === 0 ? 'Siguiente cliente listo' : `~${Number(item.estimated_wait_minutes)} min`;
+            return `<article class="owner-live-chair-card">
+                <div class="owner-live-chair-card-heading"><h4>${escapeHtml(item.barber_name || 'Barbero')}</h4><span class="live-chair-state live-chair-state-${state}">${stateLabels[state]}</span></div>
+                ${active ? `<p><strong>${escapeHtml(active.service_type || 'Servicio')}</strong> · ${Number(active.elapsed_minutes) || 0} min transcurridos</p><div class="live-chair-progress" role="progressbar" aria-label="Progreso estimado del servicio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}"><span style="width:${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}%"></span></div>` : '<p>Sin servicio en curso</p>'}
+                <p>${Number(item.checked_in_count) || 0} cliente(s) confirmaron llegada · ${escapeHtml(wait)}</p>
+                ${next ? `<p>Siguiente turno${nextAt ? ` · ${escapeHtml(nextAt)}` : ''}: ${escapeHtml(next.service_type || 'Servicio')}</p>` : ''}
+            </article>`;
+        }).join('');
+        if (!items.length) {
+            result.textContent = 'No hay barberos activos configurados.';
+        } else {
+            const updatedAt = data.updated_at
+                ? new Date(data.updated_at).toLocaleTimeString('es-DO', {
+                    timeZone: barbershopProfile?.timezone || 'UTC', hour: 'numeric', minute: '2-digit',
+                })
+                : '';
+            result.textContent = `Estado calculado con agenda y llegadas${updatedAt ? ` · actualizado a las ${updatedAt}` : ''}.`;
+        }
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo actualizar el estado operativo.';
+    } finally {
+        liveChairRequestInFlight = false;
+        if (refreshButton) refreshButton.disabled = false;
+    }
+}
+
+document.getElementById('refreshOwnerLiveChair')?.addEventListener('click', loadOwnerLiveChair);
+
 async function loadOwnerSubscription() {
     const summary = document.getElementById('ownerSubscriptionSummary');
     if (!summary || currentUser?.role !== 'barbershop_owner') return;
@@ -2752,8 +2811,24 @@ function showTab(tabName) {
     if (content) content.style.display = 'block';
     if (tabName === 'ownerManagement' && currentUser?.role === 'barbershop_owner') {
         void loadOwnerSubscription();
+        void loadOwnerLiveChair();
+        if (!liveChairRefreshTimer) {
+            liveChairRefreshTimer = setInterval(() => {
+                const ownerPanel = document.getElementById('ownerManagementTab');
+                if (currentUser?.role === 'barbershop_owner' && !document.hidden && ownerPanel?.style.display !== 'none') {
+                    void loadOwnerLiveChair();
+                }
+            }, 30000);
+        }
     }
 }
+
+document.addEventListener('visibilitychange', () => {
+    const ownerPanel = document.getElementById('ownerManagementTab');
+    if (!document.hidden && currentUser?.role === 'barbershop_owner' && ownerPanel?.style.display !== 'none') {
+        void loadOwnerLiveChair();
+    }
+});
 
 async function loadNotificationInbox() {
     const list = document.getElementById('notificationInboxItems');
@@ -3327,6 +3402,8 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (newServiceBtn) newServiceBtn.hidden = currentUser.role !== 'barbershop_owner';
         const ownerTabButton = document.getElementById('ownerManagementTabButton');
         if (ownerTabButton) ownerTabButton.hidden = currentUser.role !== 'barbershop_owner';
+        const ownerLiveChairPanel = document.getElementById('ownerLiveChair');
+        if (ownerLiveChairPanel) ownerLiveChairPanel.hidden = currentUser.role !== 'barbershop_owner';
         const achievementsButton = document.getElementById('achievementsTabButton');
         const achievementsPanel = document.getElementById('achievementsTab');
         if (achievementsButton) achievementsButton.hidden = currentUser.role !== 'barber';

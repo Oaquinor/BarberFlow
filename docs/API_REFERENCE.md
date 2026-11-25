@@ -113,6 +113,7 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `POST` | `/barber/absences` | Bloquea un rango futuro propio; rechaza rangos con citas activas |
 | `DELETE` | `/barber/absences/{absence_id}` | Cancela una ausencia propia y vuelve a publicar los turnos originales |
 | `GET` | `/barber/dashboard` | Agenda del día y métricas operativas |
+| `GET` | `/owner/live-chair` | Estado operativo por barbero para el propietario; devuelve atención activa, cantidad de check-ins, próxima cita y estimación aproximada, sin nombres/notas de clientes |
 | `GET` | `/barber/appointments?target_date=YYYY-MM-DD` | Agenda local del negocio; al equipo incluye el ID del perfil CRM para consultar únicamente el Style Passport compartido |
 | `GET` | `/barber/appointments/calendar?view=week&anchor_date=YYYY-MM-DD` | Citas por día para una semana o mes local; el barbero solo recibe sus citas y el ID CRM necesario para revisar registros compartidos |
 | `PUT` | `/barber/appointments/{appointment_id}/status` | Confirma, inicia, cancela o marca no presentado |
