@@ -36,7 +36,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 
 ## Contraste de mercado
 
-La revisión de páginas oficiales de [SQUIRE](https://getsquire.com/), [Booksy](https://biz.booksy.com/who-loves-us/barber), [Fresha](https://www.fresha.com/for-business/barber), [Vagaro](https://www.vagaro.com/pro/barber-software), [Square Appointments](https://squareup.com/us/en/appointments/features?country_redirection=true), [theCut](https://thecut.co/barber-features) y [GlossGenius](https://glossgenius.com/pricing) muestra un patrón de producto: reserva ligada a agenda y recordatorios, perfil/historial de cliente, pagos/caja, herramientas de marketing y, según proveedor, lista de espera, inventario, fidelidad o descubrimiento. Esto es una referencia de mercado, no prueba de que KingFlow ya ofrezca esas capacidades ni una especificación para copiar.
+La revisión y matriz de páginas oficiales de [SQUIRE](https://www.getsquire.com/), [Booksy](https://biz.booksy.com/en-ie/features), [Fresha](https://www.fresha.com/for-business/barber), [Vagaro](https://mysite.vagaro.com/vagarouniversity/barber), [Square](https://squareup.com/us/en/appointments), [theCut](https://thecut.co/barber-features), [GlossGenius](https://glossgenius.com/overview) y [Trendly, República Dominicana](https://www.apptrendly.com/) está en [MARKET_RESEARCH.md](MARKET_RESEARCH.md). Se observan ciclos conectados de descubrimiento, reservas, servicio, pagos y retención; el documento cruza esos patrones con el código de KingFlow, registra límites regionales y ordena brechas sin copiar interfaces. No se encontró una referencia oficial verificable de barberías para “FlowJ”, así que no se inventaron capacidades.
 
 ## Seguridad y calidad
 
