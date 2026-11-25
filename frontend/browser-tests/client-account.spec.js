@@ -29,7 +29,7 @@ test("verified customer can sign in and claim a booking with its private trackin
   await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
 
   await expect(page.getByRole("heading", { name: "Mis citas" })).toBeVisible();
-  await expect(page.getByText("KingFlow de Prueba")).toBeVisible();
+  await expect(page.locator(".appointment-card").getByText("KingFlow de Prueba")).toBeVisible();
   await expect(page.getByText("Corte clásico · Confirmada")).toBeVisible();
   expect(claimPayload).toEqual({ tracking_token: trackingToken });
   await expect(page).toHaveURL(/client-account\.html$/);
@@ -118,6 +118,9 @@ test("verified customer can reschedule an appointment from account history", asy
   await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
   await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
   await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+  await expect(page.getByRole("heading", { name: "Tu próxima cita" })).toBeVisible();
+  await expect(page.locator(".next-appointment")).toContainText("KingFlow de Prueba");
+  await expect(page.locator(".next-appointment")).toContainText("Faltan 7 días");
   await page.getByRole("button", { name: "Cambiar fecha y hora" }).click();
   await expect(page.getByLabel("Nuevo horario disponible")).toContainText("Luis Barbero");
   await page.getByRole("button", { name: "Confirmar nuevo horario" }).click();
@@ -163,6 +166,9 @@ test("customer can update account name and phone while email remains verified an
   await expect(page.getByRole("status")).toContainText("perfil se guardó");
   expect(profileUpdate).toEqual({ first_name: "Andrea", last_name: "Pérez", phone: "809 555 0099" });
   await expect(page.getByText("Hola, Andrea Pérez")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Descargar mis datos" })).toHaveCSS(
+    "background-color", "rgba(0, 0, 0, 0)",
+  );
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Descargar mis datos" }).click();
   const download = await downloadPromise;

@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-5">
+  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-6">
   <title>Mi cuenta · KingFlow Barber</title>
 </head>
 <body>
@@ -48,6 +48,11 @@
 
       <section id="customerPanel" hidden>
         <div class="account-toolbar"><p id="customerGreeting"></p><button id="logoutButton" class="button-secondary" type="button">Cerrar sesión</button></div>
+        <section class="next-appointment" aria-labelledby="nextAppointmentTitle">
+          <p class="eyebrow">TU PRÓXIMA VISITA</p>
+          <h2 id="nextAppointmentTitle">Tu próxima cita</h2>
+          <div id="nextAppointmentContent" aria-live="polite"><p>Cargando tu agenda…</p></div>
+        </section>
         <form id="profileForm" class="account-form profile-form">
           <h2>Tu perfil</h2>
           <p>Tu correo verificado identifica la cuenta. Para cambiarlo tendrás que verificar el nuevo correo.</p>
@@ -79,6 +84,6 @@
   <script src="/js/config.js"></script>
   <script src="/js/pwa.js"></script>
   <script src="/js/auth.js"></script>
-  <script src="/js/client-account.js?v=20261125-account-5"></script>
+  <script src="/js/client-account.js?v=20261125-account-6"></script>
 </body>
 </html>

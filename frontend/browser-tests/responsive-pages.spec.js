@@ -59,6 +59,29 @@ for (const viewport of viewports) {
             }
           });
         }
+        if (route === "/client-account.html") {
+          await page.route("**/api/v1/auth/login", (request) => request.fulfill({ json: {
+            access_token: "responsive-client-access",
+            refresh_token: "responsive-client-refresh",
+            token_type: "bearer",
+            user: { id: 42, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+          } }));
+          await page.route("**/api/v1/client-account/profile", (request) => request.fulfill({ json: {
+            email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095550123",
+          } }));
+          await page.route("**/api/v1/client-account/appointments", (request) => request.fulfill({ json: {
+            items: [{
+              appointment_id: 81,
+              barbershop: "KingFlow de Prueba",
+              barbershop_slug: "responsive-shop",
+              status: "confirmed",
+              scheduled_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+              service: "Corte clásico",
+              duration_minutes: 30,
+              barber: "Luis Barbero",
+            }],
+          } }));
+        }
         const targetRoute = route === "/client.html" ? `${route}?shop=mobile-test` : route;
         await page.goto(targetRoute, { waitUntil: "networkidle" });
 
@@ -129,6 +152,40 @@ for (const viewport of viewports) {
         }
 
         expect(pageErrors, `${label} uncaught browser errors`).toEqual([]);
+
+        if (route === "/client-account.html") {
+          await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
+          await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
+          await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+          await expect(page.getByRole("heading", { name: "Tu próxima cita" })).toBeVisible();
+          await expect(page.getByRole("button", { name: "Cambiar fecha y hora" })).toBeVisible();
+          const accountLayout = await page.evaluate(() => ({
+            viewportWidth: document.documentElement.clientWidth,
+            documentWidth: document.documentElement.scrollWidth,
+            bodyWidth: document.body.scrollWidth,
+            controls: [...document.querySelectorAll("button, input, select, textarea")]
+              .filter((element) => {
+                const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0;
+              })
+              .map((element) => ({
+                left: Math.round(element.getBoundingClientRect().left),
+                right: Math.round(element.getBoundingClientRect().right),
+              })),
+          }));
+          expect(accountLayout.documentWidth, "account dashboard document width").toBeLessThanOrEqual(
+            accountLayout.viewportWidth + 1,
+          );
+          expect(accountLayout.bodyWidth, "account dashboard body width").toBeLessThanOrEqual(
+            accountLayout.viewportWidth + 1,
+          );
+          expect(
+            accountLayout.controls.filter((control) => control.left < -1 || control.right > accountLayout.viewportWidth + 1),
+            "account dashboard controls outside viewport",
+          ).toEqual([]);
+          expect(pageErrors, `Account dashboard errors: ${pageErrors.join(" | ") || "none"}`).toEqual([]);
+        }
       });
     }
   });

@@ -24,12 +24,65 @@
   }
 
   function formatAppointmentDate(value) {
-    const date = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`);
+    const date = parseAppointmentDate(value);
     return Number.isNaN(date.getTime()) ? "Fecha por confirmar" : new Intl.DateTimeFormat("es-DO", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  }
+
+  function parseAppointmentDate(value) {
+    return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`);
+  }
+
+  function renderNextAppointment(items) {
+    const container = document.getElementById("nextAppointmentContent");
+    container.replaceChildren();
+    const now = Date.now();
+    const upcoming = items
+      .filter((item) => ["pending", "confirmed"].includes(item.status))
+      .map((item) => ({ item, date: parseAppointmentDate(item.scheduled_time) }))
+      .filter(({ date }) => !Number.isNaN(date.getTime()) && date.getTime() > now)
+      .sort((left, right) => left.date - right.date)[0];
+    if (!upcoming) {
+      const empty = document.createElement("p");
+      empty.textContent = "No tienes citas próximas. Cuando reserves, la verás aquí.";
+      container.append(empty);
+      return;
+    }
+
+    const { item, date } = upcoming;
+    const shop = document.createElement("p");
+    shop.className = "next-appointment-shop";
+    shop.textContent = item.barbershop || "Barbería";
+    const service = document.createElement("p");
+    service.textContent = item.service || "Servicio";
+    const scheduled = document.createElement("time");
+    scheduled.dateTime = date.toISOString();
+    scheduled.textContent = formatAppointmentDate(item.scheduled_time);
+    const barber = document.createElement("p");
+    barber.textContent = `Con ${item.barber || "el equipo"}`;
+    const hoursRemaining = Math.floor((date.getTime() - now) / 3600000);
+    const remaining = document.createElement("p");
+    remaining.className = "next-appointment-countdown";
+    if (hoursRemaining < 1) remaining.textContent = "Tu cita es en menos de una hora";
+    else if (hoursRemaining < 24) remaining.textContent = `Faltan ${hoursRemaining} ${hoursRemaining === 1 ? "hora" : "horas"}`;
+    else {
+      const days = Math.floor(hoursRemaining / 24);
+      remaining.textContent = `Faltan ${days} ${days === 1 ? "día" : "días"}`;
+    }
+    const details = document.createElement("button");
+    details.type = "button";
+    details.className = "button-secondary next-appointment-action";
+    details.textContent = "Ver detalles de la cita";
+    details.addEventListener("click", () => {
+      const card = document.getElementById(`appointment-${item.appointment_id}`);
+      card?.scrollIntoView({ behavior: "smooth", block: "center" });
+      card?.querySelector("h3")?.focus();
+    });
+    container.append(shop, service, scheduled, barber, remaining, details);
   }
 
   function renderAppointments(items) {
     appointmentsList.replaceChildren();
+    renderNextAppointment(items);
     if (!items.length) {
       const empty = document.createElement("p");
       empty.textContent = "Aún no hay citas vinculadas. Puedes añadir una con el código privado de seguimiento.";
@@ -39,7 +92,9 @@
     items.forEach((item) => {
       const card = document.createElement("article");
       card.className = "appointment-card";
+      card.id = `appointment-${Number(item.appointment_id)}`;
       const title = document.createElement("h3");
+      title.tabIndex = -1;
       title.textContent = item.barbershop || "Barbería";
       const details = document.createElement("p");
       details.textContent = `${item.service} · ${labels[item.status] || item.status}`;

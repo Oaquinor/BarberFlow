@@ -10,5 +10,13 @@
 .reschedule-chooser select{width:100%;min-height:44px;padding:9px 11px;border:1px solid #cfc6b9;border-radius:8px;background:#fff;color:var(--ink);font:inherit}
 .reschedule-chooser select:focus-visible,.account-action:focus-visible,.button-secondary:focus-visible{outline:3px solid #a8734355;outline-offset:2px}
 .profile-form{margin:8px 0 24px;padding:18px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.profile-form .button-secondary{background:transparent;border:1px solid var(--line);color:var(--ink)}
 .profile-form input[readonly]{background:#f4f1eb;color:var(--muted)}
 #accountStatus:empty{display:none}
+.next-appointment{margin:8px 0 24px;padding:20px;border:1px solid #d8c4ab;border-radius:14px;background:linear-gradient(120deg,#f7efe4,#fffefa 72%)}
+.next-appointment h2{margin:0 0 8px;font-size:20px;letter-spacing:-.02em}
+.next-appointment p{margin:4px 0;color:var(--muted);font-size:14px}
+.next-appointment .eyebrow{margin:0 0 5px;color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.16em}
+.next-appointment .next-appointment-shop{color:var(--ink);font-weight:750}
+.next-appointment .next-appointment-countdown{margin-top:10px;color:#694b2a;font-weight:750}
+.next-appointment-action{margin-top:12px}

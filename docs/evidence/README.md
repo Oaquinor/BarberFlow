@@ -6,3 +6,4 @@
 La prueba visual cubre anchos de 320, 375, 390, 430, 768, 1024, 1366 y 1920 píxeles. Esto valida desbordamiento y geometría del formulario en Chromium; no reemplaza la revisión manual de todas las pantallas ni la validación Firefox/WebKit.
 
 - client-account-desktop.png y client-account-mobile.png muestran el portal cliente en estado de acceso, capturado desde la página real con datos vacíos a 1366 px y 390 px. La zona de estado vacía no deja espacio reservado entre introducción y formulario.
+- `client-account-upcoming-appointment.png` muestra el panel autenticado con una cita sintética, para revisar la tarjeta de próxima visita, perfil, exportación y controles de cita. La captura confirma que guardar perfil destaca como acción principal y descargar datos permanece como acción secundaria.
