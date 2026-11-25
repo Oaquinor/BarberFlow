@@ -48,7 +48,7 @@ test("customer saves a completed cut with explicit sharing consent", async ({ pa
   await page.route("**/api/v1/client-account/appointments", (route) => route.fulfill({ json: { items: [{
     appointment_id: 804, barbershop: "KingFlow de Prueba", barbershop_slug: "kingflow-prueba",
     service: "Corte clásico", status: "completed", scheduled_time: "2026-11-20T15:00:00Z",
-    barber: "Luis Barbero",
+    barber: "Luis Barbero", style_passport_retention_days: 180,
   }] } }));
   await page.route("**/api/v1/client-account/favorites", (route) => route.fulfill({ json: { items: [] } }));
   await page.route("**/api/v1/client-account/style-passport", async (route) => {
@@ -62,7 +62,7 @@ test("customer saves a completed cut with explicit sharing consent", async ({ pa
         sides_length: savedPayload.sides_length, beard_style: savedPayload.beard_style,
         products_used: savedPayload.products_used, preferences: savedPayload.preferences,
         barber_notes: null, recommendations: null, share_with_shop: savedPayload.share_with_shop,
-        photos: [],
+        retention_days: 180, photos: [],
       };
       await route.fulfill({ json: savedEntry });
       return;
@@ -75,11 +75,13 @@ test("customer saves a completed cut with explicit sharing consent", async ({ pa
   await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
   await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
   await page.getByRole("button", { name: "Guardar detalles de este corte" }).click();
+  await expect(page.getByText("La barbería conservará este registro y sus fotos durante 180 días desde que lo guardes. Después se eliminarán automáticamente.")).toBeVisible();
   await page.getByLabel("Tipo de corte").fill("Crop texturizado");
   await page.getByLabel(/Compartir este registro/).check();
   await page.getByRole("button", { name: "Guardar en mi Style Passport" }).click();
 
   await expect(page.getByText("Crop texturizado", { exact: false })).toBeVisible();
+  await expect(page.getByText("Retención: 180 días desde que guardaste este registro.")).toBeVisible();
   expect(savedPayload).toMatchObject({
     appointment_id: 804, haircut_type: "Crop texturizado", share_with_shop: true,
   });

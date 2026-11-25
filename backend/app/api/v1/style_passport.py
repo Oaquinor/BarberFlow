@@ -163,6 +163,7 @@ def _serialize_entries(
                 "appointment_id": entry.appointment_id,
                 "barbershop_name": shop.name if shop else "Barbería",
                 "barbershop_slug": shop.slug if shop else None,
+                "retention_days": shop.style_passport_retention_days if shop else None,
                 "service": appointment.service_type if appointment else "Servicio",
                 "service_id": service_id,
                 "barber": barber.full_name if barber else "Equipo",

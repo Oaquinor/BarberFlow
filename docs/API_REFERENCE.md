@@ -27,7 +27,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `DELETE` | `/client-account/favorites/{favorite_id}` | Eliminación lógica del favorito propio; IDs de otras cuentas responden 404 |
 | `POST` | `/client-account/appointments/claim` | Cuenta cliente autenticada y token privado de seguimiento; añade una cita a su historial |
 | `POST` | `/client-account/appointments/{appointment_id}/cancel` | Dueño autenticado de la cita mediante enlace CRM; aplica estado, anticipación de cancelación, libera el turno y encola notificaciones |
-| `GET` | `/client-account/style-passport` | Cliente verificado; lista hasta 50 registros propios y privados |
+| `GET` | `/client-account/style-passport` | Cliente verificado; lista hasta 50 registros propios y privados con el plazo de retención vigente de cada barbería |
 | `POST` | `/client-account/style-passport` | Guarda preferencias para una cita completada propia; compartir con la barbería es opcional y desactivado por defecto |
 | `PATCH` | `/client-account/style-passport/{entry_id}` | Edita preferencias propias y revoca o concede consentimiento para compartir |
 | `DELETE` | `/client-account/style-passport/{entry_id}` | Elimina el registro, retira las fotos privadas y limpia los datos de estilo |
@@ -37,6 +37,7 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `GET` | `/owner/clients/{client_id}/style-passport` | Owner o barbero del tenant; devuelve solo registros compartidos explícitamente por el cliente |
 | `PATCH` | `/owner/clients/{client_id}/style-passport/{entry_id}` | El equipo del tenant actualiza notas y recomendaciones en un registro compartido |
 | `GET` | `/owner/clients/{client_id}/style-passport/{entry_id}/photos/{photo_id}` | Acceso autenticado del tenant a fotos del registro compartido |
+| `PUT` | `/onboarding/business-settings` | Owner configura zona, marca, políticas de reserva y retención Style Passport (`null`, 90, 180, 365 o 730 días); el historial de citas autenticado devuelve el plazo de cada barbería |
 | `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |
 | `POST` | `/billing/renewal-request` | Owner autenticado; crea o reutiliza una solicitud abierta en la bandeja de soporte. No cobra ni reactiva la cuenta |
 

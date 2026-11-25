@@ -262,8 +262,11 @@ def test_verified_customer_booking_needs_no_repeated_identity_and_appears_in_acc
     link = test_db.query(ClientAccountShopLink).filter_by(account_user_id=account.id).one()
     assert appointment.client_id == link.crm_client_user_id
     assert appointment.client_id != account.id
+    shop.style_passport_retention_days = 180
+    test_db.commit()
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
+    assert history.json()["items"][0]["style_passport_retention_days"] == 180
     test_db.refresh(slot)
     assert slot.is_booked is True
     other_account = User(

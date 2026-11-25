@@ -152,6 +152,7 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
         "name": "KingFlow Downtown", "opening_time": "09:30", "closing_time": "19:00",
         "timezone": "America/New_York", "primary_color": "#AABBCC", "secondary_color": "#DDEEFF",
         "cancellation_window_hours": 12,
+        "style_passport_retention_days": 180,
     }
 
     profile = client.get("/api/v1/onboarding/profile", headers=owner_headers)
@@ -166,7 +167,15 @@ def test_owner_can_update_business_settings_with_tenant_audit(client: TestClient
     assert saved.json()["opening_time"].startswith("09:30")
     assert saved.json()["primary_color"] == updated["primary_color"]
     assert saved.json()["cancellation_window_hours"] == 12
+    assert saved.json()["style_passport_retention_days"] == 180
+    assert test_db.get(Barbershop, shop.id).style_passport_retention_days == 180
     assert test_db.get(Barbershop, shop.id).cancellation_window_hours == 12
+    legacy_payload = {key: value for key, value in updated.items() if key != "style_passport_retention_days"}
+    legacy_saved = client.put(
+        "/api/v1/onboarding/business-settings", headers=owner_headers, json=legacy_payload,
+    )
+    assert legacy_saved.status_code == 200
+    assert legacy_saved.json()["style_passport_retention_days"] == 180
     public_profile = client.get(f"/api/v1/public/{shop.slug}")
     assert public_profile.status_code == 200
     assert public_profile.json()["name"] == updated["name"]

@@ -342,7 +342,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-barber-style-passport-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-style-retention-1">
 </head>
 <body>
     <div class="container">
@@ -753,7 +753,7 @@
                 </section>
                 <section class="card" aria-labelledby="businessSettingsTitle">
                     <h3 id="businessSettingsTitle">Configuración del negocio y página pública</h3>
-                    <p>Actualiza el horario, la zona local y los colores que ven los clientes. Cambiar la zona cambia la hora local mostrada para las citas existentes.</p>
+                    <p>Actualiza el horario, la zona local, la imagen de marca y las políticas de datos que afectan la experiencia de tus clientes.</p>
                     <form id="businessSettingsForm" class="grid">
                         <div class="field"><label for="businessSettingsName">Nombre del negocio</label><input id="businessSettingsName" required minlength="2" maxlength="200"></div>
                         <div class="field settings-wide"><label for="businessSettingsDescription">Presentación para tus clientes</label><textarea id="businessSettingsDescription" maxlength="1000" placeholder="Cuéntales qué hace especial a tu barbería"></textarea></div>
@@ -761,6 +761,7 @@
                         <div class="field"><label for="businessSettingsOpening">Apertura</label><input id="businessSettingsOpening" type="time" required></div>
                         <div class="field"><label for="businessSettingsClosing">Cierre</label><input id="businessSettingsClosing" type="time" required></div>
                         <div class="field"><label for="businessCancellationWindow">Anticipación mínima para cambios</label><input id="businessCancellationWindow" type="number" min="0" max="168" step="1" required aria-describedby="businessCancellationHelp"><small id="businessCancellationHelp">0 permite cancelar o reprogramar en cualquier momento antes de iniciar la cita. Máximo: 7 días.</small></div>
+                        <div class="field"><label for="businessStylePassportRetention">Conservar Style Passport</label><select id="businessStylePassportRetention" aria-describedby="businessStylePassportRetentionHelp"><option value="">Hasta que el cliente lo elimine</option><option value="90">90 días</option><option value="180">180 días</option><option value="365">1 año</option><option value="730">2 años</option></select><small id="businessStylePassportRetentionHelp">El plazo corre desde que se guarda cada registro. Al vencer, se borran fotos y preferencias; el cliente puede borrarlos antes. La política aplica también a los registros ya guardados.</small></div>
                         <div class="field"><label for="businessSettingsTimezone">Zona horaria IANA</label><input id="businessSettingsTimezone" required minlength="3" maxlength="50" placeholder="America/Santo_Domingo"></div>
                         <div class="field"><label for="businessSettingsPrimary">Color principal</label><input id="businessSettingsPrimary" type="color" required></div>
                         <div class="field"><label for="businessSettingsSecondary">Color secundario</label><input id="businessSettingsSecondary" type="color" required></div>
@@ -1033,7 +1034,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-barber-style-passport-1"></script>
+    <script src="js/main.js?v=20261125-style-retention-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

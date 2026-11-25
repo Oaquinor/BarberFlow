@@ -374,6 +374,10 @@ def list_client_appointments(
         "appointment_id": appointment.id,
         "barbershop": appointment.barbershop.name if appointment.barbershop else "Barbería",
         "barbershop_slug": appointment.barbershop.slug if appointment.barbershop else None,
+        "style_passport_retention_days": (
+            appointment.barbershop.style_passport_retention_days
+            if appointment.barbershop else None
+        ),
         "status": appointment.status,
         "scheduled_time": appointment.scheduled_time,
         "service": appointment.service_type,

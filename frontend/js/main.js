@@ -1466,6 +1466,7 @@ async function loadOwnerManagement() {
         document.getElementById('businessSettingsOpening').value = barbershopProfile.opening_time?.slice(0, 5) || '';
         document.getElementById('businessSettingsClosing').value = barbershopProfile.closing_time?.slice(0, 5) || '';
         document.getElementById('businessCancellationWindow').value = String(barbershopProfile.cancellation_window_hours ?? 0);
+        document.getElementById('businessStylePassportRetention').value = barbershopProfile.style_passport_retention_days == null ? '' : String(barbershopProfile.style_passport_retention_days);
         document.getElementById('businessSettingsTimezone').value = barbershopProfile.timezone || '';
         document.getElementById('businessSettingsPrimary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.primary_color || '') ? barbershopProfile.primary_color : '#b98752';
         document.getElementById('businessSettingsSecondary').value = /^#[0-9a-f]{6}$/i.test(barbershopProfile.secondary_color || '') ? barbershopProfile.secondary_color : '#5a4635';
@@ -2347,6 +2348,7 @@ async function saveBusinessSettings(event) {
         opening_time: document.getElementById('businessSettingsOpening').value,
         closing_time: document.getElementById('businessSettingsClosing').value,
         cancellation_window_hours: Number(document.getElementById('businessCancellationWindow').value),
+        style_passport_retention_days: document.getElementById('businessStylePassportRetention').value === '' ? null : Number(document.getElementById('businessStylePassportRetention').value),
         timezone: document.getElementById('businessSettingsTimezone').value.trim(),
         primary_color: document.getElementById('businessSettingsPrimary').value,
         secondary_color: document.getElementById('businessSettingsSecondary').value,
@@ -2354,6 +2356,11 @@ async function saveBusinessSettings(event) {
         booking_questions: document.getElementById('businessBookingQuestions').value
             .split(/\r?\n/).map(question => question.trim()).filter(Boolean),
     };
+    const previousRetention = barbershopProfile?.style_passport_retention_days ?? null;
+    if (payload.style_passport_retention_days !== previousRetention && payload.style_passport_retention_days !== null && !await showConfirmation(
+        `La política de ${payload.style_passport_retention_days} días también se aplicará a los registros existentes. Los que ya superen ese plazo se eliminarán en el próximo ciclo del worker, incluidas sus fotos. Esta acción no se puede deshacer. ¿Continuar?`,
+        { title: 'Confirmar retención de Style Passport', confirmLabel: 'Aplicar política' }
+    )) return;
     if (payload.timezone !== barbershopProfile?.timezone && !await showConfirmation(
         'Cambiar la zona horaria cambiará cómo se muestran las horas de todas las citas existentes. ¿Continuar?'
         , { title: 'Confirmar cambio de zona horaria', confirmLabel: 'Guardar cambios' }

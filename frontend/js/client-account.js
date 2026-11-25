@@ -231,6 +231,14 @@
     }
     select.value = selectedAppointmentId ? String(selectedAppointmentId) : "";
     select.disabled = Boolean(entry);
+    const selected = appointmentItems.find((item) => Number(item.appointment_id) === Number(select.value));
+    const notice = document.getElementById("stylePassportRetentionNotice");
+    if (notice) {
+      const days = selected?.style_passport_retention_days;
+      notice.textContent = days
+        ? `La barbería conservará este registro y sus fotos durante ${days} días desde que lo guardes. Después se eliminarán automáticamente.`
+        : "La barbería no configuró una fecha automática de borrado. Puedes eliminar este registro y sus fotos cuando quieras.";
+    }
   }
 
   function clearStylePassportForm() {
@@ -294,7 +302,12 @@
       consent.textContent = entry.share_with_shop
         ? "Compartido con el equipo de esta barbería"
         : "Privado: solo tú puedes verlo";
-      card.append(title, meta, facts, consent);
+      const retention = document.createElement("p");
+      retention.className = "style-card-meta";
+      retention.textContent = entry.retention_days
+        ? `Retención: ${entry.retention_days} días desde que guardaste este registro.`
+        : "Retención automática desactivada para este registro.";
+      card.append(title, meta, facts, consent, retention);
 
       if ((entry.photos || []).length) {
         const photoList = document.createElement("div");

@@ -55,7 +55,7 @@ Los límites por IP de login, recuperación de contraseña, solicitudes de sopor
 
 ## Notificaciones y tareas de fondo
 
-Las operaciones relevantes escriben notificaciones internas y entregas email/WhatsApp en una outbox MySQL. El worker procesa entregas con idempotencia, leases y reintentos. La disponibilidad externa depende de la configuración del proveedor. La bandeja del frontend consulta periódicamente; cuando está cerrada solo actualiza el contador de no leídas y, cuando está abierta, renueva la lista. Ese es el mecanismo de actualización de notificaciones disponible; no hay un canal WebSocket activo.
+Las operaciones relevantes escriben notificaciones internas y entregas email/WhatsApp en una outbox MySQL. El worker procesa entregas con idempotencia, leases y reintentos, y ejecuta lotes limitados de limpieza de Style Passport según la política de cada tenant. La disponibilidad externa depende de la configuración del proveedor. La bandeja del frontend consulta periódicamente; cuando está cerrada solo actualiza el contador de no leídas y, cuando está abierta, renueva la lista. Ese es el mecanismo de actualización de notificaciones disponible; no hay un canal WebSocket activo.
 
 ## Analítica
 

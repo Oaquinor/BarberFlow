@@ -33,6 +33,8 @@ test("owner sees a live, readable storefront preview from their settings", async
   await expect(preview).toContainText("Corte clásico");
   await expect(preview.locator("#brandContrastNote")).toContainText("WCAG AA");
   await expect(page.locator("#businessCancellationWindow")).toHaveValue("12");
+  await expect(page.locator("#businessStylePassportRetention")).toHaveValue("");
+  await expect(page.locator("#businessStylePassportRetention option")).toHaveCount(5);
 
   await page.getByRole("button", { name: "Oliva y lima" }).click();
   await expect(page.getByRole("button", { name: "Oliva y lima" })).toHaveAttribute("aria-pressed", "true");
@@ -61,4 +63,42 @@ test("owner sees a live, readable storefront preview from their settings", async
     expect(geometry.coverLeft, `cover starts outside viewport at ${width}px`).toBeGreaterThanOrEqual(-1);
     expect(geometry.coverRight, `cover ends outside viewport at ${width}px`).toBeLessThanOrEqual(width + 1);
   }
+});
+
+test("owner confirms retention changes and saves the selected policy", async ({ page }) => {
+  let requestBody;
+  await page.route("**/api/v1/onboarding/business-settings", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({ json: {
+      id: 7, name: "Barbería de Prueba", timezone: "America/Santo_Domingo",
+      style_passport_retention_days: 180,
+    } });
+  });
+  await page.goto("/index.html");
+  await page.evaluate(() => {
+    sessionStorage.setItem("token", "owner-test-token");
+    loadBarberDashboardData = async () => {};
+    loadOwnerManagement = async () => {};
+    currentUser = { role: "barbershop_owner" };
+    barbershopProfile = {
+      name: "Barbería de Prueba", timezone: "America/Santo_Domingo",
+      style_passport_retention_days: null,
+    };
+    document.getElementById("businessSettingsName").value = "Barbería de Prueba";
+    document.getElementById("businessSettingsDescription").value = "Cortes precisos.";
+    document.getElementById("businessSettingsOpening").value = "09:00";
+    document.getElementById("businessSettingsClosing").value = "19:00";
+    document.getElementById("businessCancellationWindow").value = "0";
+    document.getElementById("businessSettingsTimezone").value = "America/Santo_Domingo";
+    document.getElementById("businessSettingsPrimary").value = "#b98752";
+    document.getElementById("businessSettingsSecondary").value = "#5a4635";
+    document.getElementById("businessSettingsTheme").value = "light";
+    document.getElementById("businessStylePassportRetention").value = "180";
+    void saveBusinessSettings({ preventDefault() {} });
+  });
+
+  await expect(page.getByRole("dialog")).toContainText("también se aplicará a los registros existentes");
+  await page.getByRole("button", { name: "Aplicar política" }).click();
+  await expect.poll(() => requestBody?.style_passport_retention_days).toBe(180);
+  await expect(page.locator("#businessSettingsResult")).toContainText("Configuración guardada");
 });

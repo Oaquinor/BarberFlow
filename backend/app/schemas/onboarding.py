@@ -3,7 +3,7 @@ Onboarding schemas for barbershop personalization.
 """
 
 from datetime import time
-from typing import Optional, List
+from typing import Optional, List, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -101,6 +101,7 @@ class BusinessSettingsUpdate(BaseModel):
     secondary_color: str = Field(..., pattern=r"^#[0-9A-Fa-f]{6}$")
     public_theme: str = Field(default="light", pattern=r"^(light|dark)$")
     cancellation_window_hours: Optional[int] = Field(default=None, ge=0, le=168)
+    style_passport_retention_days: Optional[Literal[90, 180, 365, 730]] = None
     booking_questions: Optional[List[str]] = Field(None, max_length=5)
 
     @field_validator("booking_questions")
@@ -148,6 +149,7 @@ class BarbershopProfile(BaseModel):
     secondary_color: Optional[str] = None
     public_theme: str = "light"
     cancellation_window_hours: int = Field(default=0, ge=0, le=168)
+    style_passport_retention_days: Optional[Literal[90, 180, 365, 730]] = None
     style: Optional[str]
     primary_goal: Optional[str]
     team_size: Optional[int]

@@ -4,7 +4,7 @@ Barbershop model.
 Represents a barbershop (tenant in multi-tenant architecture).
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Time, ForeignKey, JSON
+from sqlalchemy import CheckConstraint, Column, String, Integer, Boolean, Time, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
@@ -14,6 +14,12 @@ class Barbershop(BaseModel):
     """Barbershop entity (tenant)."""
 
     __tablename__ = "barbershops"
+    __table_args__ = (
+        CheckConstraint(
+            "style_passport_retention_days IS NULL OR style_passport_retention_days IN (90, 180, 365, 730)",
+            name="ck_barbershop_style_passport_retention",
+        ),
+    )
 
     # Basic Info
     name = Column(String(200), nullable=False)
@@ -63,6 +69,7 @@ class Barbershop(BaseModel):
     currency = Column(String(3), nullable=False, default="USD")
     appointment_duration_minutes = Column(Integer, nullable=False, default=30)
     cancellation_window_hours = Column(Integer, nullable=False, default=0, server_default="0")
+    style_passport_retention_days = Column(Integer, nullable=True)
 
     # Status
     is_active = Column(Boolean, default=True, nullable=False)

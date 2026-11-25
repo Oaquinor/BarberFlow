@@ -370,6 +370,7 @@ Al alcanzar el límite, el backend rechaza con `402` la operación que crearía 
 ### Soft Delete
 - Las entidades de negocio se conservan mediante borrado lógico (`is_deleted` y `deleted_at`)
 - Los registros temporales de autenticación vencidos se purgan físicamente por la política de retención
+- El owner puede habilitar para Style Passport 90, 180, 365 o 730 días; sin una elección explícita no hay expiración automática. El plazo corre desde la creación del registro y también aplica retrospectivamente. El worker borra los datos de estilo y retira las fotos en lotes auditados; el cliente conoce el plazo antes de guardar y puede borrar el registro antes.
 
 ### Timestamps
 - Todos los registros tienen `created_at` y `updated_at`
@@ -377,4 +378,4 @@ Al alcanzar el límite, el backend rechaza con `402` la operación que crearía 
 
 ---
 
-**Última actualización:** 2026-11-23
+**Última actualización:** 2026-11-25

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.v1 import style_passport as passport_api
 from app.core.security import create_access_token
 from app.models import (
+    AuditLog,
     Appointment,
     Barbershop,
     ClientAccountShopLink,
@@ -19,6 +20,7 @@ from app.models import (
     Subscription,
     User,
 )
+from app.services import style_passport_retention
 from app.utils.datetime import utc_now_naive
 
 
@@ -400,3 +402,56 @@ def test_style_passport_upload_rejects_invalid_media_and_excess_photos(
         test_db.query(StylePassportPhoto).filter_by(entry_id=entry_id, is_deleted=False).count()
         == 2
     )
+
+
+def test_retention_is_opt_in_scrubs_expired_records_and_removes_private_photos(
+    test_db: Session, monkeypatch, tmp_path
+):
+    shop, _owner, _barber, _crm, account, _other, _service, appointment, _upcoming = (
+        _style_passport_context(test_db)
+    )
+    entry = StylePassportEntry(
+        account_user_id=account.id,
+        barbershop_id=shop.id,
+        appointment_id=appointment.id,
+        haircut_type="Crop",
+        preferences="Keep the fringe",
+        barber_notes="Sensitive note",
+        recommendations="Return in three weeks",
+        share_with_shop=True,
+        created_at=utc_now_naive() - timedelta(days=200),
+    )
+    test_db.add(entry)
+    test_db.flush()
+    key = "a" * 32 + ".jpg"
+    photo = StylePassportPhoto(
+        entry_id=entry.id, photo_kind="reference", storage_key=key, byte_size=100,
+    )
+    test_db.add(photo)
+    test_db.commit()
+    photo_path = tmp_path / "private" / "style-passport" / str(account.id) / key
+    photo_path.parent.mkdir(parents=True)
+    photo_path.write_bytes(b"private-test-image")
+    monkeypatch.setattr(
+        style_passport_retention, "get_settings",
+        lambda: type("Settings", (), {"UPLOAD_DIR": str(tmp_path)})(),
+    )
+
+    assert style_passport_retention.purge_expired_style_passports(test_db) == 0
+    assert test_db.get(StylePassportEntry, entry.id).is_deleted is False
+    assert photo_path.exists()
+
+    shop.style_passport_retention_days = 90
+    test_db.commit()
+    assert style_passport_retention.purge_expired_style_passports(test_db) == 1
+    test_db.refresh(entry)
+    assert entry.is_deleted is True
+    assert entry.preferences is None and entry.barber_notes is None
+    assert entry.share_with_shop is False
+    assert test_db.get(StylePassportPhoto, photo.id) is None
+    assert not photo_path.exists()
+    assert test_db.query(AuditLog).filter(
+        AuditLog.action == "style_passport.retention_purged",
+        AuditLog.entity_id == entry.id,
+    ).count() == 1
+    assert style_passport_retention.purge_expired_style_passports(test_db) == 0

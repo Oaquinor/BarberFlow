@@ -36,3 +36,14 @@ def test_business_settings_accept_cancellation_window_from_zero_to_seven_days():
         BusinessSettingsUpdate(**base, cancellation_window_hours=169)
     with pytest.raises(ValueError):
         BusinessSettingsUpdate(**base, cancellation_window_hours=-1)
+
+
+def test_style_passport_retention_requires_an_explicit_supported_choice():
+    base = {
+        "name": "Barbería de prueba", "opening_time": "09:00", "closing_time": "18:00",
+        "timezone": "America/Santo_Domingo", "primary_color": "#b98752", "secondary_color": "#5a4635",
+    }
+    assert BusinessSettingsUpdate(**base).style_passport_retention_days is None
+    assert BusinessSettingsUpdate(**base, style_passport_retention_days=365).style_passport_retention_days == 365
+    with pytest.raises(ValueError):
+        BusinessSettingsUpdate(**base, style_passport_retention_days=100)
