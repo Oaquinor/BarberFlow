@@ -82,3 +82,25 @@ test("client history displays stored payments and escapes untrusted service name
   assert.match(rendered, /DOP 30/);
   assert.equal(sandbox.elements.ownerClientHistoryPage.textContent, "Citas 1–1 de 1");
 });
+
+test("owner history asks only for records explicitly shared with its tenant", async () => {
+  const calls = [];
+  const sandbox = createSandbox(async (url) => {
+    calls.push(url);
+    if (url.endsWith("/appointments?limit=20&offset=0")) return { items: [], total: 0 };
+    return { items: [], limit: 25 };
+  });
+  sandbox.elements.ownerStylePassportItems = { replaceChildren() {} };
+  sandbox.elements.ownerStylePassportResult = { textContent: "" };
+
+  await sandbox.loadOwnerClientHistory();
+
+  assert.deepEqual(calls, [
+    "/owner/clients/42/appointments?limit=20&offset=0",
+    "/owner/clients/42/style-passport",
+  ]);
+  assert.equal(
+    sandbox.elements.ownerStylePassportResult.textContent,
+    "El cliente no ha compartido registros de estilo con esta barbería.",
+  );
+});
