@@ -699,6 +699,13 @@ function renderAppointmentDay(businessDate, appointments) {
                 </div>
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
                 ${renderAppointmentPreferences(appointment)}
+                ${currentUser?.role === 'barber' && Number(appointment.client_id) > 0 ? `
+                    <details class="barber-style-passport" data-appointment-id="${Number(appointment.id)}" data-client-id="${Number(appointment.client_id)}">
+                        <summary>Style Passport compartido</summary>
+                        <p class="barber-style-passport-status" role="status" aria-live="polite">Solo aparecerá la información que el cliente autorizó compartir.</p>
+                        <div class="barber-style-passport-items"></div>
+                        <button class="btn-secondary barber-style-passport-load" type="button">Consultar registros compartidos</button>
+                    </details>` : ''}
                 <div class="appointment-meta">
                     <span>${Number(appointment.estimated_duration) || 0} min</span>
                     <span>${fmtMoneyFromCents(appointment.service_price || 0)}</span>
@@ -1069,6 +1076,142 @@ async function ownerFetch(path, options = {}) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || 'No se pudo completar la solicitud');
     return data;
+}
+
+async function loadBarberStylePassport(clientId, appointmentId, container) {
+    const status = container?.querySelector('.barber-style-passport-status');
+    const list = container?.querySelector('.barber-style-passport-items');
+    if (!status || !list || !Number.isInteger(clientId) || clientId <= 0
+        || !Number.isInteger(appointmentId) || appointmentId <= 0) return;
+    const sessionToken = accessToken;
+    if (!sessionToken) return;
+    status.textContent = 'Consultando registros autorizados…';
+    list.replaceChildren();
+    try {
+        const data = await ownerFetch(`/owner/clients/${clientId}/style-passport`);
+        if (accessToken !== sessionToken) return;
+        const entries = Array.isArray(data.items) ? data.items : [];
+        if (!entries.length) {
+            status.textContent = 'El cliente no ha compartido registros de estilo con esta barbería.';
+            return;
+        }
+        entries.forEach((entry) => {
+            const card = document.createElement('article');
+            card.className = 'barber-style-passport-entry';
+            const heading = document.createElement('h5');
+            heading.textContent = entry.haircut_type || entry.service || 'Corte guardado';
+            const details = document.createElement('p');
+            let serviceDate = 'Fecha no disponible';
+            if (entry.service_date) {
+                const rawDate = String(entry.service_date);
+                const date = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(rawDate) ? rawDate : `${rawDate}Z`);
+                if (Number.isFinite(date.getTime())) {
+                    serviceDate = new Intl.DateTimeFormat('es-DO', {
+                        dateStyle: 'medium', timeStyle: 'short',
+                        timeZone: barbershopProfile?.timezone || 'UTC',
+                    }).format(date);
+                }
+            }
+            details.textContent = `${entry.service || 'Servicio'} · ${serviceDate}`;
+            card.append(heading, details);
+            [
+                ['Degradado', entry.fade_style], ['Largo superior', entry.top_length],
+                ['Lados', entry.sides_length], ['Barba', entry.beard_style],
+                ['Productos', entry.products_used], ['Preferencias', entry.preferences],
+                ['Notas técnicas', entry.barber_notes], ['Recomendaciones', entry.recommendations],
+            ].filter(([, value]) => typeof value === 'string' && value.trim()).forEach(([label, value]) => {
+                const detail = document.createElement('p');
+                detail.textContent = `${label}: ${value}`;
+                card.append(detail);
+            });
+            const photos = Array.isArray(entry.photos) ? entry.photos : [];
+            if (photos.length) {
+                const photoList = document.createElement('div');
+                photoList.className = 'barber-style-passport-photos';
+                photos.forEach((photo) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn-secondary';
+                    button.textContent = photo.kind === 'reference'
+                        ? 'Ver referencia privada' : 'Ver resultado privado';
+                    button.addEventListener('click', async () => {
+                        button.disabled = true;
+                        try {
+                            const response = await KingFlowAuth.fetch(
+                                `${API_ROOT}/api/v1/owner/clients/${clientId}/style-passport/` +
+                                `${Number(entry.id)}/photos/${Number(photo.id)}`,
+                                { headers: { Authorization: `Bearer ${accessToken}` } },
+                            );
+                            const image = document.createElement('img');
+                            if (!response.ok) throw new Error('No se pudo abrir la foto compartida.');
+                            const imageBlob = await response.blob();
+                            if (accessToken !== sessionToken) return;
+                            image.alt = photo.kind === 'reference'
+                                ? 'Foto de referencia compartida por el cliente'
+                                : 'Foto del resultado compartida por el cliente';
+                            const objectUrl = URL.createObjectURL(imageBlob);
+                            image.src = objectUrl;
+                            image.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+                            image.addEventListener('error', () => URL.revokeObjectURL(objectUrl), { once: true });
+                            photoList.append(image);
+                        } catch (error) {
+                            status.textContent = error.message || 'No se pudo abrir la fotografía.';
+                        } finally {
+                            button.disabled = false;
+                        }
+                    });
+                    photoList.append(button);
+                });
+                card.append(photoList);
+            }
+            const notesForm = document.createElement('form');
+            notesForm.className = 'barber-style-passport-notes';
+            const notesLabel = document.createElement('label');
+            notesLabel.textContent = 'Nota técnica';
+            const notes = document.createElement('textarea');
+            notes.maxLength = 2000;
+            notes.value = entry.barber_notes || '';
+            notesLabel.append(notes);
+            const recommendationsLabel = document.createElement('label');
+            recommendationsLabel.textContent = 'Recomendación para la próxima visita';
+            const recommendations = document.createElement('textarea');
+            recommendations.maxLength = 2000;
+            recommendations.value = entry.recommendations || '';
+            recommendationsLabel.append(recommendations);
+            const save = document.createElement('button');
+            save.type = 'submit';
+            save.className = 'btn-secondary';
+            save.textContent = 'Guardar notas técnicas';
+            notesForm.append(notesLabel, recommendationsLabel, save);
+            notesForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                save.disabled = true;
+                try {
+                    await ownerFetch(
+                        `/owner/clients/${clientId}/style-passport/${Number(entry.id)}`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                barber_notes: notes.value.trim() || null,
+                                recommendations: recommendations.value.trim() || null,
+                            }),
+                        },
+                    );
+                    status.textContent = 'Las notas del equipo se guardaron.';
+                } catch (error) {
+                    status.textContent = error.message || 'No se pudieron guardar las notas.';
+                } finally {
+                    save.disabled = false;
+                }
+            });
+            card.append(notesForm);
+            list.append(card);
+        });
+        status.textContent = `${entries.length} registro(s) compartido(s)`;
+    } catch (error) {
+        status.textContent = error.message || 'No se pudieron consultar los registros compartidos.';
+    }
 }
 
 function trustedBusinessImage(value) {
@@ -2685,6 +2828,8 @@ function resetSessionInterface(message = '') {
 
     const dashboard = document.getElementById('dashboardSection');
     if (dashboard) dashboard.style.display = 'none';
+    document.getElementById('appointmentsList')?.replaceChildren?.();
+    document.getElementById('appointmentsCalendarGrid')?.replaceChildren?.();
     const login = document.getElementById('loginSection');
     if (login) login.style.display = 'grid';
     const userInfo = document.getElementById('userInfo');
@@ -3278,6 +3423,22 @@ document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
     tab.addEventListener('click', () => showTab(tab.dataset.tab));
 });
 document.getElementById('appointmentsList')?.addEventListener('click', async (event) => {
+    const stylePassportButton = event.target.closest('.barber-style-passport-load');
+    if (stylePassportButton) {
+        const container = stylePassportButton.closest('.barber-style-passport');
+        const clientId = Number(container?.dataset.clientId);
+        const appointmentId = Number(container?.dataset.appointmentId);
+        if (!Number.isInteger(clientId) || clientId <= 0
+            || !Number.isInteger(appointmentId) || appointmentId <= 0) return;
+        stylePassportButton.disabled = true;
+        stylePassportButton.textContent = 'Actualizar registros';
+        try {
+            await loadBarberStylePassport(clientId, appointmentId, container);
+        } finally {
+            stylePassportButton.disabled = false;
+        }
+        return;
+    }
     const statusButton = event.target.closest('.appointment-status-action');
     if (statusButton) {
         const appointmentId = Number(statusButton.dataset.appointmentId);

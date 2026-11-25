@@ -1999,6 +1999,7 @@ def barber_appointments_for_date(
         },
         "appointments": [{
             "id": item.id,
+            "client_id": item.client_id,
             "client_name": item.client.full_name if item.client else "Cliente",
             "service_type": item.service_type,
             "scheduled_time": _utc_aware(item.scheduled_time),
@@ -2060,6 +2061,7 @@ def barber_appointments_calendar(
         local_date = _utc_aware(item.scheduled_time).astimezone(_get_timezone(shop)).date().isoformat()
         grouped.setdefault(local_date, []).append({
             "id": item.id,
+            "client_id": item.client_id,
             "client_name": item.client.full_name if item.client else "Cliente",
             "service_type": item.service_type,
             "scheduled_time": _utc_aware(item.scheduled_time),

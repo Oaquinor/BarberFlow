@@ -98,6 +98,7 @@ def test_barber_calendar_filters_selected_local_day_and_tenant(
     assert payload["summary"]["total"] == 1
     assert [item["service_type"] for item in payload["appointments"]] == ["Corte"]
     assert payload["appointments"][0]["client_name"] == "Cliente Uno"
+    assert payload["appointments"][0]["client_id"] == client_one.id
 
     weekly = client.get(
         f"/api/v1/barber/appointments/calendar?view=week&anchor_date={target_date.isoformat()}",
@@ -111,6 +112,8 @@ def test_barber_calendar_filters_selected_local_day_and_tenant(
     assert week_payload["summary"]["total"] == expected_week_count
     assert len(week_payload["days"]) == 7
     assert week_payload["days"][0]["date"] == week_start.isoformat()
+    weekly_items = [item for day in week_payload["days"] for item in day["appointments"]]
+    assert next(item for item in weekly_items if item["service_type"] == "Corte")["client_id"] == client_one.id
 
     monthly = client.get(
         f"/api/v1/barber/appointments/calendar?view=month&anchor_date={target_date.isoformat()}",

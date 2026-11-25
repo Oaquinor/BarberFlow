@@ -19,6 +19,8 @@ test('expired sessions hide private dashboard data and return to login', () => {
       nodes.set(id, {
         style: {}, hidden: false, value: '', textContent: '', open: false,
         close() { this.open = false; },
+        children: ['private data'],
+        replaceChildren(...children) { this.children = children; },
       });
     }
     return nodes.get(id);
@@ -50,6 +52,8 @@ test('expired sessions hide private dashboard data and return to login', () => {
   assert.equal(nodeFor('loginPassword').value, '');
   assert.equal(nodeFor('passwordChangeDialog').open, false);
   assert.equal(nodeFor('ownerClientSearch').value, '');
+  assert.deepEqual(nodeFor('appointmentsList').children, []);
+  assert.deepEqual(nodeFor('appointmentsCalendarGrid').children, []);
   assert.equal(nodeFor('sessionExpiredNotice').hidden, false);
   assert.match(nodeFor('sessionExpiredNotice').textContent, /sesión expiró/i);
   assert.deepEqual(removed, ['userEmail']);

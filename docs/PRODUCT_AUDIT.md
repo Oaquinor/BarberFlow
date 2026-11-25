@@ -28,7 +28,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Fidelidad, membresías y referidos | No implementado | No hay motor de puntos o suscripciones de cliente |
 | Citas grupales o recurrentes | No implementado | No aparecen en rutas activas |
 | Multi-sucursal, renta de silla, empleo | No implementado | No afirmar soporte de sedes, contratos o nómina |
-| Style Passport | Parcial; flujo de cliente implementado | Guarda preferencias vinculadas a citas completadas y fotos privadas de referencia/resultado. Compartir con la barbería es opcional y revocable; el acceso del equipo se acota al tenant. Falta retención automática configurable y UI dedicada en el portal del barbero. No usa reconocimiento facial ni publica fotos. |
+| Style Passport | Parcial; flujo cliente y consulta de equipo integrados | Guarda preferencias vinculadas a citas completadas y fotos privadas de referencia/resultado. Owner y barbero del tenant pueden consultar y anotar solo registros compartidos; el consentimiento es opcional y revocable. Falta retención automática configurable. No usa reconocimiento facial ni publica fotos. |
 | Live Chair, Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
 | Pronóstico de demanda | Parcial | Promedio estadístico explicable; no es ML ni predicción comercial validada |
 | MFA, WebSocket, notificaciones push | No implementado | No hay MFA ni canal push/WebSocket activo |
@@ -44,6 +44,8 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 ## Cambios cerrados en este incremento
 
 - Style Passport: `041_style_passport` agrega un registro por cita completada y fotos privadas con claves aleatorias fuera de rutas públicas; consentimiento apagado por defecto y revocable, acceso del equipo acotado a CRM/tenant, borrado lógico del registro con limpieza de campos y eliminación física de archivos. Las imágenes JPG/PNG se decodifican y re-guardan en JPEG para quitar EXIF, con límite de tamaño/píxeles y máximo de dos por categoría. Referencia API, matriz y PWA actualizadas. Retención automática y portal dedicado de barbero siguen pendientes.
+- El barbero consulta Style Passport desde la cita de su propia agenda. El API entrega el ID CRM solo con la agenda autenticada; el endpoint exige que el registro esté compartido con ese tenant. La pantalla permite leer preferencias, ver fotos privadas autorizadas y guardar notas/recomendaciones profesionales; el cierre de sesión limpia la agenda y su contenido privado.
+- Verificación adicional de agenda del barbero: backend local **79 passed, 114 skipped** (MySQL de integración requiere `TEST_DATABASE_URL`); frontend **118/118**; Playwright **74/74** en Chromium, incluida la consulta y anotación de registros compartidos con API simulada. `compileall`, flake8 selectivo y `git diff --check` correctos. CI multi-motor/MySQL de este nuevo incremento queda pendiente del push.
 - Validación local de Style Passport: compilación Python correcta; backend **79 passed, 114 skipped** (integraciones MySQL omitidas localmente por falta de `TEST_DATABASE_URL`); frontend **116/116**; Playwright **73/73** en Chromium, incluido guardar el corte con consentimiento explícito (API simulada). GitHub Actions `45676034345` confirmó en `bc236ad` migración limpia, downgrade/recuperación, **193 pruebas MySQL 8.4**, **116 pruebas frontend**, 8 pruebas de WhatsApp, **73 flujos por motor** en Chromium, Firefox y WebKit y contenedores de producción: [run 45676034345](https://github.com/Oaquinor/BarberFlow/actions/runs/45676034345).
 - Se añadieron al catálogo API cuatro rutas activas de imagen de portada y galería que faltaban en la referencia.
 - Se reparó una expectativa obsoleta de expiración de sesión y dos pruebas con selectores/flujo de inicialización desactualizados.
@@ -99,7 +101,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Siguiente orden de entrega
 
-1. Revisar visualmente Style Passport, añadir UI al portal de barbero y acordar la regla de retención de fotos antes de habilitarlo ampliamente.
-2. Confirmar en CI MySQL la migración, downgrade y pruebas de aislamiento de Style Passport.
-3. Definir país, proveedor y modelo comercial antes de diseñar cobros online; automatizar la lista de espera y definir fidelidad/sucursales antes de implementar esos dominios.
+1. Acordar y luego implementar una regla explícita de retención automática de fotos y pruebas de purga/respaldo del Style Passport.
+2. Diseñar Live Chair a partir de disponibilidad, check-in, estimación de espera y privacidad antes de elegir mecanismo realtime.
+3. Definir país, proveedor y modelo comercial antes de diseñar cobros online; automatizar la lista de espera y definir fidelidad/sucursales antes de esos dominios.
 4. Threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.
