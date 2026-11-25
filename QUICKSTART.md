@@ -112,6 +112,16 @@ Access:
 - **API**: http://localhost:8000
 - **Docs**: http://localhost:8000/docs
 
+The seeder prompts for `kings-barbershop-demo` before writing. It creates an owner, a barber, a platform admin, three services, and future MySQL availability slots. After confirming the prompt, use:
+
+| Role | Email | Password |
+|---|---|---|
+| Owner | `owner-demo@example.com` | `DemoOnlyChangeMe123` |
+| Barber | `barber-demo@example.com` | `DemoOnlyChangeMe123` |
+| Platform admin | `admin-demo@example.com` | `DemoOnlyChangeMe123` |
+
+Open the public booking page at http://localhost:8000/client.html?shop=kings-barbershop-demo. These are disposable local credentials; do not expose the demo tenant on a shared or production deployment. The script refuses to overwrite a tenant with the demo slug.
+
 ---
 
 ## 📚 Next Steps
