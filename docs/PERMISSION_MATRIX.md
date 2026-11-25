@@ -9,6 +9,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Crear reserva como invitado | Sí | Sí | Sí | Sí; además se guarda en su historial | Sí |
 | Solicitar contacto por horario (lista de espera) | Sí; solo propia solicitud | Consulta y seguimiento de su tenant | No | Sí; se comporta como petición guest | No por defecto |
 | Filtrar, contactar y cambiar estado de solicitudes de espera | No | Solo su tenant | No | No | No por defecto |
+| Buscar horarios compatibles para una solicitud de espera | No | Solo solicitudes y turnos disponibles de su tenant; ofrece el enlace, no aparta el turno ni confirma cita | No | No | No por defecto |
 | Administrar catálogo, costos, precios y umbrales de inventario | No | Solo su tenant | No | No | No por defecto |
 | Cobrar venta de productos y consultar ventas POS | No | Solo su tenant | No | No | No por defecto |
 | Registrar y consultar gastos del negocio | No | Solo su tenant; idempotente y auditado; sin edición/borrado financiero | No | No | No por defecto |

@@ -137,6 +137,7 @@ El inbox guarda eventos operativos de cita para el barbero asignado y los propie
 | `PUT` | `/owner/clients/{client_id}` | Actualiza nombre y teléfono de un cliente del tenant, con auditoría |
 | `PUT` | `/owner/clients/{client_id}/status` | Activa o desactiva el acceso del cliente sin borrar su historial |
 | `GET` | `/owner/waitlist?status=new&limit=50&offset=0` | Consulta solicitudes de espera del tenant autenticado; permite filtrar `new`, `contacted` o `closed` |
+| `GET` | `/owner/waitlist/{entry_id}/matches` | Busca hasta ocho turnos abiertos que cumplan servicio, duración, profesional y rango de fechas de una solicitud `new`; devuelve enlace para iniciar una reserva preseleccionada |
 | `PUT` | `/owner/waitlist/{entry_id}/status` | Marca la solicitud `new`, `contacted` o `closed`; registra hora del contacto y auditoría |
 
 El alta manual requiere nombre, apellido y teléfono; normaliza el teléfono y rechaza duplicados del mismo tenant. Crea una ficha sin acceso de cuenta ni cita asociada.

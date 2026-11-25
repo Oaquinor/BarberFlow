@@ -53,8 +53,55 @@ test('owner waitlist renders escaped tenant data and safe WhatsApp links', async
   assert.match(nodes.ownerWaitlistBody.innerHTML, /&lt;img src=x onerror=alert\(2\)&gt;/);
   assert.doesNotMatch(nodes.ownerWaitlistBody.innerHTML, /<script>|<img/);
   assert.match(nodes.ownerWaitlistBody.innerHTML, /href="https:\/\/wa\.me\/18095554141\?text=/);
+  assert.match(nodes.ownerWaitlistBody.innerHTML, /Buscar horarios/);
   assert.match(nodes.ownerWaitlistBody.innerHTML, /Marcar contactado/);
   assert.equal(nodes.ownerWaitlistResult.textContent, '1 solicitud(es) · 1 en este filtro');
+});
+
+test('owner can offer a matching open slot through WhatsApp with a preselected booking link', async () => {
+  const start = mainScript.indexOf("document.getElementById('ownerWaitlistBody')?.addEventListener");
+  const end = mainScript.indexOf('\nlet ownerInventoryProducts = [];', start);
+  const listenerSource = mainScript.slice(start, end);
+  let clickHandler;
+  const result = { textContent: '', innerHTML: '' };
+  const button = {
+    dataset: { id: '17' },
+    disabled: false,
+    closest(selector) { return selector === '.owner-waitlist-matches' ? this : selector === 'tr' ? row : null; },
+  };
+  const row = { querySelector: () => ({ getAttribute: () => 'tel:18095554141' }) };
+  const calls = [];
+  const sandbox = {
+    Date,
+    barbershopProfile: { timezone: 'America/Santo_Domingo' },
+    escapeHtml: (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]),
+    document: {
+      getElementById: (id) => id === 'ownerWaitlistBody' ? { addEventListener(_type, handler) { clickHandler = handler; } }
+        : id === 'ownerWaitlistMatches17' ? result : null,
+    },
+    ownerFetch: async (url) => {
+      calls.push(url);
+      return {
+        service_name: 'Corte clásico',
+        items: [{
+          slot_start: '2026-12-01T21:00:00Z', barber_name: 'Barbero Uno',
+          booking_url: 'https://kingflow.test/client.html?shop=local&service_id=4&barber_id=8',
+        }],
+      };
+    },
+    showConfirmation: async () => true,
+  };
+
+  vm.runInNewContext(listenerSource, sandbox);
+  await clickHandler({ target: { closest: (selector) => selector === '.owner-waitlist-matches' ? button : null } });
+
+  assert.deepEqual(calls, ['/owner/waitlist/17/matches']);
+  assert.match(result.innerHTML, /El turno no queda reservado/);
+  assert.match(result.innerHTML, /Ofrecer horario por WhatsApp/);
+  assert.match(result.innerHTML, /service_id%3D4%26barber_id%3D8/);
+  assert.equal(button.disabled, false);
 });
 
 test('waitlist requests are not fetched for other dashboard roles', async () => {

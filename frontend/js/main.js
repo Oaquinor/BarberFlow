@@ -1541,11 +1541,14 @@ async function loadOwnerWaitlist() {
             const statusLabel = { new: 'Pendiente', contacted: 'Contactado', closed: 'Cerrado' }[entry.status] || 'Desconocido';
             const nextStatus = entry.status === 'new' ? 'contacted' : entry.status === 'contacted' ? 'closed' : 'new';
             const actionLabel = nextStatus === 'contacted' ? 'Marcar contactado' : nextStatus === 'closed' ? 'Cerrar solicitud' : 'Reabrir';
+            const matchesButton = entry.status === 'new'
+                ? `<button class="btn-secondary owner-waitlist-matches" data-id="${Number(entry.id)}" type="button">Buscar horarios</button><div class="owner-waitlist-match-results" id="ownerWaitlistMatches${Number(entry.id)}" role="status" aria-live="polite"></div>`
+                : '';
             return `<tr><td data-label="Cliente">${escapeHtml(entry.client_name)}<br><a href="tel:${phone}">${escapeHtml(entry.phone)}</a></td>
                 <td data-label="Servicio">${escapeHtml(entry.service_name)}</td><td data-label="Barbero">${escapeHtml(entry.barber_name || 'Cualquiera')}</td>
                 <td data-label="Fechas preferidas">${escapeHtml(dateLabel)}</td><td data-label="Detalle">${escapeHtml(entry.notes || '—')}</td>
                 <td data-label="Recibida">${escapeHtml(new Date(entry.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
-                <td data-label="Estado">${escapeHtml(statusLabel)}</td><td data-label="Acciones">${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
+                <td data-label="Estado">${escapeHtml(statusLabel)}</td><td data-label="Acciones">${matchesButton}${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
                 <button class="btn-secondary owner-waitlist-status" data-id="${Number(entry.id)}" data-next-status="${nextStatus}" type="button">${actionLabel}</button></td></tr>`;
         }).join('');
         result.textContent = items.length ? `${items.length} solicitud(es) · ${Number(data.total)} en este filtro` : 'No hay solicitudes para mostrar.';
@@ -1558,6 +1561,34 @@ async function loadOwnerWaitlist() {
 document.getElementById('refreshOwnerWaitlist')?.addEventListener('click', loadOwnerWaitlist);
 document.getElementById('ownerWaitlistStatus')?.addEventListener('change', loadOwnerWaitlist);
 document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (event) => {
+    const matchesButton = event.target.closest('.owner-waitlist-matches');
+    if (matchesButton) {
+        const id = Number(matchesButton.dataset.id);
+        const result = document.getElementById(`ownerWaitlistMatches${id}`);
+        if (!Number.isInteger(id) || id <= 0 || !result) return;
+        matchesButton.disabled = true;
+        result.textContent = 'Buscando horarios disponibles…';
+        try {
+            const data = await ownerFetch(`/owner/waitlist/${id}/matches`);
+            const phone = matchesButton.closest('tr')?.querySelector('a[href^="tel:"]')?.getAttribute('href')?.slice(4) || '';
+            const items = data.items || [];
+            if (!items.length) {
+                result.textContent = 'No hay turnos compatibles disponibles por ahora.';
+            } else {
+                result.innerHTML = `<p>${items.length} horario(s) compatibles. El turno no queda reservado y podría ocuparse antes de confirmar.</p>${items.map(item => {
+                    const when = new Date(item.slot_start).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' });
+                    const message = `Hola, ${data.service_name} tiene disponibilidad ${when} con ${item.barber_name}. Puedes revisar y reservar aquí: ${item.booking_url}`;
+                    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                    return `<p>${escapeHtml(when)} · ${escapeHtml(item.barber_name || 'Barbero')} <a class="btn-secondary" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">Ofrecer horario por WhatsApp</a></p>`;
+                }).join('')}`;
+            }
+        } catch (error) {
+            result.textContent = error.message || 'No se pudieron buscar horarios compatibles.';
+        } finally {
+            matchesButton.disabled = false;
+        }
+        return;
+    }
     const button = event.target.closest('.owner-waitlist-status');
     if (!button) return;
     const id = Number(button.dataset.id);

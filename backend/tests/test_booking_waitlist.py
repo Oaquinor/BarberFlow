@@ -1,13 +1,16 @@
 """MySQL integration tests for public waitlist intake and owner follow-up."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
-from app.models import AuditLog, Barbershop, BookingWaitlistEntry, Service, Subscription, User
+from app.models import (
+    AuditLog, BarberAvailability, BarberAvailabilityBlock, Barbershop,
+    BookingWaitlistEntry, Service, Subscription, User,
+)
 from app.utils.datetime import utc_now_naive
 
 
@@ -126,6 +129,40 @@ def test_public_request_persists_and_owner_can_contact_and_close(
     assert listed.json()["items"][0]["barber_name"] == barber.full_name
     assert listed.json()["items"][0]["service_name"] == service.name
 
+    good_start = datetime.combine(preferred_start, time(17))
+    blocked_start = datetime.combine(preferred_start, time(18))
+    short_start = datetime.combine(preferred_start, time(19))
+    good_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id,
+        slot_start=good_start, slot_end=good_start + timedelta(minutes=45),
+        is_active=True, is_booked=False,
+    )
+    blocked_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id,
+        slot_start=blocked_start, slot_end=blocked_start + timedelta(minutes=45),
+        is_active=True, is_booked=False,
+    )
+    short_slot = BarberAvailability(
+        barbershop_id=shop.id, barber_id=barber.id,
+        slot_start=short_start, slot_end=short_start + timedelta(minutes=20),
+        is_active=True, is_booked=False,
+    )
+    test_db.add_all([good_slot, blocked_slot, short_slot])
+    test_db.add(BarberAvailabilityBlock(
+        barbershop_id=shop.id, barber_id=barber.id,
+        starts_at=blocked_start, ends_at=blocked_start + timedelta(minutes=45),
+        reason="Pausa",
+    ))
+    test_db.commit()
+    matches = client.get(
+        f"/api/v1/owner/waitlist/{entry.id}/matches", headers=headers,
+    )
+    assert matches.status_code == 200
+    assert matches.json()["service_name"] == service.name
+    assert [item["availability_id"] for item in matches.json()["items"]] == [good_slot.id]
+    assert matches.json()["items"][0]["barber_name"] == barber.full_name
+    assert f"service_id={service.id}&barber_id={barber.id}" in matches.json()["items"][0]["booking_url"]
+
     contacted = client.put(
         f"/api/v1/owner/waitlist/{entry.id}/status",
         headers=headers,
@@ -179,6 +216,9 @@ def test_waitlist_rejects_foreign_resources_and_isolates_tenant_management(
 
     assert client.get("/api/v1/owner/waitlist").status_code == 401
     assert client.get("/api/v1/owner/waitlist", headers=_headers(other_owner)).json()["items"] == []
+    assert client.get(
+        f"/api/v1/owner/waitlist/{entry.id}/matches", headers=_headers(other_owner),
+    ).status_code == 404
     cross_tenant_update = client.put(
         f"/api/v1/owner/waitlist/{entry.id}/status",
         headers=_headers(other_owner),

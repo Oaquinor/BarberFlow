@@ -1,6 +1,6 @@
 """Public waitlist intake and tenant-isolated owner follow-up."""
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta, timezone as dt_timezone
 import hashlib
 from typing import Optional
 
@@ -10,8 +10,12 @@ from sqlalchemy.orm import Session
 
 from app.core import get_db
 from app.core.constants.enums import MAX_ADVANCE_BOOKING_DAYS
+from app.core.constants.enums import MAX_SERVICE_DURATION_MINUTES
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
 from app.models.barbershop import Barbershop
+from app.models.appointment import Appointment
+from app.models.barber_availability import BarberAvailability
+from app.models.barber_availability_block import BarberAvailabilityBlock
 from app.models.service import Service
 from app.models.user import User
 from app.schemas.booking_waitlist import PublicWaitlistRequest, WaitlistStatusUpdate
@@ -25,9 +29,11 @@ from app.api.v1.endpoints.common import (
     _utc_aware,
 )
 from app.api.v1.endpoints.platform import (
+    _build_client_link,
     _consume_public_booking_quota,
     _get_public_shop,
     _public_booking_client_ip,
+    _slot_available_for_duration,
 )
 
 router = APIRouter(tags=["booking-waitlist"])
@@ -214,6 +220,124 @@ def owner_list_waitlist(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/owner/waitlist/{entry_id}/matches")
+def owner_waitlist_matches(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Find real, unbooked slots compatible with one active tenant request."""
+    owner = _get_current_user(db, authorization)
+    if owner.role != "barbershop_owner" or not owner.barbershop_id:
+        raise HTTPException(
+            status_code=403, detail="Solo el propietario puede consultar coincidencias"
+        )
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == owner.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=403, detail="Barbería inactiva")
+    entry = db.query(BookingWaitlistEntry).filter(
+        BookingWaitlistEntry.id == entry_id,
+        BookingWaitlistEntry.barbershop_id == shop.id,
+        BookingWaitlistEntry.is_deleted == False,
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if entry.status != "new":
+        raise HTTPException(status_code=409, detail="La solicitud ya no está pendiente")
+    service = db.query(Service).filter(
+        Service.id == entry.service_id,
+        Service.barbershop_id == shop.id,
+        Service.is_active == True,
+        Service.is_deleted == False,
+    ).first()
+    if not service:
+        return {"items": [], "service_name": entry.service_name_snapshot}
+
+    now = utc_now_naive()
+    timezone = _get_timezone(shop)
+    local_today = _utc_aware(now).astimezone(timezone).date()
+    min_date = max(entry.preferred_date_start or local_today, local_today)
+    max_date = min(
+        entry.preferred_date_end or local_today + timedelta(days=MAX_ADVANCE_BOOKING_DAYS),
+        local_today + timedelta(days=MAX_ADVANCE_BOOKING_DAYS),
+    )
+    if max_date < min_date:
+        return {"items": [], "service_name": entry.service_name_snapshot}
+    local_start = datetime.combine(min_date, time.min, tzinfo=timezone)
+    local_end = datetime.combine(max_date + timedelta(days=1), time.min, tzinfo=timezone)
+    range_start = max(now, local_start.astimezone(dt_timezone.utc).replace(tzinfo=None))
+    range_end = local_end.astimezone(dt_timezone.utc).replace(tzinfo=None)
+
+    slots_query = db.query(BarberAvailability).filter(
+        BarberAvailability.barbershop_id == shop.id,
+        BarberAvailability.is_active == True,
+        BarberAvailability.is_booked == False,
+        BarberAvailability.is_deleted == False,
+        BarberAvailability.slot_start >= range_start,
+        BarberAvailability.slot_start < range_end,
+    )
+    if entry.barber_id:
+        slots_query = slots_query.filter(BarberAvailability.barber_id == entry.barber_id)
+    slots = slots_query.order_by(BarberAvailability.slot_start, BarberAvailability.id).limit(300).all()
+    if not slots:
+        return {"items": [], "service_name": service.name}
+
+    barber_ids = {slot.barber_id for slot in slots}
+    first_start = min(slot.slot_start for slot in slots)
+    last_end = max(slot.slot_end for slot in slots)
+    appointments = db.query(Appointment).filter(
+        Appointment.barbershop_id == shop.id,
+        Appointment.barber_id.in_(barber_ids),
+        Appointment.status.in_(("pending", "confirmed", "in_progress")),
+        Appointment.is_deleted == False,
+        Appointment.scheduled_time >= first_start - timedelta(minutes=MAX_SERVICE_DURATION_MINUTES),
+        Appointment.scheduled_time < last_end,
+    ).all()
+    blocks = db.query(BarberAvailabilityBlock).filter(
+        BarberAvailabilityBlock.barbershop_id == shop.id,
+        BarberAvailabilityBlock.barber_id.in_(barber_ids),
+        BarberAvailabilityBlock.is_deleted == False,
+        BarberAvailabilityBlock.starts_at < last_end,
+        BarberAvailabilityBlock.ends_at > first_start,
+    ).all()
+    appointments_by_barber: dict[int, list[Appointment]] = {}
+    blocks_by_barber: dict[int, list[BarberAvailabilityBlock]] = {}
+    for appointment in appointments:
+        appointments_by_barber.setdefault(appointment.barber_id, []).append(appointment)
+    for block in blocks:
+        blocks_by_barber.setdefault(block.barber_id, []).append(block)
+    barbers = {
+        barber.id: barber.full_name
+        for barber in db.query(User).filter(User.id.in_(barber_ids)).all()
+    }
+    booking_base = _build_client_link(shop.slug)
+    matches = []
+    for slot in slots:
+        if not _slot_available_for_duration(
+            slot,
+            blocks_by_barber.get(slot.barber_id, []),
+            appointments_by_barber.get(slot.barber_id, []),
+            service.duration_minutes,
+        ):
+            continue
+        matches.append({
+            "availability_id": slot.id,
+            "slot_start": _utc_aware(slot.slot_start),
+            "barber_id": slot.barber_id,
+            "barber_name": barbers.get(slot.barber_id),
+            "booking_url": (
+                f"{booking_base}&service_id={service.id}&barber_id={slot.barber_id}"
+            ),
+        })
+        if len(matches) == 8:
+            break
+    return {"items": matches, "service_name": service.name}
 
 
 @router.put("/owner/waitlist/{entry_id}/status")
