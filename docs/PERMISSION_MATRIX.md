@@ -15,10 +15,10 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Registrar y consultar gastos del negocio | No | Solo su tenant; idempotente y auditado; sin edición/borrado financiero | No | No | No por defecto |
 | Registrar o consultar movimientos de existencias | No | Solo productos y movimientos de su tenant; deja auditoría | No | No | No por defecto |
 | Consultar/cancelar/reprogramar reserva guest con token privado | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva | Token de esa reserva |
-| Check-in y estimación privada de cola | Solo con token de esa reserva; sin revelar otros clientes; ETA se omite durante descanso | Consulta su tenant en agenda; recibe aviso | Consulta según su agenda; recibe aviso si es barbero asignado | Solo su cita con token de seguimiento | No por defecto |
+| Check-in y estimación privada de cola | Solo con token de esa reserva; sin revelar otros clientes; ETA aproximada durante descanso solo si el barbero indicó regreso futuro, y se omite si no existe o ya venció | Consulta su tenant en agenda; recibe aviso | Consulta según su agenda; recibe aviso si es barbero asignado | Solo su cita con token de seguimiento | No por defecto |
 | Agenda/estado/cobro/caja | No | Su negocio | Solo operaciones propias permitidas | No | Según endpoint administrativo explícito |
 | Panel Live Chair del equipo | No | Solo barberos/agenda del tenant; sin datos identificables de clientes | No | No | No por defecto |
-| Marcar disponibilidad/descanso en Live Chair | No | No modifica estado del equipo | Solo su perfil; descanso bloqueado mientras atiende y debe reanudarse manualmente | No | No por defecto |
+| Marcar disponibilidad/descanso en Live Chair | No | No modifica estado del equipo | Solo su perfil; descanso bloqueado mientras atiende, regreso previsto de 5–120 min y reanudación manual | No | No por defecto |
 | Consultar conciliación del día | No | Su negocio, incluye egresos operativos | Sus cobros y cierres permitidos; no ve el detalle de gastos del negocio | No | Solo conforme al tenant de su cuenta |
 | Crear/editar barberos, clientes y comisiones | No | Su tenant | No; consulta permitida de sus comisiones | No | Según endpoints administrativos explícitos |
 | Configurar negocio, horarios y branding | No | Su tenant | Lectura o acceso limitado según ruta | No | No por defecto |

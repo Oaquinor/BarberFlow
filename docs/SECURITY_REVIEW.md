@@ -1,6 +1,6 @@
 # Revisión defensiva de seguridad
 
-**Alcance:** revisión defensiva del código local a 25-11-2026, incluidas las migraciones `041_style_passport` y `042_style_passport_retention`. CI `45683210897` aprobó la migración limpia, downgrade, recuperación y pruebas MySQL 8.4 para esta entrega. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
+**Alcance:** revisión defensiva del código local al 25-11-2026, incluidas las migraciones hasta `045_live_chair_break_return`. CI `45716413144` aprobó migración limpia, downgrade, recuperación y pruebas MySQL 8.4 para esta entrega. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
 
 ## Controles observados
 
@@ -23,7 +23,7 @@
 3. La revisión no confirma configuración real de proxy, TLS, backups/restauración, logs/alertas, secretos del proveedor ni permisos mínimos en producción.
 4. SMTP y WhatsApp requieren proveedor/credenciales y worker; entrega real no fue validada.
 5. MFA no está implementado. Considerar MFA especialmente para superadmin y owner antes de exposición amplia.
-6. Revisar CSRF según transporte de credenciales en cada flujo, límites de sesión, caducidad y seguridad de links secretos.
+6. Revisar CSRF según transporte de credenciales en cada flujo, límites de sesión, caducidad y seguridad de links secretos. Live Chair expone el regreso previsto solo por token privado de seguimiento o owner autenticado; vencida la hora, omite la ETA hasta que el barbero confirme su retorno.
 7. Hay pruebas negativas para varias acciones sensibles nuevas (incluidos reclamo, cancelación, reprogramación y exportación de cuenta), pero falta cobertura sistemática de autorización por objeto/tenant para todo el API y análisis dinámico de API.
 8. `pip-audit` y `npm audit` forman parte del workflow y pasaron en las ejecuciones CI citadas en `docs/PRODUCT_AUDIT.md`; el entorno local no los ejecutó.
 
