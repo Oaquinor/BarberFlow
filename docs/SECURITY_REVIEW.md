@@ -19,7 +19,7 @@
 ## Riesgos / verificaciones pendientes
 
 1. No hay evidencia de pentest externo ni de checklist ASVS completa. La referencia actual de ASVS es 5.0; elegir perfil/requisitos según aplicación y riesgo.
-2. La máquina local no tenía `TEST_DATABASE_URL`, por lo que las pruebas de integración actuales (incluido Style Passport) se omitieron localmente. El CI histórico MySQL 8.4 no cubre este cambio aún. No sustituye pruebas de producción bajo carga ni una auditoría completa de aislamiento.
+2. La máquina local no tenía `TEST_DATABASE_URL`, por lo que las pruebas de integración actuales (incluido Style Passport) se omitieron localmente. GitHub Actions `45674724760` ejecutó **193 pruebas** en MySQL 8.4 y confirmó migración limpia, downgrade y recuperación. No sustituye pruebas de producción bajo carga ni una auditoría completa de aislamiento.
 3. La revisión no confirma configuración real de proxy, TLS, backups/restauración, logs/alertas, secretos del proveedor ni permisos mínimos en producción.
 4. SMTP y WhatsApp requieren proveedor/credenciales y worker; entrega real no fue validada.
 5. MFA no está implementado. Considerar MFA especialmente para superadmin y owner antes de exposición amplia.
