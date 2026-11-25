@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v57`;
+const CACHE_NAME = `${CACHE_PREFIX}v58`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -16,7 +16,7 @@ const ASSETS_TO_CACHE = [
   '/css/account-security.css',
   '/css/ui-feedback.css',
   '/css/client.css?v=20261125-account-3',
-  '/css/client-account.css?v=20261125-account-4',
+  '/css/client-account.css?v=20261125-account-5',
   '/css/business-gallery.css',
   '/css/owner-dashboard.css',
   '/images/barbershop-hero.png',

@@ -40,6 +40,7 @@ test("registration explains that an email verification link is required", async 
     status: 202, json: { message: "Si el correo puede registrarse, enviaremos un enlace de verificación." },
   }));
   await page.goto("/client-account.html");
+  await expect(page.locator("#accountStatus")).toHaveCSS("display", "none");
   await page.getByText("Crear cuenta de cliente").click();
   await page.getByLabel("Nombre", { exact: true }).fill("Ana");
   await page.getByLabel("Apellido", { exact: true }).fill("Cliente");

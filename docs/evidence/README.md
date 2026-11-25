@@ -4,3 +4,5 @@
 - `owner-settings-after.png` se generó en Playwright desde el formulario real, con datos de prueba sintéticos (nombre de barbería y servicio de ejemplo); no representa información real de producción. Muestra el resultado del layout, las paletas, la vista previa conectada y la política de cancelación.
 
 La prueba visual cubre anchos de 320, 375, 390, 430, 768, 1024, 1366 y 1920 píxeles. Esto valida desbordamiento y geometría del formulario en Chromium; no reemplaza la revisión manual de todas las pantallas ni la validación Firefox/WebKit.
+
+- client-account-desktop.png y client-account-mobile.png muestran el portal cliente en estado de acceso, capturado desde la página real con datos vacíos a 1366 px y 390 px. La zona de estado vacía no deja espacio reservado entre introducción y formulario.
