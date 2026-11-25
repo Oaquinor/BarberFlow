@@ -212,6 +212,12 @@ def test_retail_sale_is_idempotent_and_flows_into_cash_close(client: TestClient,
         json={"idempotency_key": str(uuid4()), "quantity_delta": 4, "reason": "receipt"},
     )
     assert receipt.status_code == 201, receipt.text
+    second_receipt = client.post(
+        f"/api/v1/owner/inventory/products/{second_product['id']}/movements",
+        headers=headers,
+        json={"idempotency_key": str(uuid4()), "quantity_delta": 4, "reason": "receipt"},
+    )
+    assert second_receipt.status_code == 201, second_receipt.text
     payload = {
         "idempotency_key": str(uuid4()),
         "method": "cash",
