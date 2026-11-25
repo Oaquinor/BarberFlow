@@ -5,7 +5,7 @@ from hashlib import sha256
 from html import escape
 import secrets
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -189,8 +189,9 @@ def _require_client_account(user: User) -> None:
 
 
 @router.get("/profile")
-def get_client_profile(user: CurrentUser):
+def get_client_profile(response: Response, user: CurrentUser):
     _require_client_account(user)
+    response.headers["Cache-Control"] = "no-store"
     return {
         "email": user.email,
         "first_name": user.first_name,
@@ -228,8 +229,11 @@ def update_client_profile(
 
 
 @router.get("/appointments")
-def list_client_appointments(user: CurrentUser, db: Session = Depends(get_db)):
+def list_client_appointments(
+    response: Response, user: CurrentUser, db: Session = Depends(get_db),
+):
     _require_client_account(user)
+    response.headers["Cache-Control"] = "no-store"
     appointments = db.query(Appointment).filter(
         Appointment.client_id.in_(
             db.query(ClientAccountShopLink.crm_client_user_id).filter(
@@ -256,9 +260,12 @@ def list_client_appointments(user: CurrentUser, db: Session = Depends(get_db)):
 
 
 @router.get("/export")
-def export_client_data(user: CurrentUser, db: Session = Depends(get_db)):
+def export_client_data(
+    response: Response, user: CurrentUser, db: Session = Depends(get_db),
+):
     """Return the authenticated customer's profile and linked appointment data."""
     _require_client_account(user)
+    response.headers["Cache-Control"] = "no-store"
     appointments = db.query(Appointment).join(
         ClientAccountShopLink,
         ClientAccountShopLink.crm_client_user_id == Appointment.client_id,

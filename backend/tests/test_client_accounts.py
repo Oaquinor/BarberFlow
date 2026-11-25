@@ -46,6 +46,7 @@ def test_client_registration_requires_email_verification_before_login(
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
     profile = client.get("/api/v1/client-account/profile", headers=headers)
     assert profile.status_code == 200
+    assert profile.headers["cache-control"] == "no-store"
     assert profile.json()["email"] == payload["email"]
     updated = client.patch(
         "/api/v1/client-account/profile", headers=headers,
@@ -115,9 +116,11 @@ def test_client_claims_only_a_private_token_and_sees_only_linked_shop_history(
     assert link.crm_client_user_id == appointment.client_id
     history = client.get("/api/v1/client-account/appointments", headers=headers)
     assert history.status_code == 200
+    assert history.headers["cache-control"] == "no-store"
     assert [item["appointment_id"] for item in history.json()["items"]] == [appointment.id]
     exported = client.get("/api/v1/client-account/export", headers=headers)
     assert exported.status_code == 200
+    assert exported.headers["cache-control"] == "no-store"
     assert exported.json()["account"]["email"] == account.email
     assert [item["appointment_id"] for item in exported.json()["appointments"]] == [appointment.id]
     assert "tracking_token" not in str(exported.json())
