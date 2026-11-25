@@ -26,6 +26,7 @@ from app.models.support_ticket import SupportTicket
 from app.models.client_account import (
     ClientAccountFavorite, ClientAccountShopLink, ClientAccountVerification,
 )
+from app.models.style_passport import StylePassportEntry, StylePassportPhoto
 from app.models.booking_waitlist_entry import BookingWaitlistEntry
 from app.models.inventory_product import InventoryProduct
 from app.models.inventory_movement import InventoryMovement
@@ -64,6 +65,8 @@ __all__ = [
     "ClientAccountShopLink",
     "ClientAccountVerification",
     "ClientAccountFavorite",
+    "StylePassportEntry",
+    "StylePassportPhoto",
     "BookingWaitlistEntry",
     "InventoryProduct",
     "InventoryMovement",

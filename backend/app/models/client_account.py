@@ -1,7 +1,13 @@
 """Verified customer identities and their tenant-scoped CRM profiles."""
 
 from sqlalchemy import (
-    CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, String,
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
     UniqueConstraint,
 )
 

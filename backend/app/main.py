@@ -124,6 +124,15 @@ def create_application() -> FastAPI:
             raise HTTPException(status_code=503, detail="MySQL no disponible") from exc
         return {"status": "healthy", "database": "connected"}
 
+    @application.api_route(
+        "/uploads/private/{private_path:path}",
+        methods=["GET", "HEAD"],
+        include_in_schema=False,
+    )
+    def deny_private_uploads(private_path: str):
+        """Prevent the public frontend mount from serving private media files."""
+        raise HTTPException(status_code=404, detail="Recurso no encontrado")
+
     # Mount the whole frontend directory last so it acts as a catch-all for
     # static assets and PWA pages (client.html, onboarding.html, admin.html,
     # manifest.webmanifest, sw.js, offline.html, css/, js/, icons/) without

@@ -60,6 +60,12 @@ La migración `040_operating_expenses` crea un libro de egresos operativos por b
 
 El cierre de caja conserva fondo inicial, movimiento esperado, importe contado y diferencia. El movimiento en efectivo incluye cobros cash, ventas retail cash, comisiones cash liquidadas y gastos cash; se calcula como entradas menos egresos. El efectivo esperado al cerrar suma el fondo inicial declarado a ese movimiento. La migración no altera importes de cierres anteriores: quedan con fondo inicial cero.
 
+### style_passport_entries y style_passport_photos
+
+La migración `041_style_passport` permite un registro único por cita completada para preferencias de corte y notas de cuidado. Cada fila liga la cuenta global verificada, el tenant y una cita existente. `share_with_shop` inicia desactivado; el consentimiento y su fecha se actualizan al cambiar la selección. La UI/API de cliente permite editar o retirar el registro.
+
+Las filas de fotos guardan categoría (`reference`/`result`), MIME normalizado, tamaño y clave UUID aleatoria. Los bytes JPEG re-encodeados se almacenan en `UPLOAD_DIR/private/style-passport/{account_id}`, fuera del acceso estático público. La API valida titularidad o consentimiento del tenant en cada lectura; la respuesta usa `private, no-store`. Se admiten hasta dos archivos por categoría de hasta 5 MiB cada uno. Borrar el registro limpia los campos de estilo y elimina los archivos; la fila queda con soft delete para auditoría y unicidad histórica por cita. No hay expiración automática configurada: debe definirse una regla de retención antes de operación amplia.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

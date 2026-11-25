@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-8">
+  <link rel="stylesheet" href="/css/client-account.css?v=20261125-style-passport-1">
   <title>Mi cuenta · KingFlow Barber</title>
 </head>
 <body>
@@ -73,6 +73,47 @@
           <h2 id="appointmentsTitle">Mis citas</h2>
           <div id="appointmentsList" class="appointments-list"><p>Cargando tus citas…</p></div>
         </section>
+        <section class="style-passport-section" aria-labelledby="stylePassportTitle">
+          <div class="style-passport-heading">
+            <div>
+              <p class="eyebrow">TU HISTORIAL DE ESTILO</p>
+              <h2 id="stylePassportTitle">Style Passport</h2>
+              <p>Conserva los detalles de tus cortes y vuelve a reservarlos cuando quieras.</p>
+            </div>
+            <button id="newStylePassportButton" class="button-secondary" type="button">Guardar un corte</button>
+          </div>
+          <form id="stylePassportForm" class="account-form style-passport-form" hidden>
+            <input id="stylePassportEntryId" type="hidden">
+            <h3 id="stylePassportFormTitle">Guarda una visita completada</h3>
+            <label for="stylePassportAppointment">Visita completada</label>
+            <select id="stylePassportAppointment" required></select>
+            <div class="style-fields-grid">
+              <div><label for="stylePassportHaircut">Tipo de corte</label><input id="stylePassportHaircut" maxlength="120"></div>
+              <div><label for="stylePassportFade">Tipo de fade</label><input id="stylePassportFade" maxlength="120"></div>
+              <div><label for="stylePassportTop">Largo superior</label><input id="stylePassportTop" maxlength="120"></div>
+              <div><label for="stylePassportSides">Largo de los lados</label><input id="stylePassportSides" maxlength="120"></div>
+              <div><label for="stylePassportBeard">Estilo de barba</label><input id="stylePassportBeard" maxlength="120"></div>
+              <div><label for="stylePassportProducts">Productos usados</label><input id="stylePassportProducts" maxlength="300"></div>
+            </div>
+            <label for="stylePassportPreferences">Detalles que quieres recordar</label>
+            <textarea id="stylePassportPreferences" maxlength="2000" rows="3" placeholder="Ej.: conservar el largo arriba y preguntar antes de recortar el flequillo"></textarea>
+            <div class="style-photo-fields">
+              <div><label for="stylePassportReferencePhotos">Fotos de referencia (hasta 2)</label><input id="stylePassportReferencePhotos" type="file" accept="image/jpeg,image/png" multiple></div>
+              <div><label for="stylePassportResultPhotos">Fotos del resultado (hasta 2)</label><input id="stylePassportResultPhotos" type="file" accept="image/jpeg,image/png" multiple></div>
+            </div>
+            <label class="style-consent" for="stylePassportShare">
+              <input id="stylePassportShare" type="checkbox">
+              <span>Compartir este registro y sus fotos con el equipo de esta barbería. Puedes retirar el acceso cuando quieras.</span>
+            </label>
+            <p class="style-privacy-note">Por defecto, solo tú puedes ver este registro. Las fotos son privadas, no aparecen en la galería pública y se eliminan del almacenamiento al borrarlas.</p>
+            <p id="stylePassportFormResult" class="status" role="status" aria-live="polite"></p>
+            <div class="style-form-actions">
+              <button type="submit">Guardar en mi Style Passport</button>
+              <button id="cancelStylePassportEdit" class="button-secondary" type="button">Cancelar</button>
+            </div>
+          </form>
+          <div id="stylePassportList" class="style-passport-list" aria-live="polite"><p>Cargando tu historial de estilo…</p></div>
+        </section>
         <section class="favorites-section" aria-labelledby="favoritesTitle">
           <h2 id="favoritesTitle">Mis favoritos</h2>
           <div id="favoritesList" class="favorites-list"><p>Cargando tus favoritos…</p></div>
@@ -83,11 +124,15 @@
         <h2>Verificando tu correo</h2><p>Comprobamos que el enlace siga vigente y no se haya usado antes.</p>
       </section>
     </section>
+    <dialog id="stylePassportPhotoDialog" class="style-photo-dialog" aria-labelledby="stylePassportPhotoTitle">
+      <div class="style-photo-dialog-heading"><h2 id="stylePassportPhotoTitle">Foto privada de estilo</h2><button id="closeStylePassportPhoto" class="button-secondary" type="button">Cerrar</button></div>
+      <img id="stylePassportPhotoPreview" alt="Foto privada de tu Style Passport">
+    </dialog>
     <p class="account-footer">Tus datos de cliente se mantienen separados por barbería.</p>
   </main>
   <script src="/js/config.js"></script>
   <script src="/js/pwa.js"></script>
   <script src="/js/auth.js"></script>
-  <script src="/js/client-account.js?v=20261125-account-8"></script>
+  <script src="/js/client-account.js?v=20261125-style-passport-1"></script>
 </body>
 </html>

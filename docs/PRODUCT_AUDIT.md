@@ -28,7 +28,8 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 | Fidelidad, membresías y referidos | No implementado | No hay motor de puntos o suscripciones de cliente |
 | Citas grupales o recurrentes | No implementado | No aparecen en rutas activas |
 | Multi-sucursal, renta de silla, empleo | No implementado | No afirmar soporte de sedes, contratos o nómina |
-| Live Chair, Style Passport, Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
+| Style Passport | Parcial; flujo de cliente implementado | Guarda preferencias vinculadas a citas completadas y fotos privadas de referencia/resultado. Compartir con la barbería es opcional y revocable; el acceso del equipo se acota al tenant. Falta retención automática configurable y UI dedicada en el portal del barbero. No usa reconocimiento facial ni publica fotos. |
+| Live Chair, Coach, Smart Match, Barber Studio | No implementado | Nombres del mandato sin implementación conectada constatada |
 | Pronóstico de demanda | Parcial | Promedio estadístico explicable; no es ML ni predicción comercial validada |
 | MFA, WebSocket, notificaciones push | No implementado | No hay MFA ni canal push/WebSocket activo |
 
@@ -42,6 +43,8 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Cambios cerrados en este incremento
 
+- Style Passport: `041_style_passport` agrega un registro por cita completada y fotos privadas con claves aleatorias fuera de rutas públicas; consentimiento apagado por defecto y revocable, acceso del equipo acotado a CRM/tenant, borrado lógico del registro con limpieza de campos y eliminación física de archivos. Las imágenes JPG/PNG se decodifican y re-guardan en JPEG para quitar EXIF, con límite de tamaño/píxeles y máximo de dos por categoría. Referencia API, matriz y PWA actualizadas. Retención automática y portal dedicado de barbero siguen pendientes.
+- Validación local de Style Passport: compilación Python correcta; backend **79 passed, 114 skipped** (integraciones MySQL omitidas localmente por falta de `TEST_DATABASE_URL`); frontend **115/115**; Playwright **73/73** en Chromium, incluido guardar el corte con consentimiento explícito (API simulada). CI MySQL aún debe validar migración, downgrade y casos de aislamiento del módulo.
 - Se añadieron al catálogo API cuatro rutas activas de imagen de portada y galería que faltaban en la referencia.
 - Se reparó una expectativa obsoleta de expiración de sesión y dos pruebas con selectores/flujo de inicialización desactualizados.
 - El menú del portal público ahora se distribuye en una cuadrícula en móviles pequeños; las pruebas de navegador comprobaron 320 y 375 px.
@@ -96,7 +99,7 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 
 ## Siguiente orden de entrega
 
-1. Recorrido autenticado completo del cliente y revisión visual/manual de agenda y configuración del negocio.
-2. Definir país, proveedor y modelo comercial antes de diseñar cobros online.
-3. Completar la automatización de lista de espera y definir límites funcionales de CRM/fidelidad, inventario/caja y sucursales antes de implementar cada dominio con migraciones y permisos.
+1. Revisar visualmente Style Passport, añadir UI al portal de barbero y acordar la regla de retención de fotos antes de habilitarlo ampliamente.
+2. Confirmar en CI MySQL la migración, downgrade y pruebas de aislamiento de Style Passport.
+3. Definir país, proveedor y modelo comercial antes de diseñar cobros online; automatizar la lista de espera y definir fidelidad/sucursales antes de implementar esos dominios.
 4. Threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.

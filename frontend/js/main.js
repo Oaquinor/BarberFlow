@@ -1864,10 +1864,127 @@ async function loadOwnerClientHistory() {
         if (previous) previous.disabled = ownerClientHistoryOffset === 0;
         if (next) next.disabled = ownerClientHistoryOffset + items.length >= total;
         result.textContent = `${total} cita(s) en el historial`;
+        await loadOwnerStylePassport(requestId);
     } catch (error) {
         if (requestId !== ownerClientHistoryRequestId) return;
         list.textContent = '';
         result.textContent = error.message || 'No se pudo cargar el historial.';
+    }
+}
+
+async function loadOwnerStylePassport(requestId = ownerClientHistoryRequestId) {
+    const list = document.getElementById('ownerStylePassportItems');
+    const result = document.getElementById('ownerStylePassportResult');
+    if (!list || !result || !ownerClientHistoryClientId) return;
+    list.replaceChildren();
+    result.textContent = 'Consultando los registros que el cliente compartió…';
+    try {
+        const data = await ownerFetch(
+            `/owner/clients/${Number(ownerClientHistoryClientId)}/style-passport`,
+        );
+        if (requestId !== ownerClientHistoryRequestId) return;
+        const entries = data.items || [];
+        if (!entries.length) {
+            result.textContent = 'El cliente no ha compartido registros de estilo con esta barbería.';
+            return;
+        }
+        entries.forEach((entry) => {
+            const card = document.createElement('article');
+            card.className = 'owner-style-passport-card';
+            const title = document.createElement('h4');
+            title.textContent = entry.haircut_type || entry.service || 'Corte guardado';
+            const meta = document.createElement('p');
+            meta.textContent = `${entry.service} · ${entry.barber} · ${entry.service_date || ''}`;
+            card.append(title, meta);
+            [
+                ['Fade', entry.fade_style], ['Largo superior', entry.top_length],
+                ['Lados', entry.sides_length], ['Barba', entry.beard_style],
+                ['Productos', entry.products_used], ['Preferencias', entry.preferences],
+                ['Notas del barbero', entry.barber_notes], ['Recomendaciones', entry.recommendations],
+            ].filter(([, value]) => value).forEach(([label, value]) => {
+                const detail = document.createElement('p');
+                detail.textContent = `${label}: ${value}`;
+                card.append(detail);
+            });
+            if ((entry.photos || []).length) {
+                const photos = document.createElement('div');
+                photos.className = 'owner-style-passport-photos';
+                entry.photos.forEach((photo) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = photo.kind === 'reference'
+                        ? 'Ver referencia privada' : 'Ver resultado privado';
+                    button.addEventListener('click', async () => {
+                        button.disabled = true;
+                        try {
+                            const response = await KingFlowAuth.fetch(
+                                `${API_ROOT}/api/v1/owner/clients/${Number(ownerClientHistoryClientId)}` +
+                                `/style-passport/${Number(entry.id)}/photos/${Number(photo.id)}`,
+                            );
+                            if (!response.ok) throw new Error('No se pudo abrir la foto compartida.');
+                            const image = document.createElement('img');
+                            image.alt = photo.kind === 'reference'
+                                ? 'Foto de referencia compartida por el cliente'
+                                : 'Foto del resultado compartida por el cliente';
+                            image.src = URL.createObjectURL(await response.blob());
+                            image.addEventListener('load', () => URL.revokeObjectURL(image.src), { once: true });
+                            photos.append(image);
+                        } catch (error) {
+                            result.textContent = error.message;
+                        } finally {
+                            button.disabled = false;
+                        }
+                    });
+                    photos.append(button);
+                });
+                card.append(photos);
+            }
+            const form = document.createElement('form');
+            const notesLabel = document.createElement('label');
+            notesLabel.textContent = 'Nota profesional';
+            const notes = document.createElement('textarea');
+            notes.maxLength = 2000;
+            notes.value = entry.barber_notes || '';
+            notesLabel.append(notes);
+            const recommendationsLabel = document.createElement('label');
+            recommendationsLabel.textContent = 'Recomendación para la próxima visita';
+            const recommendations = document.createElement('textarea');
+            recommendations.maxLength = 2000;
+            recommendations.value = entry.recommendations || '';
+            recommendationsLabel.append(recommendations);
+            const save = document.createElement('button');
+            save.type = 'submit';
+            save.textContent = 'Guardar nota del equipo';
+            form.append(notesLabel, recommendationsLabel, save);
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                save.disabled = true;
+                try {
+                    await ownerFetch(
+                        `/owner/clients/${Number(ownerClientHistoryClientId)}/style-passport/${Number(entry.id)}`,
+                        {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                barber_notes: notes.value.trim() || null,
+                                recommendations: recommendations.value.trim() || null,
+                            }),
+                        },
+                    );
+                    result.textContent = 'La nota profesional se guardó.';
+                    await loadOwnerStylePassport(requestId);
+                } catch (error) {
+                    result.textContent = error.message || 'No se pudo guardar la nota.';
+                    save.disabled = false;
+                }
+            });
+            card.append(form);
+            list.append(card);
+        });
+        result.textContent = `${entries.length} registro(s) compartido(s)`;
+    } catch (error) {
+        if (requestId !== ownerClientHistoryRequestId) return;
+        result.textContent = error.message || 'No se pudo cargar el Style Passport compartido.';
     }
 }
 

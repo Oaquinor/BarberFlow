@@ -48,12 +48,13 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v73");
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v74");
   assert.ok(worker.addedAssets[0].assets.includes("/css/owner-dashboard.css?v=20261126-owner-expenses-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261126-owner-expenses-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js?v=20261125-waitlist-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/client-account.html"));
-  assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-account-8"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-style-passport-1"));
+  assert.ok(worker.addedAssets[0].assets.includes("/css/client-account.css?v=20261125-style-passport-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/auth-pages.css"));

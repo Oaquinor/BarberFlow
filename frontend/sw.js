@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'kingflow-pwa-';
-const CACHE_NAME = `${CACHE_PREFIX}v73`;
+const CACHE_NAME = `${CACHE_PREFIX}v74`;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -16,7 +16,7 @@ const ASSETS_TO_CACHE = [
   '/css/account-security.css',
   '/css/ui-feedback.css',
   '/css/client.css?v=20261125-booking-answers-2',
-  '/css/client-account.css?v=20261125-account-8',
+  '/css/client-account.css?v=20261125-style-passport-1',
   '/css/business-gallery.css?v=20261125-cover-preview-1',
   '/images/barbershop-hero.png',
   '/css/owner-dashboard.css?v=20261126-owner-expenses-1',
@@ -32,7 +32,7 @@ const ASSETS_TO_CACHE = [
   '/js/onboarding.js',
   '/js/offline.js',
   '/js/client.js?v=20261125-waitlist-1',
-  '/js/client-account.js?v=20261125-account-8',
+  '/js/client-account.js?v=20261125-style-passport-1',
   '/js/pwa.js',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg'
@@ -71,7 +71,9 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Never put API payloads or authenticated responses in the shared offline cache.
-  if (requestUrl.pathname.startsWith('/api/') || event.request.headers.has('Authorization')) {
+  if (requestUrl.pathname.startsWith('/api/') ||
+      requestUrl.pathname.startsWith('/uploads/private/') ||
+      event.request.headers.has('Authorization')) {
     return;
   }
 

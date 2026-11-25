@@ -35,6 +35,57 @@ test("verified customer can sign in and claim a booking with its private trackin
   await expect(page).toHaveURL(/client-account\.html$/);
 });
 
+test("customer saves a completed cut with explicit sharing consent", async ({ page }) => {
+  let savedPayload;
+  let savedEntry = null;
+  await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: {
+    access_token: "client-access", refresh_token: "client-refresh", token_type: "bearer",
+    user: { id: 9, email: "ana@example.com", full_name: "Ana Cliente", role: "client" },
+  } }));
+  await page.route("**/api/v1/client-account/profile", (route) => route.fulfill({ json: {
+    email: "ana@example.com", first_name: "Ana", last_name: "Cliente", phone: "18095551213",
+  } }));
+  await page.route("**/api/v1/client-account/appointments", (route) => route.fulfill({ json: { items: [{
+    appointment_id: 804, barbershop: "KingFlow de Prueba", barbershop_slug: "kingflow-prueba",
+    service: "Corte clásico", status: "completed", scheduled_time: "2026-11-20T15:00:00Z",
+    barber: "Luis Barbero",
+  }] } }));
+  await page.route("**/api/v1/client-account/favorites", (route) => route.fulfill({ json: { items: [] } }));
+  await page.route("**/api/v1/client-account/style-passport", async (route) => {
+    if (route.request().method() === "POST") {
+      savedPayload = route.request().postDataJSON();
+      savedEntry = {
+        id: 81, appointment_id: savedPayload.appointment_id,
+        barbershop_name: "KingFlow de Prueba", service: "Corte clásico", barber: "Luis Barbero",
+        service_date: "2026-11-20T15:00:00", haircut_type: savedPayload.haircut_type,
+        fade_style: savedPayload.fade_style, top_length: savedPayload.top_length,
+        sides_length: savedPayload.sides_length, beard_style: savedPayload.beard_style,
+        products_used: savedPayload.products_used, preferences: savedPayload.preferences,
+        barber_notes: null, recommendations: null, share_with_shop: savedPayload.share_with_shop,
+        photos: [],
+      };
+      await route.fulfill({ json: savedEntry });
+      return;
+    }
+    await route.fulfill({ json: { items: savedEntry ? [savedEntry] : [], limit: 50 } });
+  });
+
+  await page.goto("/client-account.html");
+  await page.getByLabel("Correo", { exact: true }).fill("ana@example.com");
+  await page.getByLabel("Contraseña", { exact: true }).fill("CustomerPass123");
+  await page.getByRole("button", { name: "Entrar a mi cuenta" }).click();
+  await page.getByRole("button", { name: "Guardar detalles de este corte" }).click();
+  await page.getByLabel("Tipo de corte").fill("Crop texturizado");
+  await page.getByLabel(/Compartir este registro/).check();
+  await page.getByRole("button", { name: "Guardar en mi Style Passport" }).click();
+
+  await expect(page.getByText("Crop texturizado", { exact: false })).toBeVisible();
+  expect(savedPayload).toMatchObject({
+    appointment_id: 804, haircut_type: "Crop texturizado", share_with_shop: true,
+  });
+  await page.screenshot({ path: "../docs/evidence/client-style-passport.png", fullPage: true });
+});
+
 test("registration explains that an email verification link is required", async ({ page }) => {
   await page.route("**/api/v1/client-account/register", (route) => route.fulfill({
     status: 202, json: { message: "Si el correo puede registrarse, enviaremos un enlace de verificación." },

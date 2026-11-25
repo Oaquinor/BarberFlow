@@ -29,6 +29,10 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Cancelar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta; respeta anticipación y libera turno | No por defecto |
 | Reprogramar desde la cuenta cliente | No | No | No | Solo cita CRM vinculada a su cuenta verificada; respeta anticipación y disponibilidad | No por defecto |
 | Guardar/quitar favoritos | No | No | No | Puede guardar barberías activas y sus servicios/barberos; solo administra sus registros | No por defecto |
+| Style Passport: crear/leer/editar/eliminar sus registros | No | No | No | Solo sus registros ligados a citas completadas propias | No por defecto |
+| Fotos privadas del Style Passport | No | No | No | Gestiona y consulta sus fotos; almacenamiento privado y sin caché | No por defecto |
+| Leer fotos/notas compartidas del Style Passport | No | Solo si el cliente lo comparte y el CRM pertenece al tenant | Igual, limitado a su tenant activo | Puede revocar en cualquier momento | No por defecto |
+| Actualizar notas compartidas del Style Passport | No | Solo en registros compartidos del tenant | Solo en registros compartidos del tenant | No edita notas profesionales | No por defecto |
 
 ## Reglas para cambios
 
@@ -40,3 +44,4 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 - Una cuenta cliente solo reclama citas con el token privado de esa reserva; el teléfono no enlaza identidades ni comparte historiales CRM.
 - La cuenta cliente sigue siendo parcial: favoritos, perfil e historial están integrados; pagos y beneficios no están implementados.
 - Mantener pruebas negativas de acceso cruzado entre tenants para cada endpoint nuevo.
+- Las fotos del Style Passport nunca se sirven desde `/uploads` público; preservar autenticación, consentimiento, `no-store` y aislamiento de tenant en lecturas.

@@ -9,6 +9,11 @@
   const verifyPanel = document.getElementById("verifyPanel");
   const appointmentsList = document.getElementById("appointmentsList");
   const favoritesList = document.getElementById("favoritesList");
+  const stylePassportList = document.getElementById("stylePassportList");
+  const stylePassportForm = document.getElementById("stylePassportForm");
+  let appointmentItems = [];
+  let stylePassportItems = [];
+  let stylePhotoObjectUrl = null;
   const labels = { pending: "Pendiente", confirmed: "Confirmada", in_progress: "En curso", completed: "Completada", cancelled: "Cancelada", no_show: "No asistió" };
   const fragment = new URLSearchParams(window.location.hash.slice(1));
   let pendingClaimToken = fragment.get("claim");
@@ -113,6 +118,15 @@
       const barber = document.createElement("p");
       barber.textContent = `Atiende: ${item.barber || "Equipo"}`;
       card.append(title, details, date, barber);
+      if (item.status === "completed") {
+        const saveStyle = document.createElement("button");
+        saveStyle.type = "button";
+        saveStyle.className = "button-secondary style-appointment-action";
+        saveStyle.dataset.action = "add-style-passport";
+        saveStyle.dataset.appointmentId = String(item.appointment_id);
+        saveStyle.textContent = "Guardar detalles de este corte";
+        card.append(saveStyle);
+      }
       if (["pending", "confirmed"].includes(item.status)) {
         if (item.barbershop_slug) {
           const rescheduleButton = document.createElement("button");
@@ -174,7 +188,212 @@
     appointmentsList.textContent = "Cargando tus citas…";
     const response = await window.KingFlowAuth.fetch(`${api}/appointments`);
     const data = await readJson(response);
-    renderAppointments(data.items || []);
+    appointmentItems = data.items || [];
+    renderAppointments(appointmentItems);
+    return appointmentItems;
+  }
+
+  function styleField(label, value) {
+    if (!value) return null;
+    const row = document.createElement("div");
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = value;
+    row.append(term, detail);
+    return row;
+  }
+
+  function applyStyleEntryButtons() {
+    const savedAppointments = new Set(stylePassportItems.map((item) => Number(item.appointment_id)));
+    appointmentsList.querySelectorAll('[data-action="add-style-passport"]').forEach((button) => {
+      button.hidden = savedAppointments.has(Number(button.dataset.appointmentId));
+    });
+  }
+
+  function fillStyleAppointmentSelect(selectedAppointmentId = "", entry = null) {
+    const select = document.getElementById("stylePassportAppointment");
+    const savedAppointments = new Set(stylePassportItems.map((item) => Number(item.appointment_id)));
+    select.replaceChildren(new Option("Selecciona una visita completada", ""));
+    appointmentItems.filter((item) => item.status === "completed").forEach((item) => {
+      if (savedAppointments.has(Number(item.appointment_id)) &&
+          Number(item.appointment_id) !== Number(entry?.appointment_id)) return;
+      select.add(new Option(
+        `${item.barbershop} · ${item.service} · ${formatAppointmentDate(item.scheduled_time)}`,
+        String(item.appointment_id),
+      ));
+    });
+    if (entry && ![...select.options].some((option) => option.value === String(entry.appointment_id))) {
+      select.add(new Option(
+        `${entry.barbershop_name} · ${entry.service} · ${formatAppointmentDate(entry.service_date)}`,
+        String(entry.appointment_id),
+      ));
+    }
+    select.value = selectedAppointmentId ? String(selectedAppointmentId) : "";
+    select.disabled = Boolean(entry);
+  }
+
+  function clearStylePassportForm() {
+    stylePassportForm.reset();
+    document.getElementById("stylePassportEntryId").value = "";
+    document.getElementById("stylePassportAppointment").disabled = false;
+    document.getElementById("stylePassportFormTitle").textContent = "Guarda una visita completada";
+    document.getElementById("stylePassportFormResult").textContent = "";
+    stylePassportForm.hidden = true;
+  }
+
+  function openStylePassportForm(appointmentId = "", entry = null) {
+    stylePassportForm.reset();
+    document.getElementById("stylePassportEntryId").value = entry ? String(entry.id) : "";
+    document.getElementById("stylePassportFormTitle").textContent = entry
+      ? "Actualiza los detalles de tu corte" : "Guarda una visita completada";
+    document.getElementById("stylePassportHaircut").value = entry?.haircut_type || "";
+    document.getElementById("stylePassportFade").value = entry?.fade_style || "";
+    document.getElementById("stylePassportTop").value = entry?.top_length || "";
+    document.getElementById("stylePassportSides").value = entry?.sides_length || "";
+    document.getElementById("stylePassportBeard").value = entry?.beard_style || "";
+    document.getElementById("stylePassportProducts").value = entry?.products_used || "";
+    document.getElementById("stylePassportPreferences").value = entry?.preferences || "";
+    document.getElementById("stylePassportShare").checked = Boolean(entry?.share_with_shop);
+    document.getElementById("stylePassportReferencePhotos").value = "";
+    document.getElementById("stylePassportResultPhotos").value = "";
+    document.getElementById("stylePassportFormResult").textContent = "";
+    fillStyleAppointmentSelect(appointmentId || entry?.appointment_id || "", entry);
+    stylePassportForm.hidden = false;
+    stylePassportForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    (entry ? document.getElementById("stylePassportHaircut") : document.getElementById("stylePassportAppointment")).focus();
+  }
+
+  function renderStylePassport(items) {
+    stylePassportItems = Array.isArray(items) ? items : [];
+    stylePassportList.replaceChildren();
+    if (!stylePassportItems.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "Tus cortes guardados aparecerán aquí después de cada visita completada.";
+      stylePassportList.append(empty);
+    }
+    stylePassportItems.forEach((entry) => {
+      const card = document.createElement("article");
+      card.className = "style-passport-card";
+      const title = document.createElement("h3");
+      title.textContent = entry.haircut_type || entry.service || "Corte guardado";
+      const meta = document.createElement("p");
+      meta.className = "style-card-meta";
+      meta.textContent = `${entry.barbershop_name} · ${entry.service} · ${formatAppointmentDate(entry.service_date)}`;
+      const facts = document.createElement("dl");
+      facts.className = "style-card-facts";
+      [
+        ["Fade", entry.fade_style], ["Largo superior", entry.top_length],
+        ["Lados", entry.sides_length], ["Barba", entry.beard_style],
+        ["Productos", entry.products_used], ["Preferencias", entry.preferences],
+        ["Nota del barbero", entry.barber_notes], ["Recomendación", entry.recommendations],
+      ].map(([label, value]) => styleField(label, value)).filter(Boolean)
+        .forEach((row) => facts.append(row));
+      const consent = document.createElement("p");
+      consent.className = "style-card-meta";
+      consent.textContent = entry.share_with_shop
+        ? "Compartido con el equipo de esta barbería"
+        : "Privado: solo tú puedes verlo";
+      card.append(title, meta, facts, consent);
+
+      if ((entry.photos || []).length) {
+        const photoList = document.createElement("div");
+        photoList.className = "style-photo-list";
+        entry.photos.forEach((photo) => {
+          const view = document.createElement("button");
+          view.type = "button";
+          view.dataset.action = "view-style-photo";
+          view.dataset.photoId = String(photo.id);
+          view.dataset.entryId = String(entry.id);
+          view.textContent = photo.kind === "reference" ? "Ver referencia" : "Ver resultado";
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.dataset.action = "delete-style-photo";
+          remove.dataset.photoId = String(photo.id);
+          remove.dataset.entryId = String(entry.id);
+          remove.textContent = photo.kind === "reference" ? "Quitar referencia" : "Quitar resultado";
+          photoList.append(view, remove);
+        });
+        card.append(photoList);
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "style-card-actions";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "button-secondary";
+      edit.dataset.action = "edit-style-passport";
+      edit.dataset.entryId = String(entry.id);
+      edit.textContent = "Editar registro";
+      actions.append(edit);
+      if (entry.barbershop_slug && entry.service_id) {
+        const repeat = document.createElement("a");
+        repeat.className = "button-secondary";
+        const params = new URLSearchParams({
+          shop: entry.barbershop_slug,
+          service_id: String(entry.service_id),
+        });
+        if (entry.barber_id) params.set("barber_id", String(entry.barber_id));
+        repeat.href = `/client.html?${params.toString()}`;
+        repeat.textContent = "Repetir este corte";
+        actions.append(repeat);
+      }
+      card.append(actions);
+      const deleteDetails = document.createElement("details");
+      deleteDetails.className = "style-card-delete";
+      const summary = document.createElement("summary");
+      summary.textContent = "Eliminar este registro";
+      const removeEntry = document.createElement("button");
+      removeEntry.type = "button";
+      removeEntry.dataset.action = "delete-style-passport";
+      removeEntry.dataset.entryId = String(entry.id);
+      removeEntry.textContent = "Eliminar el registro y sus fotos";
+      deleteDetails.append(summary, removeEntry);
+      card.append(deleteDetails);
+      stylePassportList.append(card);
+    });
+    const available = appointmentItems.some((item) => item.status === "completed" &&
+      !stylePassportItems.some((entry) => Number(entry.appointment_id) === Number(item.appointment_id)));
+    document.getElementById("newStylePassportButton").disabled = !available;
+    applyStyleEntryButtons();
+  }
+
+  async function loadStylePassport() {
+    const data = await readJson(await window.KingFlowAuth.fetch(`${api}/style-passport`));
+    renderStylePassport(data.items || []);
+  }
+
+  async function uploadStylePhotos(entryId) {
+    for (const [inputId, kind] of [
+      ["stylePassportReferencePhotos", "reference"],
+      ["stylePassportResultPhotos", "result"],
+    ]) {
+      const input = document.getElementById(inputId);
+      const files = [...input.files];
+      if (files.length > 2) throw new Error("Puedes subir hasta dos fotos por categoría.");
+      for (const file of files) {
+        const form = new FormData();
+        form.append("file", file);
+        const result = await readJson(await window.KingFlowAuth.fetch(
+          `${api}/style-passport/${encodeURIComponent(entryId)}/photos?photo_kind=${kind}`,
+          { method: "POST", body: form },
+        ));
+        if (!result.id) throw new Error("No se pudo guardar una de las fotografías.");
+      }
+      input.value = "";
+    }
+  }
+
+  async function showStylePhoto(entryId, photoId) {
+    const response = await window.KingFlowAuth.fetch(
+      `${api}/style-passport/${encodeURIComponent(entryId)}/photos/${encodeURIComponent(photoId)}`,
+    );
+    if (!response.ok) throw new Error("No se pudo abrir la foto privada.");
+    const blob = await response.blob();
+    if (stylePhotoObjectUrl) URL.revokeObjectURL(stylePhotoObjectUrl);
+    stylePhotoObjectUrl = URL.createObjectURL(blob);
+    document.getElementById("stylePassportPhotoPreview").src = stylePhotoObjectUrl;
+    document.getElementById("stylePassportPhotoDialog").showModal();
   }
 
   async function loadFavorites() {
@@ -227,6 +446,10 @@
   appointmentsList.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
+    if (button.dataset.action === "add-style-passport") {
+      openStylePassportForm(button.dataset.appointmentId);
+      return;
+    }
     if (button.dataset.action === "start-reschedule") {
       const chooser = button.nextElementSibling;
       const select = chooser.querySelector("select");
@@ -300,6 +523,102 @@
     }
   });
 
+  document.getElementById("newStylePassportButton").addEventListener("click", () => {
+    openStylePassportForm();
+  });
+  document.getElementById("cancelStylePassportEdit").addEventListener("click", clearStylePassportForm);
+  stylePassportForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = stylePassportForm.querySelector('button[type="submit"]');
+    const result = document.getElementById("stylePassportFormResult");
+    const entryIdField = document.getElementById("stylePassportEntryId");
+    const entryId = entryIdField.value;
+    const appointmentId = document.getElementById("stylePassportAppointment").value;
+    if (!entryId && !appointmentId) {
+      result.textContent = "Selecciona una visita completada para guardar el corte.";
+      return;
+    }
+    const payload = {
+      haircut_type: document.getElementById("stylePassportHaircut").value.trim() || null,
+      fade_style: document.getElementById("stylePassportFade").value.trim() || null,
+      top_length: document.getElementById("stylePassportTop").value.trim() || null,
+      sides_length: document.getElementById("stylePassportSides").value.trim() || null,
+      beard_style: document.getElementById("stylePassportBeard").value.trim() || null,
+      products_used: document.getElementById("stylePassportProducts").value.trim() || null,
+      preferences: document.getElementById("stylePassportPreferences").value.trim() || null,
+      share_with_shop: document.getElementById("stylePassportShare").checked,
+    };
+    if (!entryId) payload.appointment_id = Number(appointmentId);
+    button.disabled = true;
+    result.textContent = "Guardando tu Style Passport…";
+    try {
+      const saved = await readJson(await window.KingFlowAuth.fetch(
+        entryId ? `${api}/style-passport/${encodeURIComponent(entryId)}` : `${api}/style-passport`,
+        {
+          method: entryId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      ));
+      entryIdField.value = String(saved.id);
+      await uploadStylePhotos(saved.id);
+      await loadStylePassport();
+      clearStylePassportForm();
+      message("Tu corte quedó guardado en el Style Passport.");
+    } catch (error) {
+      result.textContent = `${error.message} Si el registro ya se guardó, puedes editarlo para completar las fotos.`;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  stylePassportList.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const entryId = Number(button.dataset.entryId);
+    const entry = stylePassportItems.find((item) => Number(item.id) === entryId);
+    if (button.dataset.action === "edit-style-passport") {
+      if (entry) openStylePassportForm(entry.appointment_id, entry);
+      return;
+    }
+    button.disabled = true;
+    try {
+      if (button.dataset.action === "view-style-photo") {
+        await showStylePhoto(entryId, Number(button.dataset.photoId));
+        return;
+      }
+      if (button.dataset.action === "delete-style-photo") {
+        await readJson(await window.KingFlowAuth.fetch(
+          `${api}/style-passport/${entryId}/photos/${Number(button.dataset.photoId)}`,
+          { method: "DELETE" },
+        ));
+        message("La foto privada se eliminó.");
+      } else if (button.dataset.action === "delete-style-passport") {
+        await readJson(await window.KingFlowAuth.fetch(
+          `${api}/style-passport/${entryId}`,
+          { method: "DELETE" },
+        ));
+        clearStylePassportForm();
+        message("Se eliminaron el registro y sus fotos privadas.");
+      }
+      await loadStylePassport();
+    } catch (error) {
+      message(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("closeStylePassportPhoto").addEventListener("click", () => {
+    document.getElementById("stylePassportPhotoDialog").close();
+  });
+  document.getElementById("stylePassportPhotoDialog").addEventListener("close", () => {
+    const preview = document.getElementById("stylePassportPhotoPreview");
+    preview.removeAttribute("src");
+    if (stylePhotoObjectUrl) URL.revokeObjectURL(stylePhotoObjectUrl);
+    stylePhotoObjectUrl = null;
+  });
+
   async function showAccount(user) {
     authPanel.hidden = true;
     verifyPanel.hidden = true;
@@ -315,6 +634,7 @@
       message(error.message);
     }
     await loadAppointments();
+    try { await loadStylePassport(); } catch (error) { message(error.message); }
     try { await loadFavorites(); } catch (error) { message(error.message); }
     if (pendingClaimToken) {
       document.getElementById("claimToken").value = pendingClaimToken;
@@ -334,6 +654,7 @@
       document.getElementById("claimToken").value = "";
       message("La cita se añadió a tu historial.");
       await loadAppointments();
+      await loadStylePassport();
     } catch (error) {
       message(error.message);
     }
@@ -457,6 +778,17 @@
 
   document.getElementById("logoutButton").addEventListener("click", async () => {
     await window.KingFlowAuth.logout();
+    document.getElementById("stylePassportPhotoDialog").close();
+    stylePassportItems = [];
+    appointmentItems = [];
+    appointmentsList.replaceChildren();
+    favoritesList.replaceChildren();
+    stylePassportList.replaceChildren();
+    document.getElementById("profileEmail").value = "";
+    document.getElementById("profileFirstName").value = "";
+    document.getElementById("profileLastName").value = "";
+    document.getElementById("profilePhone").value = "";
+    clearStylePassportForm();
     customerPanel.hidden = true;
     authPanel.hidden = false;
     message("Has cerrado sesión.");

@@ -14,6 +14,8 @@ function q(name) {
 }
 
 const shopSlug = q('shop');
+let requestedRebookBarberId = Number(q('barber_id')) || 0;
+const requestedRebookServiceId = Number(q('service_id')) || 0;
 
 function trustedTrackingUrl(value) {
   try {
@@ -424,14 +426,20 @@ async function loadShop() {
     serviceSelect.innerHTML = serviceCatalog
       .map(s => `<option value="${Number(s.id)}">${escapeHtml(s.name)} - ${formatMoney(s.price_cents)} (${Number(s.duration_minutes)} min)</option>`)
       .join('');
+    if (serviceCatalog.some((service) => Number(service.id) === requestedRebookServiceId)) {
+      serviceSelect.value = String(requestedRebookServiceId);
+    }
     renderServiceCards();
     renderPublicGallery(shop.gallery_images);
     renderPublicTeam(shop.team);
     syncShopFavoriteButton();
     await loadPublicFavorites();
     renderCustomBookingQuestions(shop.booking_questions);
-    if (serviceCatalog[0]) {
-      document.querySelector(`.service-card[data-service-id="${Number(serviceCatalog[0].id)}"]`)?.classList.add('selected');
+    const selectedService = serviceCatalog.find(
+      (service) => Number(service.id) === Number(serviceSelect.value),
+    );
+    if (selectedService) {
+      document.querySelector(`.service-card[data-service-id="${Number(selectedService.id)}"]`)?.classList.add('selected');
     }
 
     await loadSlots(selectedServiceDuration());
@@ -533,7 +541,10 @@ async function loadSlots(durationMinutes = selectedServiceDuration()) {
   }
   availableSlots = slots;
 
-  const selectedBarberId = barberSelect?.value || '';
+  const requestedBarberId = typeof requestedRebookBarberId === 'undefined'
+    ? 0
+    : requestedRebookBarberId;
+  const selectedBarberId = barberSelect?.value || requestedBarberId || '';
   const barbers = new Map((window.__kingflowLoadedShop?.team || []).map((barber) => [
     Number(barber.id), barber.name,
   ]));
@@ -545,8 +556,9 @@ async function loadSlots(durationMinutes = selectedServiceDuration()) {
   if (barberSelect) {
     barberSelect.innerHTML = '<option value="">Cualquier barbero</option>' +
       [...barbers.entries()].map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('');
-    if (barbers.has(Number(selectedBarberId))) barberSelect.value = selectedBarberId;
+    if (barbers.has(Number(selectedBarberId))) barberSelect.value = String(selectedBarberId);
   }
+  if (typeof requestedRebookBarberId !== 'undefined') requestedRebookBarberId = 0;
 
   renderAvailableSlots();
 }
