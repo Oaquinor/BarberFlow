@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models import AuditLog, LoginAttempt, PasswordResetToken, RefreshSession, User
+from app.models import AuditLog, ClientAccountVerification, LoginAttempt, PasswordResetToken, RefreshSession, User
 from app.services.auth_record_retention import prune_expired_auth_records
 from app.services.notification_service import NotificationService
 from app.utils.datetime import utc_now_naive
@@ -233,12 +233,24 @@ def test_expired_authentication_records_are_pruned_in_bounded_batches(test_db: S
         token_hash=sha256(b"fresh-token").hexdigest(),
         expires_at=now + timedelta(minutes=30),
     )
-    test_db.add_all([stale_attempt, fresh_attempt, stale_token, fresh_token])
+    stale_verification = ClientAccountVerification(
+        user_id=user.id,
+        token_hash=sha256(b"stale-verification").hexdigest(),
+        expires_at=now - timedelta(days=2),
+    )
+    fresh_verification = ClientAccountVerification(
+        user_id=user.id,
+        token_hash=sha256(b"fresh-verification").hexdigest(),
+        expires_at=now + timedelta(minutes=30),
+    )
+    test_db.add_all([stale_attempt, fresh_attempt, stale_token, fresh_token, stale_verification, fresh_verification])
     test_db.commit()
 
     removed = prune_expired_auth_records(test_db, now, force=True)
-    assert removed == 2
+    assert removed == 3
     assert test_db.query(LoginAttempt).filter(LoginAttempt.key_hash == "a" * 64).count() == 0
     assert test_db.query(LoginAttempt).filter(LoginAttempt.key_hash == "b" * 64).count() == 1
     assert test_db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == sha256(b"stale-token").hexdigest()).count() == 0
     assert test_db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == sha256(b"fresh-token").hexdigest()).count() == 1
+    assert test_db.query(ClientAccountVerification).filter(ClientAccountVerification.token_hash == sha256(b"stale-verification").hexdigest()).count() == 0
+    assert test_db.query(ClientAccountVerification).filter(ClientAccountVerification.token_hash == sha256(b"fresh-verification").hexdigest()).count() == 1

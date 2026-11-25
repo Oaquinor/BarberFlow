@@ -5,6 +5,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const authSource = fs.readFileSync(path.join(__dirname, "..", "js", "auth.js"), "utf8");
+const dashboardSource = fs.readFileSync(path.join(__dirname, "..", "js", "main.js"), "utf8");
 
 function createStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
@@ -115,4 +116,18 @@ test("temporary refresh server failures preserve the local session", async () =>
   assert.equal(sessionStorage.getItem("token"), "access");
   assert.equal(sessionStorage.getItem("refresh_token"), "refresh");
   assert.deepEqual(events, []);
+});
+
+test("client role is routed to the customer account instead of the barber dashboard", async () => {
+  const start = dashboardSource.indexOf("async function initializeAuthenticatedDashboard(");
+  const end = dashboardSource.indexOf("\nasync function restoreAuthenticatedSession()", start);
+  assert.ok(start >= 0 && end > start);
+  let destination = null;
+  const sandbox = {
+    window: { location: { replace(value) { destination = value; } } },
+    sessionStorage: createStorage(),
+  };
+  vm.runInNewContext(dashboardSource.slice(start, end), sandbox);
+  await sandbox.initializeAuthenticatedDashboard({ role: "client" });
+  assert.equal(destination, "/client-account.html");
 });

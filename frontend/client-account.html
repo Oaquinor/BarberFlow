@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171713">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/css/client-account.css?v=20261125-account-1">
+  <title>Mi cuenta · KingFlow Barber</title>
+</head>
+<body>
+  <main class="account-shell">
+    <a class="wordmark" href="/client.html">KINGFLOW <span>BARBER</span></a>
+    <section class="account-card" aria-labelledby="accountTitle">
+      <p class="eyebrow">TU ESPACIO PERSONAL</p>
+      <h1 id="accountTitle">Tus citas, bajo tu control.</h1>
+      <p class="intro">Verifica tu correo para guardar y consultar tus citas en las barberías que usan KingFlow.</p>
+      <p id="accountStatus" class="status" role="status" aria-live="polite"></p>
+
+      <section id="authPanel" class="auth-panel">
+        <form id="loginForm" class="account-form">
+          <h2>Iniciar sesión</h2>
+          <label for="loginEmail">Correo</label><input id="loginEmail" type="email" autocomplete="email" required>
+          <label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required>
+          <button type="submit">Entrar a mi cuenta</button>
+        </form>
+        <details>
+          <summary>Crear cuenta de cliente</summary>
+          <form id="registerForm" class="account-form">
+            <label for="registerFirstName">Nombre</label><input id="registerFirstName" autocomplete="given-name" required minlength="2" maxlength="100">
+            <label for="registerLastName">Apellido</label><input id="registerLastName" autocomplete="family-name" required minlength="2" maxlength="100">
+            <label for="registerEmail">Correo para verificar tu cuenta</label><input id="registerEmail" type="email" autocomplete="email" required>
+            <label for="registerPhone">Teléfono (no se usa para reclamar citas)</label><input id="registerPhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30">
+            <label for="registerPassword">Contraseña (12 caracteres, una mayúscula y un número)</label><input id="registerPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
+            <button type="submit">Crear cuenta</button>
+          </form>
+        </details>
+        <details>
+          <summary>No recibí el correo de verificación</summary>
+          <form id="resendForm" class="account-form">
+            <label for="resendEmail">Correo de la cuenta</label><input id="resendEmail" type="email" autocomplete="email" required>
+            <button type="submit">Enviar otro enlace</button>
+          </form>
+        </details>
+      </section>
+
+      <section id="customerPanel" hidden>
+        <div class="account-toolbar"><p id="customerGreeting"></p><button id="logoutButton" class="button-secondary" type="button">Cerrar sesión</button></div>
+        <form id="claimForm" class="account-form claim-form">
+          <h2>Añadir una cita anterior</h2>
+          <p>Usa el código privado del enlace de seguimiento. El teléfono no sirve para reclamar citas.</p>
+          <label for="claimToken">Código privado de seguimiento</label><input id="claimToken" autocomplete="off" minlength="32" maxlength="128" required>
+          <button type="submit">Añadir cita a mi historial</button>
+        </form>
+        <section aria-labelledby="appointmentsTitle">
+          <h2 id="appointmentsTitle">Mis citas</h2>
+          <div id="appointmentsList" class="appointments-list"><p>Cargando tus citas…</p></div>
+        </section>
+      </section>
+
+      <section id="verifyPanel" hidden>
+        <h2>Verificando tu correo</h2><p>Comprobamos que el enlace siga vigente y no se haya usado antes.</p>
+      </section>
+    </section>
+    <p class="account-footer">Tus datos de cliente se mantienen separados por barbería.</p>
+  </main>
+  <script src="/js/config.js"></script>
+  <script src="/js/pwa.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/client-account.js?v=20261125-account-1"></script>
+</body>
+</html>

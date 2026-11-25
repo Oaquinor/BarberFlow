@@ -23,6 +23,7 @@ from app.models.notification_delivery import NotificationDelivery
 from app.models.platform_settings import PlatformSettings
 from app.models.password_reset_token import PasswordResetToken
 from app.models.support_ticket import SupportTicket
+from app.models.client_account import ClientAccountShopLink, ClientAccountVerification
 
 __all__ = [
     "BaseModel",
@@ -53,4 +54,6 @@ __all__ = [
     "PlatformSettings",
     "PasswordResetToken",
     "SupportTicket",
+    "ClientAccountShopLink",
+    "ClientAccountVerification",
 ]

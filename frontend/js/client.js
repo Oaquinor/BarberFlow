@@ -499,7 +499,7 @@ async function bookAppointment() {
 
   bookBtn.disabled = true;
   try {
-    const res = await fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
+    const res = await window.KingFlowAuth.fetch(`${API_BASE}/public/${shopSlug}/appointments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -513,6 +513,7 @@ async function bookAppointment() {
 
     bookResult.replaceChildren();
     bookResult.append(document.createTextNode(`Cita creada (ID ${Number(data.appointment_id)}). `));
+    if (data.saved_to_account) bookResult.append(document.createTextNode('Guardada en tu cuenta. '));
     const link = document.createElement('a');
     const trackingUrl = trustedTrackingUrl(data.tracking_link);
     if (!trackingUrl) {
@@ -524,6 +525,14 @@ async function bookAppointment() {
     link.rel = 'noopener noreferrer';
     link.textContent = 'Abrir seguimiento privado';
     bookResult.append(link);
+    const trackingToken = trackingUrl.searchParams.get('track_token');
+    if (trackingToken && !data.saved_to_account) {
+      const accountLink = document.createElement('a');
+      accountLink.href = `/client-account.html#claim=${encodeURIComponent(trackingToken)}`;
+      accountLink.textContent = 'Guardar cita en mi cuenta';
+      accountLink.className = 'booking-account-link';
+      bookResult.append(document.createTextNode(' · '), accountLink);
+    }
     await loadSlots();
   } catch (_) {
     bookResult.textContent = 'No pudimos confirmar la respuesta. Revisa tus citas con el código de seguimiento antes de volver a reservar.';
@@ -703,6 +712,21 @@ if (showSupportBtn) showSupportBtn.addEventListener('click', () => showPanel('su
 window.addEventListener('DOMContentLoaded', async () => {
   showPanel('book');
   await loadShop();
+
+  if (sessionStorage.getItem('token')) {
+    try {
+      const response = await window.KingFlowAuth.fetch(`${API_BASE}/auth/me`);
+      if (response.ok) {
+        const user = await response.json();
+        if (user.role === 'client' && user.barbershop_id === null && user.is_verified) {
+          document.getElementById('clientName').value = user.full_name || '';
+          document.getElementById('clientPhone').value = user.phone || '';
+        }
+      }
+    } catch (_) {
+      // Keep guest booking available when the optional client session is unavailable.
+    }
+  }
 
   const trackingToken = q('track_token');
   if (trackingToken) document.getElementById('trackToken').value = trackingToken;

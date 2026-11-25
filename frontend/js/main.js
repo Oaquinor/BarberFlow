@@ -2575,6 +2575,10 @@ async function deleteService(serviceId) {
 }
 
 async function initializeAuthenticatedDashboard(user, { showWelcome = false } = {}) {
+        if (user.role === 'client') {
+            window.location.replace('/client-account.html');
+            return;
+        }
         accessToken = sessionStorage.getItem('token') || accessToken;
         currentUser = {
             email: user.email,

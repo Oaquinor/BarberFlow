@@ -13,6 +13,9 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Métricas de negocio | No | Su tenant | Sus métricas | Métricas globales/operación explícita |
 | Tenants, suscripciones, soporte/auditoría plataforma | No | No | No | Sí |
 | Cobro de suscripción | No | Solicitud manual; no carga fondos | No | Registro de pago externo ya recibido |
+| Crear cuenta global y verificar correo | Sí | Sí | Sí | Sí |
+| Consultar historial de cliente | No | Solo con una sesión propia de cliente verificada | Solo con una sesión propia de cliente verificada | No por defecto |
+| Reclamar cita guest | Solo cuenta cliente verificada y token privado vigente | Igual | Igual | No por defecto |
 
 ## Reglas para cambios
 
@@ -21,5 +24,6 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 - Comprobar pertenencia por objeto (cita, cliente, barbero, pago, imagen) además del rol.
 - Responder sin filtrar existencia ajena donde el contrato y la privacidad lo requieran.
 - Reservas guest solo pueden gestionarse con su secreto aleatorio; no tratar el ID de cita como credencial.
+- Una cuenta cliente solo reclama citas con el token privado de esa reserva; el número telefónico no enlaza identidades ni comparte historial CRM.
 - Las capacidades del cliente con sesión son parciales; no prometer una matriz de cuenta cliente completa.
 - Agregar pruebas negativas de acceso cruzado entre tenants para cada nuevo endpoint.

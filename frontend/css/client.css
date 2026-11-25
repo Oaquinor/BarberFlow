@@ -78,3 +78,4 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .cancellation-policy-notice{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--brand-primary);border-radius:9px;color:var(--copy);background:var(--soft);font-size:12px;line-height:1.55}
 
 [hidden]{display:none!important}
+ .header-nav .account-link,.booking-account-link{color:var(--selection);font-weight:750;text-decoration:underline;text-underline-offset:3px}.header-nav .account-link{display:inline-flex;align-items:center;white-space:nowrap}.booking-account-link{display:inline-block;margin-top:5px}

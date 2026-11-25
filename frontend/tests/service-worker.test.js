@@ -48,14 +48,16 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v49");
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v51");
   assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261125-service-catalog-1"));
-  assert.ok(worker.addedAssets[0].assets.includes("/js/client.js?v=20261125-service-catalog-1"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/client.js?v=20261125-account-3"));
+  assert.ok(worker.addedAssets[0].assets.includes("/client-account.html"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-account-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/auth-pages.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/ui-feedback.css"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/client.css"));
+  assert.ok(worker.addedAssets[0].assets.includes("/css/client.css?v=20261125-account-3"));
   assert.ok(worker.addedAssets[0].assets.includes("/css/business-gallery.css"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/ui-feedback.js"));
   for (const asset of worker.addedAssets[0].assets) {
@@ -122,7 +124,7 @@ test("returns a successful network response when cloning it for cache fails", as
 });
 
 test("all app entry pages provide the manifest and register the service worker", () => {
-  for (const page of ["index.html", "client.html", "admin.html", "signup.html", "reset-password.html", "onboarding.html"]) {
+  for (const page of ["index.html", "client.html", "client-account.html", "admin.html", "signup.html", "reset-password.html", "onboarding.html"]) {
     const html = fs.readFileSync(path.join(__dirname, "..", page), "utf8");
     assert.match(html, /rel="manifest"/i, `${page} must link the PWA manifest`);
     assert.match(html, /js\/pwa\.js/i, `${page} must register the service worker`);

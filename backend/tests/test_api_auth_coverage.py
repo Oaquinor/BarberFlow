@@ -23,6 +23,9 @@ PUBLIC_OR_CAPABILITY_ROUTES = (
     "/saas/registration-status",
     "/support/contact",
     "/public/",
+    "/client-account/register",
+    "/client-account/resend-verification",
+    "/client-account/verify",
 )
 
 

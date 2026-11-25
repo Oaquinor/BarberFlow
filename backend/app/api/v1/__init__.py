@@ -9,7 +9,7 @@ from app.api.v1.endpoints import admin
 from app.api.v1.endpoints import owner
 from app.api.v1.endpoints import notifications
 from app.api.v1 import services
-from app.api.v1 import achievements, admin_settings, analytics, billing, performance, password_reset
+from app.api.v1 import achievements, admin_settings, analytics, billing, client_accounts, performance, password_reset
 
 router = APIRouter()
 
@@ -26,3 +26,4 @@ router.include_router(analytics.router)
 router.include_router(admin_settings.router)
 router.include_router(billing.router)
 router.include_router(password_reset.router)
+router.include_router(client_accounts.router)

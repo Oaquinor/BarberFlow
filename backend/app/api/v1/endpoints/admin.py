@@ -762,6 +762,8 @@ def admin_toggle_user_support(
     user = db.query(User).filter(User.id == user_id, User.is_deleted == False).with_for_update().first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if user.role == "client" and user.barbershop_id is None and not user.is_verified:
+        raise HTTPException(status_code=409, detail="La cuenta cliente solo se activa verificando el correo")
 
     if user.role not in ["super_admin", "barbershop_owner", "barber"]:
         raise HTTPException(status_code=400, detail="Solo roles administrativos/barbero pueden recibir soporte")

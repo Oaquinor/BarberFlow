@@ -7,7 +7,7 @@ from time import monotonic
 
 from sqlalchemy.orm import Session
 
-from app.models import LoginAttempt, PasswordResetToken
+from app.models import ClientAccountVerification, LoginAttempt, PasswordResetToken
 
 logger = logging.getLogger(__name__)
 CLEANUP_INTERVAL_SECONDS = 900
@@ -18,7 +18,7 @@ _last_cleanup_at = 0.0
 
 
 def prune_expired_auth_records(db: Session, now: datetime, *, force: bool = False) -> int:
-    """Delete at most 1,000 stale throttle rows and reset tokens per 15 minutes per process."""
+    """Delete bounded batches of stale throttles, reset tokens and account verification links."""
     global _last_cleanup_at
     current = monotonic()
     if not force and current - _last_cleanup_at < CLEANUP_INTERVAL_SECONDS:
@@ -48,8 +48,16 @@ def prune_expired_auth_records(db: Session, now: datetime, *, force: bool = Fals
                     db.query(PasswordResetToken).filter(PasswordResetToken.id.in_(token_ids)).delete(
                         synchronize_session=False
                     )
+                verification_ids = [row[0] for row in db.query(ClientAccountVerification.id).filter(
+                    ClientAccountVerification.expires_at < cutoff,
+                    ClientAccountVerification.is_deleted == False,
+                ).order_by(ClientAccountVerification.expires_at.asc()).limit(MAX_ROWS_PER_TABLE).all()]
+                if verification_ids:
+                    db.query(ClientAccountVerification).filter(
+                        ClientAccountVerification.id.in_(verification_ids)
+                    ).delete(synchronize_session=False)
             _last_cleanup_at = current
-            return len(attempt_ids) + len(token_ids)
+            return len(attempt_ids) + len(token_ids) + len(verification_ids)
         except Exception:
             logger.exception("Could not prune expired authentication records")
             return 0

@@ -15,6 +15,11 @@ Base local: `http://localhost:8000/api/v1`. La lista siguiente corresponde a las
 | `POST` | `/auth/password-reset/request` | Público; responde sin revelar si la cuenta existe y limita solicitudes por correo/IP |
 | `POST` | `/auth/password-reset/confirm` | Público; requiere token de un solo uso vigente y contraseña robusta |
 | `GET` | `/auth/me` | Usuario autenticado |
+| `POST` | `/client-account/register` | Público; crea cuenta global inactiva y envía verificación por correo; requiere SMTP |
+| `POST` | `/client-account/resend-verification` | Público; respuesta no enumera cuentas y limita intentos por IP |
+| `POST` | `/client-account/verify` | Público; activa una cuenta con token de 30 minutos, de un solo uso |
+| `GET` | `/client-account/appointments` | Cuenta cliente autenticada y correo verificado; hasta 100 citas vinculadas |
+| `POST` | `/client-account/appointments/claim` | Cuenta cliente autenticada y token privado de seguimiento; añade una cita a su historial |
 | `GET` | `/billing/subscription` | Owner autenticado; devuelve estado del periodo y uso de límites del plan |
 | `POST` | `/billing/renewal-request` | Owner autenticado; crea o reutiliza una solicitud abierta en la bandeja de soporte. No cobra ni reactiva la cuenta |
 
@@ -56,6 +61,8 @@ Las solicitudes de reserva para barberías con suscripción activa se limitan po
 El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su hash. No se acepta un ID de cita como sustituto de autorización. Para reprogramar envía `{"token":"<token privado>","availability_id":45}`; el sistema bloquea el nuevo turno, valida duración y conflictos, libera el anterior y registra el cambio atómicamente. Cancelación acepta `token` y `reason` opcional. Email/WhatsApp depende de configuración real del proveedor.
 
 Las rutas de consulta, servicios, disponibilidad y reserva requieren una suscripción activa. Cancelar una reserva futura no requiere iniciar sesión.
+
+Las cuentas de cliente son identidades globales (`role=client`, sin `barbershop_id`) y no sustituyen los registros tenant-scoped del CRM. El email debe verificarse antes de iniciar sesión. Las citas existentes se importan presentando el token privado de seguimiento; no se enlazan registros por teléfono. Al reclamar se crea un perfil CRM separado para ese cliente y barbería, y una cita ya vinculada a otra cuenta no se puede transferir con el mismo token. Gestionar una cita desde su enlace privado sigue disponible; el portal de cuenta muestra el historial y permite importarlo, pero todavía no ofrece todos los controles de cancelación/reprogramación del mandato.
 
 ## Bandeja autenticada
 

@@ -6,6 +6,7 @@ const pages = [
   ["Inicio de owner", "/index.html", "loginForm"],
   ["Registro", "/signup.html", "signupForm"],
   ["Portal de cliente", "/client.html", "showBookBtn"],
+  ["Cuenta de cliente", "/client-account.html", "loginForm"],
   ["Administración", "/admin.html", "gateContainer"],
   ["Onboarding", "/onboarding.html", "step1"],
   ["Recuperación", "/reset-password.html", "requestForm"],

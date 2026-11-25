@@ -1,0 +1,205 @@
+"use strict";
+
+(() => {
+  const apiRoot = (window.KINGFLOW_CONFIG?.apiBaseUrl || window.location.origin).replace(/\/$/, "");
+  const api = `${apiRoot}/api/v1/client-account`;
+  const status = document.getElementById("accountStatus");
+  const authPanel = document.getElementById("authPanel");
+  const customerPanel = document.getElementById("customerPanel");
+  const verifyPanel = document.getElementById("verifyPanel");
+  const appointmentsList = document.getElementById("appointmentsList");
+  const labels = { pending: "Pendiente", confirmed: "Confirmada", in_progress: "En curso", completed: "Completada", cancelled: "Cancelada", no_show: "No asistió" };
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  let pendingClaimToken = fragment.get("claim");
+  if (window.location.hash) history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+
+  function message(value) {
+    status.textContent = value || "";
+  }
+
+  async function readJson(response) {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || "No se pudo completar la solicitud.");
+    return data;
+  }
+
+  function formatAppointmentDate(value) {
+    const date = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`);
+    return Number.isNaN(date.getTime()) ? "Fecha por confirmar" : new Intl.DateTimeFormat("es-DO", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  }
+
+  function renderAppointments(items) {
+    appointmentsList.replaceChildren();
+    if (!items.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "Aún no hay citas vinculadas. Puedes añadir una con el código privado de seguimiento.";
+      appointmentsList.append(empty);
+      return;
+    }
+    items.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "appointment-card";
+      const title = document.createElement("h3");
+      title.textContent = item.barbershop || "Barbería";
+      const details = document.createElement("p");
+      details.textContent = `${item.service} · ${labels[item.status] || item.status}`;
+      const date = document.createElement("p");
+      date.textContent = formatAppointmentDate(item.scheduled_time);
+      const barber = document.createElement("p");
+      barber.textContent = `Atiende: ${item.barber || "Equipo"}`;
+      card.append(title, details, date, barber);
+      appointmentsList.append(card);
+    });
+  }
+
+  async function loadAppointments() {
+    appointmentsList.textContent = "Cargando tus citas…";
+    const response = await window.KingFlowAuth.fetch(`${api}/appointments`);
+    const data = await readJson(response);
+    renderAppointments(data.items || []);
+  }
+
+  async function showAccount(user) {
+    authPanel.hidden = true;
+    verifyPanel.hidden = true;
+    customerPanel.hidden = false;
+    document.getElementById("customerGreeting").textContent = `Hola, ${user.full_name || user.email}`;
+    await loadAppointments();
+    if (pendingClaimToken) {
+      document.getElementById("claimToken").value = pendingClaimToken;
+      const token = pendingClaimToken;
+      pendingClaimToken = null;
+      await claimAppointment(token);
+    }
+  }
+
+  async function claimAppointment(token) {
+    message("");
+    try {
+      await readJson(await window.KingFlowAuth.fetch(`${api}/appointments/claim`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tracking_token: token }),
+      }));
+      document.getElementById("claimToken").value = "";
+      message("La cita se añadió a tu historial.");
+      await loadAppointments();
+    } catch (error) {
+      message(error.message);
+    }
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    button.disabled = true;
+    message("");
+    try {
+      const response = await fetch(`${apiRoot}/api/v1/auth/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: document.getElementById("loginEmail").value.trim(),
+          password: document.getElementById("loginPassword").value,
+        }),
+      });
+      const data = await readJson(response);
+      if (data.user?.role !== "client") throw new Error("Este acceso es para cuentas de cliente.");
+      window.KingFlowAuth.setTokens(data.access_token, data.refresh_token);
+      await showAccount(data.user);
+    } catch (error) {
+      message(error.message || "No pudimos iniciar sesión.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("registerForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const data = await readJson(await fetch(`${api}/register`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: document.getElementById("registerFirstName").value.trim(),
+          last_name: document.getElementById("registerLastName").value.trim(),
+          email: document.getElementById("registerEmail").value.trim(),
+          phone: document.getElementById("registerPhone").value.trim(),
+          password: document.getElementById("registerPassword").value,
+        }),
+      }));
+      message(data.message || "Revisa tu correo para verificar la cuenta.");
+      form.reset();
+    } catch (error) {
+      message(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("resendForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector("button[type=submit]");
+    button.disabled = true;
+    try {
+      const data = await readJson(await fetch(`${api}/resend-verification`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: document.getElementById("resendEmail").value.trim() }),
+      }));
+      message(data.message || "Si la cuenta necesita verificación, enviaremos un enlace.");
+    } catch (error) {
+      message(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("claimForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await claimAppointment(document.getElementById("claimToken").value.trim());
+  });
+
+  document.getElementById("logoutButton").addEventListener("click", async () => {
+    await window.KingFlowAuth.logout();
+    customerPanel.hidden = true;
+    authPanel.hidden = false;
+    message("Has cerrado sesión.");
+  });
+
+  async function initialize() {
+    const verifyToken = new URLSearchParams(window.location.search).get("verify");
+    if (verifyToken) {
+      history.replaceState(null, "", window.location.pathname);
+      authPanel.hidden = true;
+      verifyPanel.hidden = false;
+      try {
+        const result = await readJson(await fetch(`${api}/verify`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: verifyToken }),
+        }));
+        verifyPanel.hidden = true;
+        authPanel.hidden = false;
+        message(result.message);
+      } catch (error) {
+        verifyPanel.hidden = true;
+        authPanel.hidden = false;
+        message(error.message);
+      }
+      return;
+    }
+    if (!sessionStorage.getItem("token")) {
+      if (pendingClaimToken) message("Inicia sesión o crea una cuenta para añadir la cita del enlace privado.");
+      return;
+    }
+    try {
+      const response = await window.KingFlowAuth.fetch(`${apiRoot}/api/v1/auth/me`);
+      const user = await readJson(response);
+      if (user.role !== "client") return;
+      await showAccount(user);
+    } catch (_) {
+      // Keep the login form visible when this tab's session is expired or belongs to another portal.
+    }
+  }
+
+  initialize();
+})();

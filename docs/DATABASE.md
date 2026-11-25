@@ -38,6 +38,14 @@ KingFlow Barber uses **MySQL 8** with a **multi-tenant architecture** where each
 
 La migración `018_barber_availability_blocks` guarda los rangos futuros en los que un barbero no acepta citas. Cada fila referencia su tenant y barbero, almacena inicio/fin UTC, motivo opcional y metadatos de soft delete. Se indexa por barbero y rango para filtrar turnos públicos existentes y rechazar turnos que se intenten generar durante la ausencia. El endpoint serializa la operación con creación y reserva de turnos y rechaza el cambio si hay citas activas en el rango. Cancelar una ausencia restaura la disponibilidad anterior sin modificar las filas de turnos.
 
+### client_account_verifications
+
+La migración `033_client_accounts` guarda hashes SHA-256 de enlaces de verificación de correo, su fecha de vencimiento y uso/revocación. Los tokens originales solo se envían por correo; expiran en 30 minutos y son de un solo uso. El limpiador de registros de autenticación elimina tokens expirados.
+
+### client_account_shop_links
+
+La migración `033_client_accounts` vincula una identidad global de cliente verificada con un registro CRM independiente por barbería. Hay unicidad por `(account_user_id, barbershop_id)` y por `crm_client_user_id`. No se deduce pertenencia a partir del teléfono; las citas antiguas se añaden mediante su token privado de seguimiento.
+
 ### 1. subscriptions
 
 Barbershop subscription plans.

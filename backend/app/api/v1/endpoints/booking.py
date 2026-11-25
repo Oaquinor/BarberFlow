@@ -42,6 +42,7 @@ from app.schemas.platform import (
 )
 from app.services.subscription_service import count_monthly_appointments
 from app.services.booking_policy import enforce_public_change_window
+from app.services.client_account_service import get_or_create_shop_client
 from app.utils.datetime import local_day_start_utc_naive, utc_now_naive
 from app.api.v1.endpoints.common import (
     _audit, _cash_register_closed_for_user, _get_current_user, _get_timezone,
@@ -242,6 +243,7 @@ def public_create_appointment(
     data: PublicCreateAppointmentRequest,
     request: Request,
     db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
 ):
     shop = _get_public_shop(db, slug)
     if not shop:
@@ -249,11 +251,24 @@ def public_create_appointment(
     _require_active_subscription(db, shop)
     source_ip = _public_booking_client_ip(request)
     _consume_public_booking_quota(db, shop.id, source_ip, utc_now_naive())
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == shop.id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).with_for_update().first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
     subscription = _require_active_subscription(db, shop, lock=True)
     if subscription.max_appointments_per_month is not None:
         used = count_monthly_appointments(db, shop)
         if used >= subscription.max_appointments_per_month:
             raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de citas de su plan")
+
+    account_user = None
+    if authorization:
+        account_user = _get_current_user(db, authorization)
+        if account_user.role != "client" or account_user.barbershop_id is not None or not account_user.is_verified:
+            raise HTTPException(status_code=403, detail="Se requiere una cuenta de cliente verificada")
 
     service = (
         db.query(Service)
@@ -341,49 +356,52 @@ def public_create_appointment(
     ):
         raise HTTPException(status_code=409, detail="El barbero ya tiene una cita en ese horario")
 
-    phone = _normalize_phone(data.phone)
-    client = (
-        db.query(User)
-        .filter(
-            User.phone == phone,
-            User.barbershop_id == shop.id,
-            User.role == "client",
-            User.is_deleted == False,
-        )
-        .first()
-    )
-    if client and not client.is_active:
-        raise HTTPException(status_code=409, detail="El cliente está desactivado en esta barbería")
-
-    if not client:
-        if subscription.max_clients is not None:
-            client_count = db.query(User.id).filter(
+    if account_user:
+        client = get_or_create_shop_client(db, account_user, shop, subscription)
+        phone = client.phone or ""
+    else:
+        phone = _normalize_phone(data.phone)
+        client = (
+            db.query(User)
+            .filter(
+                User.phone == phone,
                 User.barbershop_id == shop.id,
                 User.role == "client",
                 User.is_deleted == False,
-            ).count()
-            if client_count >= subscription.max_clients:
-                raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de clientes de su plan")
-        name_parts = data.client_name.strip().split(" ")
-        first_name = name_parts[0]
-        last_name = " ".join(name_parts[1:]).strip() or "Cliente"
-        # Public bookings do not collect email. Keep a unique, non-deliverable
-        # address without copying the client's phone number into the email field.
-        synthetic_email = f"client-{shop.id}-{secrets.token_hex(16)}@client.invalid"
-
-        client = User(
-            email=synthetic_email,
-            password_hash=hash_password(secrets.token_urlsafe(32)),
-            first_name=first_name,
-            last_name=last_name,
-            phone=phone,
-            role="client",
-            is_active=True,
-            is_verified=False,
-            barbershop_id=shop.id,
+            )
+            .first()
         )
-        db.add(client)
-        db.flush()
+        if client and not client.is_active:
+            raise HTTPException(status_code=409, detail="El cliente está desactivado en esta barbería")
+
+        if not client:
+            if subscription.max_clients is not None:
+                client_count = db.query(User.id).filter(
+                    User.barbershop_id == shop.id,
+                    User.role == "client",
+                    User.is_deleted == False,
+                ).count()
+                if client_count >= subscription.max_clients:
+                    raise HTTPException(status_code=402, detail="La barbería alcanzó el límite de clientes de su plan")
+            name_parts = data.client_name.strip().split(" ")
+            first_name = name_parts[0]
+            last_name = " ".join(name_parts[1:]).strip() or "Cliente"
+            # Guest bookings use an undeliverable address and never claim email verification.
+            synthetic_email = f"client-{shop.id}-{secrets.token_hex(16)}@client.invalid"
+
+            client = User(
+                email=synthetic_email,
+                password_hash=hash_password(secrets.token_urlsafe(32)),
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                role="client",
+                is_active=True,
+                is_verified=False,
+                barbershop_id=shop.id,
+            )
+            db.add(client)
+            db.flush()
 
     tracking_token = secrets.token_urlsafe(32)
     appointment = Appointment(
@@ -459,6 +477,7 @@ def public_create_appointment(
         status=appointment.status,
         tracking_link=tracking_link,
         message="Cita agendada correctamente",
+        saved_to_account=account_user is not None,
     )
 
 @router.post("/barber/appointments/walk-in", status_code=201)

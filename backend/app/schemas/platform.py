@@ -81,6 +81,8 @@ class AuthUserResponse(BaseModel):
     full_name: str
     role: str
     barbershop_id: Optional[int] = None
+    phone: Optional[str] = None
+    is_verified: bool = False
     feature_flags: dict[str, bool] = Field(default_factory=dict)
 
 
@@ -247,6 +249,7 @@ class PublicCreateAppointmentResponse(BaseModel):
     status: str
     tracking_link: str
     message: str
+    saved_to_account: bool = False
 
 
 class PublicTrackAppointmentRequest(BaseModel):

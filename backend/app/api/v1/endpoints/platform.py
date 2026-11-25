@@ -605,7 +605,12 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
     user = db.query(User).filter(User.email == normalized_email, User.is_deleted == False).first()
     password_hash = user.password_hash if user else DUMMY_LOGIN_PASSWORD_HASH
     password_valid = verify_password(data.password, password_hash)
-    if not user or not password_valid or not user.is_active:
+    if (
+        not user
+        or not password_valid
+        or not user.is_active
+        or (user.role == "client" and user.barbershop_id is None and not user.is_verified)
+    ):
         _record_login_failure(db, buckets, now)
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     if user.barbershop_id and user.role != "super_admin":
@@ -636,6 +641,8 @@ def auth_login(data: AuthLoginRequest, request: Request, db: Session = Depends(g
             full_name=user.full_name,
             role=user.role,
             barbershop_id=user.barbershop_id,
+            phone=user.phone,
+            is_verified=user.is_verified,
             feature_flags=_get_user_feature_flags(db, user.id),
         ),
     )
@@ -950,6 +957,8 @@ def auth_me(
         full_name=user.full_name,
         role=user.role,
         barbershop_id=user.barbershop_id,
+        phone=user.phone,
+        is_verified=user.is_verified,
         feature_flags=_get_user_feature_flags(db, user.id),
     )
 

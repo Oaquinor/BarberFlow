@@ -12,7 +12,7 @@ El repositorio implementa un sistema operativo multi-tenant para barberías con 
 |---|---|---|
 | Registro de barbería, acceso owner/barbero, sesiones y recuperación | Implementado | API `/auth/*`, `/saas/register`; JWT con refresh persistido/revocable |
 | Catálogo público, disponibilidad, reserva de invitado y gestión con token | Implementado | API de booking; no requiere cuenta cliente |
-| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial | Página pública y seguimiento de reserva; no hay experiencia autenticada integral de cliente |
+| Portal cliente con cuenta, historial, cartera y autoservicio completo | Parcial; cuenta verificada inicial integrada | Registro y login cliente con verificación SMTP, historial multi-barbería y reclamación de citas con token privado. Aún faltan control de citas reclamadas desde la cuenta, cartera, pagos, beneficios, favoritos y perfil/privacidad |
 | Agenda, atención, turnos presenciales, cobro y conciliación | Implementado | Flujo de cita/pago y caja; el pago de servicio se registra manualmente |
 | Política por barbería para anticipación de cancelación/reprogramación | Implementado en este incremento | Columna MySQL versionada, rango 0–168h, aviso público y validación en ambos cambios |
 | Perfil público: marca, horarios, zona, tema, logo, portada, galería, preguntas | Implementado | Onboarding y opciones públicas; la calidad visual requiere revisión continua en varios anchos |
@@ -46,6 +46,8 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 - El formulario de configuración del negocio ahora tiene una vista previa con el nombre, descripción, primer servicio real, logo/portada configurados y contraste calculado; se corrigieron los botones, campos e inputs de archivos que aparecían sin estructura en la captura de revisión. Las cuatro paletas tienen pares de color distintos y selección accesible.
 - Se añadió una política por tenant para la anticipación mínima de cancelación/reprogramación, con migración compatible, valor histórico cero y enforcement en la API pública.
 - El catálogo del owner ahora muestra las fotos reales asignadas a cada servicio; rechaza visualmente URLs fuera del origen confiable y mantiene el icono accesible para servicios sin foto.
+- Se añadió una cuenta global de cliente con activación por email, límite de reenvío, token de un uso, perfiles CRM aislados por barbería e importación de una cita solo con su token privado. La pantalla cliente permite entrar, revisar historial y reclamar una cita desde su enlace; no relaciona cuentas por teléfono.
+- Migración nueva `033_client_accounts`: crea tablas de verificación/link sin tocar citas existentes. Requiere ejecutar `alembic upgrade head` y configurar SMTP antes de habilitar altas.
 - Evidencia visual: [antes](evidence/owner-settings-before.png) y [después](evidence/owner-settings-after.png).
 - Nuevos documentos: arquitectura de permisos, sistema visual, estándar de desarrollo, decisiones de producto y revisión de seguridad.
 
