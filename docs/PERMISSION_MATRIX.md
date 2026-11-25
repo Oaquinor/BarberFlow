@@ -18,6 +18,7 @@ Esta matriz resume el código y las rutas montadas; `docs/API_REFERENCE.md` es l
 | Consultar conciliación del día | No | Su negocio, incluye egresos operativos | Sus cobros y cierres permitidos; no ve el detalle de gastos del negocio | No | Solo conforme al tenant de su cuenta |
 | Crear/editar barberos, clientes y comisiones | No | Su tenant | No; consulta permitida de sus comisiones | No | Según endpoints administrativos explícitos |
 | Configurar negocio, horarios y branding | No | Su tenant | Lectura o acceso limitado según ruta | No | No por defecto |
+| Configurar retención de Style Passport | No | Elige o desactiva el plazo para su tenant; cambio auditado y confirmado si aplica retroactivamente | No | Consulta el plazo antes de guardar y en su historial | No por defecto |
 | Métricas de negocio | No | Su tenant | Sus métricas | No | Métricas globales/operación explícita |
 | Tenants, suscripciones, soporte/auditoría plataforma | No | No | No | No | Sí |
 | Cobro de suscripción SaaS | No | Solicitud manual; no carga fondos | No | No | Registro de pago externo ya recibido |

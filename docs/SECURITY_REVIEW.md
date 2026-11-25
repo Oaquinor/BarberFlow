@@ -1,6 +1,6 @@
 # Revisión defensiva de seguridad
 
-**Alcance:** revisión defensiva del código local a 25-11-2026, incluidas las migraciones `041_style_passport` y `042_style_passport_retention` pendientes del siguiente CI. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
+**Alcance:** revisión defensiva del código local a 25-11-2026, incluidas las migraciones `041_style_passport` y `042_style_passport_retention`. CI `45683210897` aprobó la migración limpia, downgrade, recuperación y pruebas MySQL 8.4 para esta entrega. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
 
 ## Controles observados
 
@@ -19,7 +19,7 @@
 ## Riesgos / verificaciones pendientes
 
 1. No hay evidencia de pentest externo ni de checklist ASVS completa. La referencia actual de ASVS es 5.0; elegir perfil/requisitos según aplicación y riesgo.
-2. La máquina local no tiene `TEST_DATABASE_URL`, por lo que las pruebas de integración (incluidos Style Passport y su purga) se omiten localmente. GitHub Actions `45679241529` validó el código previo en MySQL 8.4; la migración `042` requiere el siguiente CI. La CI no sustituye pruebas de producción bajo carga ni una auditoría completa de aislamiento.
+2. La máquina local no tiene `TEST_DATABASE_URL`, por lo que las pruebas de integración (incluidos Style Passport y su purga) se omiten localmente. GitHub Actions `45683210897` ejecutó **195 pruebas** en MySQL 8.4 y validó `042`; la CI no sustituye pruebas de producción bajo carga ni una auditoría completa de aislamiento.
 3. La revisión no confirma configuración real de proxy, TLS, backups/restauración, logs/alertas, secretos del proveedor ni permisos mínimos en producción.
 4. SMTP y WhatsApp requieren proveedor/credenciales y worker; entrega real no fue validada.
 5. MFA no está implementado. Considerar MFA especialmente para superadmin y owner antes de exposición amplia.
