@@ -1,6 +1,6 @@
 # Revisión defensiva de seguridad
 
-**Alcance:** revisión defensiva del código y CI hasta `7d26e21`, 25-11-2026. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
+**Alcance:** revisión defensiva del código y CI hasta `b74a8d4`, 25-11-2026. No es un pentest, certificación, revisión de infraestructura productiva ni auditoría legal.
 
 ## Controles observados
 
@@ -32,4 +32,6 @@
 - Ejecutar análisis de dependencias Python y JS, SAST/DAST y revisión humana conforme al perfil ASVS seleccionado.
 - Confirmar alertas y operación del worker; documentar retención de PII y respuesta a incidentes.
 
-Referencias: [OWASP ASVS](https://asvs.owasp.org/), [OWASP API Security Top 10](https://owasp.org/www-project-api-security/).
+La CI de `b74a8d4` pasó en MySQL 8.4 y en los tres motores de navegador. Las pruebas de integración afirman explícitamente `Cache-Control: no-store` para respuestas de perfil, citas e historial exportado. Run: [GitHub Actions 45621663593](https://github.com/Oaquinor/BarberFlow/actions/runs/45621663593).
+
+Referencias: [OWASP ASVS](https://asvs.org/), [OWASP API Security Top 10](https://owasp.org/www-project-api-security/).
