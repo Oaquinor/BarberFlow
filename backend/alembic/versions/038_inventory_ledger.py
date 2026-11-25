@@ -76,8 +76,5 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_index("ix_inventory_movement_product_created", table_name="inventory_movements")
-    op.drop_index("ix_inventory_movement_shop_created", table_name="inventory_movements")
     op.drop_table("inventory_movements")
-    op.drop_index("ix_inventory_shop_active_name", table_name="inventory_products")
     op.drop_table("inventory_products")
