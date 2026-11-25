@@ -350,11 +350,11 @@
                 <p class="subtitle">Gestión para barberías</p></div>
             </div>
             <div class="header-actions">
-                <button id="installAppBtn" class="btn-install" type="button">📲 Instalar App</button>
-                <button id="notificationInboxButton" class="btn-secondary" type="button" aria-expanded="false" hidden>🔔 <span id="notificationUnreadCount">0</span></button>
+                <button id="installAppBtn" class="btn-install" type="button">Instalar aplicación</button>
+                <button id="notificationInboxButton" class="btn-secondary notification-button" type="button" aria-label="Notificaciones" aria-expanded="false" hidden><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notificationUnreadCount">0</span></button>
                 <div class="user-info" id="userInfo" style="display: none;">
                     <span id="userName">Carlos Martínez (Barbero)</span>
-                    <button id="changePasswordBtn" type="button" class="btn-secondary" aria-haspopup="dialog">🔒 Contraseña</button>
+                    <button id="changePasswordBtn" type="button" class="btn-secondary" aria-haspopup="dialog">Cambiar contraseña</button>
                     <button id="logoutButton" class="btn-secondary">Cerrar Sesión</button>
                 </div>
                 <p id="passwordChangeNotice" role="status" aria-live="polite" hidden></p>
@@ -432,13 +432,13 @@
             <!-- Navigation Tabs -->
             <nav class="tabs">
                 <p class="nav-label">ESPACIO DE TRABAJO</p>
-                <button class="tab active" data-tab="serviceMode"><span class="nav-icon">◷</span><span>Mi jornada</span></button>
-                <button class="tab" data-tab="appointments"><span class="nav-icon">▦</span><span>Agenda</span></button>
-                <button class="tab" data-tab="performance"><span class="nav-icon">↗</span><span>Rendimiento</span></button>
-                <button class="tab" data-tab="achievements"><span class="nav-icon">✳</span><span>Logros</span></button>
-                <button class="tab" data-tab="services"><span class="nav-icon">✂</span><span>Servicios</span></button>
-                <button class="tab" data-tab="cashRegister"><span class="nav-icon">＄</span><span>Caja</span></button>
-                <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden><span class="nav-icon">♙</span><span>Equipo y clientes</span></button>
+                <button class="tab active" data-tab="serviceMode"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.3 2"/></svg></span><span>Mi jornada</span></button>
+                <button class="tab" data-tab="appointments"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/></svg></span><span>Agenda</span></button>
+                <button class="tab" data-tab="performance"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/></svg></span><span>Rendimiento</span></button>
+                <button class="tab" data-tab="achievements"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4L12 14.7l-4.8 2.9 1.3-5.4-4.2-3.6 5.5-.5L12 3Z"/><path d="m5 17-1 4 4-1M19 17l1 4-4-1"/></svg></span><span>Logros</span></button>
+                <button class="tab" data-tab="services"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5c1-1 2.5.5 1.5 1.5L17 10M14 14l-2 2"/></svg></span><span>Servicios</span></button>
+                <button class="tab" data-tab="cashRegister"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2.5"/><path d="M3 10h18M7 15h4M16 15h.01"/></svg></span><span>Caja</span></button>
+                <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.3-5.5 5.5-5.5s5.5 2.3 5.5 5.5M16 5.2a3.1 3.1 0 0 1 0 5.8M17 14.8c2.2.4 3.5 2.1 3.5 4.8"/></svg></span><span>Equipo y clientes</span></button>
             </nav>
 
             <!-- SERVICE MODE TAB -->
@@ -453,7 +453,7 @@
                 <div class="service-card active-service">
                     <div class="service-header">
                         <h3>Servicio en curso</h3>
-                        <span class="status-badge in-progress">En Servicio</span>
+                        <span class="status-badge" id="activeServiceStatus">Sin cita activa</span>
                     </div>
 
                     <div class="service-details">
@@ -528,8 +528,8 @@
                 </section>
 
                     <div class="action-buttons">
-                        <button class="btn-success btn-large" id="finishServiceButton">
-                            Finalizar servicio
+                        <button class="btn-success btn-large" id="finishServiceButton" disabled>
+                            Cobrar y finalizar
                         </button>
                     </div>
                 </div>
@@ -554,7 +554,7 @@
                 <div class="quick-actions">
                     <h3>Accesos rápidos</h3>
                     <div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:12px; margin-bottom:14px;">
-                        <div style="font-weight:700; margin-bottom:8px;">🔗 Link público para clientes</div>
+                        <div style="font-weight:700; margin-bottom:8px;">Enlace público de reservas</div>
                         <input id="shareLinkInput" aria-label="Enlace público de reservas" type="text" readonly style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px;" placeholder="Cargando link...">
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
                             <button id="copyShareLinkBtn" class="btn-secondary" type="button">Copiar link</button>
@@ -562,11 +562,8 @@
                         </div>
                     </div>
                     <div class="actions-grid">
-                        <button class="action-btn" id="testConnectionButton">
-                            <span class="action-text">Test API</span>
-                        </button>
                         <button class="action-btn" id="quickStatsButton" type="button">
-                            <span class="action-text">Ver Stats</span>
+                            <span class="action-text">Ver rendimiento</span>
                         </button>
                         <button class="action-btn" id="quickAgendaButton" type="button">
                             <span class="action-text">Ver agenda</span>
@@ -574,7 +571,6 @@
                     </div>
                 </div>
 
-                <div id="connectionResult" style="margin-top: 20px;"></div>
             </div>
 
             <!-- APPOINTMENTS TAB -->
@@ -640,42 +636,43 @@
                 <!-- Stats Grid -->
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">📅</div>
+                        <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01"/></svg></div>
                         <div class="stat-value" id="statsCompletedToday">0</div>
                         <div class="stat-label">Citas Completadas Hoy</div>
                         <div class="stat-trend positive" id="statsCompletedTrend">↗️ 0 vs ayer</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">💰</div>
+                        <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18M7 15h4M16 14.5h.01"/></svg></div>
                         <div class="stat-value" id="statsRevenueToday">$0</div>
                         <div class="stat-label">Ingresos del Día</div>
                         <div class="stat-trend positive" id="statsRevenueTrend">↗️ $0.00 vs ayer</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">⚡</div>
+                        <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2M4.5 12h2M17.5 12h2"/></svg></div>
                         <div class="stat-value" id="statsEfficiency">0%</div>
                         <div class="stat-label">Eficiencia de Tiempo</div>
                         <div class="stat-trend positive" id="statsEfficiencyTrend">↗️ 0% vs ayer</div>
                     </div>
                     <div class="stat-card highlight">
-                        <div class="stat-icon">🔥</div>
+                        <div class="stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="17" rx="2.5"/><path d="M8 3v3M16 3v3M8 11h8M8 15h5"/></svg></div>
                         <div class="stat-value" id="statsPendingCount">0</div>
-                        <div class="stat-label">Pendientes Hoy</div>
-                        <div class="stat-trend positive">🏆 ¡Sigue así!</div>
+                        <div class="stat-label">Pendientes por atender</div>
+                        <div class="stat-trend">En agenda</div>
                     </div>
                 </div>
 
                 <!-- Performance Chart -->
                 <div class="chart-card">
-                    <h3>📈 Rendimiento Semanal</h3>
+                    <h3>Rendimiento semanal</h3>
                     <div class="simple-chart">
-                        <div class="chart-bars" id="performanceChartBars"></div>
+                        <canvas id="performanceChartCanvas" role="img" aria-label="Citas completadas por día durante la última semana"></canvas>
+                        <p id="performanceChartSummary" class="visually-hidden" aria-live="polite"></p>
                     </div>
                 </div>
 
                 <!-- Insights -->
                 <div class="insights-card">
-                    <h3>💡 Insights Personalizados</h3>
+                    <h3>Consejos para tu negocio</h3>
                     <div class="insights-list" id="insightsList"></div>
                 </div>
                 <section class="card" id="barberCommissionCard" hidden>
@@ -942,7 +939,7 @@
     <script src="js/account-security.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261124-accessible-branding"></script>
+    <script src="js/main.js?v=20261125-professional-dashboard-2"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

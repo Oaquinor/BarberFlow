@@ -17,6 +17,7 @@ let cashSummaryRequestSequence = 0;
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 let serviceTimerInterval = null;
+let performanceChartResizeObserver = null;
 const ownerClientCache = new Map();
 const ownerBarberCache = new Map();
 const OWNER_CLIENTS_PAGE_SIZE = 50;
@@ -33,6 +34,10 @@ function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     })[char]);
+}
+
+function withoutLeadingEmoji(value) {
+    return String(value ?? '').replace(/^(?:\p{Extended_Pictographic}\uFE0F?\s*)+/u, '').trim();
 }
 
 function setText(id, value) {
@@ -79,7 +84,7 @@ function updateActiveServiceTimer(startedAt, estimatedMinutes, nextAppointment) 
             if (minutesUntilNext <= 10) alerts.push(`🚨 Próxima cita en ${minutesUntilNext} minutos`);
             else if (minutesUntilNext <= 20) alerts.push(`⚠️ Próxima cita en ${minutesUntilNext} minutos`);
         }
-        setText('activeServiceAlert', alerts.join(' · ') || `🔥 Servicio en curso · ${progressPct}% del tiempo estimado`);
+        setText('activeServiceAlert', alerts.join(' · ') || `Servicio en curso · ${progressPct}% del tiempo estimado`);
     };
 
     renderElapsed();
@@ -91,11 +96,11 @@ function setTrend(id, delta, suffix, currency = false) {
     if (!el) return;
 
     if (currency) {
-        el.textContent = `${delta >= 0 ? '↗️' : '↘️'} ${fmtMoneyFromCents(delta)} ${suffix}`;
+        el.textContent = `${delta >= 0 ? '↑' : '↓'} ${fmtMoneyFromCents(delta)} ${suffix}`;
         return;
     }
 
-    el.textContent = `${delta >= 0 ? '↗️' : '↘️'} ${delta >= 0 ? '+' : ''}${delta}${suffix}`;
+    el.textContent = `${delta >= 0 ? '↑' : '↓'} ${delta >= 0 ? '+' : ''}${delta}${suffix}`;
 }
 
 function renderNextAppointment(next) {
@@ -104,14 +109,14 @@ function renderNextAppointment(next) {
         setText('nextAppointmentEta', 'Sin próxima cita');
         setText('nextAppointmentClient', 'Agenda del día');
         setText('nextAppointmentService', 'No tienes citas próximas');
-        setText('nextAppointmentDuration', '⏱️ -- min estimados');
+        setText('nextAppointmentDuration', '-- min estimados');
         return;
     }
 
     setText('nextAppointmentTime', fmtHour(next.scheduled_time));
     setText('nextAppointmentClient', next.client_name || 'Cliente');
     setText('nextAppointmentService', next.service_type || 'Servicio');
-    setText('nextAppointmentDuration', `⏱️ ${next.estimated_duration || 0} min estimados`);
+    setText('nextAppointmentDuration', `${next.estimated_duration || 0} min estimados`);
     const etaEl = document.getElementById('nextAppointmentEta');
     if (etaEl) {
         const minutesUntil = Math.max(0, Math.round((new Date(next.scheduled_time) - new Date()) / 60000));
@@ -120,25 +125,94 @@ function renderNextAppointment(next) {
 }
 
 function renderWeeklyChart(weeklyCounts) {
-    const chartBars = document.getElementById('performanceChartBars');
-    if (!chartBars) return;
-
+    const canvas = document.getElementById('performanceChartCanvas');
+    if (!canvas) return;
     const data = Array.isArray(weeklyCounts) ? weeklyCounts : [];
-    if (!data.length) {
-        chartBars.innerHTML = '<div class="chart-bar future" style="height:100%;"><div class="bar-fill" style="height:0%"></div><span class="bar-label">-</span></div>';
-        return;
-    }
+    const summary = document.getElementById('performanceChartSummary');
+    if (summary) summary.textContent = data.length
+        ? data.map(item => `${item.label}: ${Number(item.count) || 0} citas`).join('. ')
+        : 'Aún no hay datos de citas para este periodo.';
 
-    chartBars.innerHTML = data.map((item) => {
-        const pct = Math.max(0, Math.min(100, Number(item.height_percent) || 0));
-        const isFuture = Number(item.count || 0) === 0;
-        return `
-            <div class="chart-bar ${isFuture ? 'future' : ''}" style="height: ${Math.max(25, pct)}%;">
-                <div class="bar-fill" style="height: 100%;" title="${escapeHtml(item.label)}: ${Number(item.count) || 0} citas"></div>
-                <span class="bar-label">${escapeHtml(item.label)}</span>
-            </div>
-        `;
-    }).join('');
+    const draw = () => {
+        const width = canvas.clientWidth;
+        if (!width) return;
+        const height = Math.max(208, Math.min(270, Math.round(width * .35)));
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        canvas.style.height = `${height}px`;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.clearRect(0, 0, width, height);
+
+        const left = 38, right = 10, top = 15, bottom = 35;
+        const plotWidth = width - left - right;
+        const plotHeight = height - top - bottom;
+        const maximum = Math.max(4, ...data.map(item => Number(item.count) || 0));
+        const ink = getComputedStyle(document.documentElement).getPropertyValue('--kf-muted').trim() || '#77746d';
+        const grid = '#ebe7e0';
+        context.font = '11px Inter, ui-sans-serif, system-ui, sans-serif';
+        context.textBaseline = 'middle';
+        context.lineWidth = 1;
+        for (let tick = 0; tick <= 4; tick += 1) {
+            const y = top + plotHeight - plotHeight * tick / 4;
+            context.beginPath(); context.moveTo(left, y); context.lineTo(width - right, y);
+            context.strokeStyle = grid; context.stroke();
+            context.fillStyle = ink; context.textAlign = 'right';
+            context.fillText(String(Math.round(maximum * tick / 4)), left - 9, y);
+        }
+
+        if (!data.length) {
+            context.fillStyle = ink; context.textAlign = 'center';
+            context.fillText('Aún no hay actividad para mostrar', left + plotWidth / 2, top + plotHeight / 2);
+            return;
+        }
+
+        const hasActivity = data.some(item => (Number(item.count) || 0) > 0);
+        if (!hasActivity) {
+            context.fillStyle = ink; context.textAlign = 'center';
+            context.fillText('Sin citas completadas esta semana', left + plotWidth / 2, top + plotHeight / 2);
+            const slot = plotWidth / data.length;
+            data.forEach((item, index) => {
+                context.fillStyle = ink; context.textAlign = 'center';
+                context.fillText(String(item.label || '').slice(0, 10), left + slot * index + slot / 2, height - 14);
+            });
+            return;
+        }
+
+        const slot = plotWidth / data.length;
+        const barWidth = Math.min(38, slot * .54);
+        const brand = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim() || '#b98752';
+        const gradient = context.createLinearGradient(0, top, 0, top + plotHeight);
+        gradient.addColorStop(0, '#d5b48b');
+        gradient.addColorStop(1, brand);
+        data.forEach((item, index) => {
+            const count = Math.max(0, Number(item.count) || 0);
+            const barHeight = count ? Math.max(4, plotHeight * count / maximum) : 3;
+            const x = left + slot * index + (slot - barWidth) / 2;
+            const y = top + plotHeight - barHeight;
+            context.beginPath();
+            context.roundRect(x, y, barWidth, barHeight, [6, 6, 1, 1]);
+            context.fillStyle = count ? gradient : '#e8e3da';
+            context.fill();
+            context.textAlign = 'center';
+            if (count) {
+                context.fillStyle = '#5a4635';
+                context.fillText(String(count), x + barWidth / 2, Math.max(top + 6, y - 10));
+            }
+            context.fillStyle = ink;
+            context.fillText(String(item.label || '').slice(0, 10), left + slot * index + slot / 2, height - 14);
+        });
+    };
+    draw();
+    if (typeof ResizeObserver === 'function') {
+        if (!performanceChartResizeObserver) performanceChartResizeObserver = new ResizeObserver(draw);
+        performanceChartResizeObserver.disconnect();
+        performanceChartResizeObserver.observe(canvas);
+    } else {
+        window.addEventListener('resize', draw, { once: true });
+    }
 }
 
 function renderAchievements(achievements) {
@@ -159,7 +233,9 @@ function renderAchievements(achievements) {
 
         return `
             <div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
-                <div class="achievement-icon ${unlocked ? '' : 'locked-icon'}">${unlocked ? escapeHtml(item.icon || '🏆') : '🔒'}</div>
+                <div class="achievement-icon ${unlocked ? '' : 'locked-icon'}" aria-hidden="true">${unlocked
+                    ? '<svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0V4ZM7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4M12 13v4m-4 3h8m-7-3h6"/></svg>'
+                    : '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>'}</div>
                 <h4>${escapeHtml(item.title)}</h4>
                 <p>${escapeHtml(item.description)}</p>
                 <div class="achievement-points">${Number(item.points) || 0} puntos</div>
@@ -208,7 +284,7 @@ function labelStatus(status) {
     const map = {
         pending: '📅 Pendiente',
         confirmed: '📅 Confirmada',
-        in_progress: '🔥 En Servicio',
+        in_progress: 'En servicio',
         completed: '✅ Completada',
         cancelled: '❌ Cancelada',
         no_show: '🚫 No asistió'
@@ -259,8 +335,10 @@ function applyBranding(profile) {
         }
         logoElement.append(document.createTextNode(profile.name || 'KingFlow Barber'));
     } else if (logoElement && profile?.name) {
-        logoElement.textContent = `👑 ${profile.name}`;
+        logoElement.textContent = profile.name;
     }
+    const logoMark = document.querySelector('.logo-mark');
+    if (logoMark && profile?.name) logoMark.textContent = profile.name.trim().charAt(0).toUpperCase() || 'K';
 
     const brandColorPattern = /^#[0-9a-f]{6}$/i;
     const readableBrandText = hex => {
@@ -349,7 +427,7 @@ async function loadDashboardLayout() {
         if (insightsContainer && Array.isArray(dashboardLayout.insights) && dashboardLayout.insights.length) {
             insightsContainer.innerHTML = dashboardLayout.insights.map((insight, index) => `
                 <div class="insight-item ${index % 2 === 0 ? 'positive' : 'warning'}">
-                    <span class="insight-icon">${index % 2 === 0 ? '🎯' : '💡'}</span>
+                    <span class="insight-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/></svg></span>
                     <div class="insight-content">
                         <h4>Insight personalizado</h4>
                     <p>${escapeHtml(insight)}</p>
@@ -360,7 +438,7 @@ async function loadDashboardLayout() {
 
         const quickActionsTitle = document.querySelector('.quick-actions h3');
         if (quickActionsTitle && dashboardLayout.layout_type) {
-            quickActionsTitle.textContent = `⚡ Acciones Rápidas • ${dashboardLayout.layout_type.toUpperCase()}`;
+            quickActionsTitle.textContent = 'Accesos rápidos';
         }
     } catch (error) {
         console.error('Error loading dashboard layout:', error);
@@ -392,7 +470,7 @@ async function loadSmartMessages() {
         if (container && message) {
             container.innerHTML = `
                 <div style="background: rgba(255,255,255,0.95); border-left: 5px solid var(--brand-primary); padding: 14px 16px; border-radius: 12px; margin-bottom: 16px;">
-                    <strong>${escapeHtml(message.icon)} ${message.type === 'celebration' ? 'Celebración' : 'Mensaje inteligente'}</strong>
+                    <strong>${message.type === 'celebration' ? 'Buen avance' : 'Sugerencia para tu negocio'}</strong>
                     <div style="margin-top: 6px; color: #444;">${escapeHtml(message.message)}</div>
                 </div>
             `;
@@ -413,9 +491,9 @@ async function loadContextualGreeting() {
         const greetingElement = document.getElementById('contextualGreeting');
         if (greetingElement) {
             greetingElement.innerHTML = `
-                <div style="background: rgba(255,255,255,0.15); padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; color: white;">
-                    <span style="font-size: 1.2em;">${escapeHtml(greeting.icon)}</span>
-                    <span style="margin-left: 10px; font-weight: 600;">${escapeHtml(greeting.message)}</span>
+                <div class="contextual-greeting-card">
+                    <span class="contextual-greeting-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 14 9l6 3-6 2-2 7-2-7-6-2 6-3 2-6Z"/></svg></span>
+                    <span class="contextual-greeting-text">${escapeHtml(withoutLeadingEmoji(greeting.message))}</span>
                 </div>
             `;
         }
@@ -614,15 +692,15 @@ function renderAppointmentDay(businessDate, appointments) {
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
                 ${appointment.client_notes ? `<p class="appointment-notes"><strong>Preferencias del cliente:</strong><br>${escapeHtml(appointment.client_notes).replace(/\n/g, '<br>')}</p>` : ''}
                 <div class="appointment-meta">
-                    <span>⏱️ ${Number(appointment.estimated_duration) || 0} min</span>
-                    <span>💰 ${fmtMoneyFromCents(appointment.service_price || 0)}</span>
+                    <span>${Number(appointment.estimated_duration) || 0} min</span>
+                    <span>${fmtMoneyFromCents(appointment.service_price || 0)}</span>
                 </div>
                 <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-                    ${appointment.status === 'pending' ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="confirmed">✅ Confirmar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="in_progress">▶️ Iniciar</button>` : ''}
-                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary appointment-payment" type="button" data-appointment-id="${Number(appointment.id)}">💳 Cobrar y finalizar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="cancelled">❌ Cancelar</button>` : ''}
-                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="no_show">🚫 No asistió</button>` : ''}
+                    ${appointment.status === 'pending' ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="confirmed">Confirmar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="in_progress">Iniciar servicio</button>` : ''}
+                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary appointment-payment" type="button" data-appointment-id="${Number(appointment.id)}">Cobrar y finalizar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="cancelled">Cancelar</button>` : ''}
+                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="no_show">Marcar inasistencia</button>` : ''}
                 </div>
             </div>
         </div>
@@ -885,21 +963,32 @@ async function loadBarberDashboardData() {
         const revenueDeltaCents = Number(summary.revenue_delta_cents || 0);
         const efficiencyDelta = Number(summary.efficiency_delta || 0);
 
-        setText('statsCompletedTrend', `${completedDelta >= 0 ? '↗️' : '↘️'} ${completedDelta >= 0 ? '+' : ''}${completedDelta} vs ayer`);
-        setText('statsRevenueTrend', `${revenueDeltaCents >= 0 ? '↗️' : '↘️'} ${fmtMoneyFromCents(revenueDeltaCents)} vs ayer`);
-        setText('statsEfficiencyTrend', `${efficiencyDelta >= 0 ? '↗️' : '↘️'} ${efficiencyDelta >= 0 ? '+' : ''}${efficiencyDelta}% vs ayer`);
+        setText('statsCompletedTrend', `${completedDelta >= 0 ? '↑' : '↓'} ${completedDelta >= 0 ? '+' : ''}${completedDelta} vs ayer`);
+        setText('statsRevenueTrend', `${revenueDeltaCents >= 0 ? '↑' : '↓'} ${fmtMoneyFromCents(revenueDeltaCents)} vs ayer`);
+        setText('statsEfficiencyTrend', `${efficiencyDelta >= 0 ? '↑' : '↓'} ${efficiencyDelta >= 0 ? '+' : ''}${efficiencyDelta}% vs ayer`);
         const businessDate = data.business_date || businessTodayDate();
         dashboardBusinessDate = businessDate;
         if (!selectedAppointmentsDate) selectedAppointmentsDate = businessDate;
 
         const active = data.active_appointment ||
             (Array.isArray(data.appointments) ? data.appointments : []).find((a) => a.status === 'in_progress') || null;
+        const finishServiceButton = document.getElementById('finishServiceButton');
+        const activeServiceStatus = document.getElementById('activeServiceStatus');
+        if (finishServiceButton) finishServiceButton.disabled = !active;
         if (active) {
+            if (activeServiceStatus) {
+                activeServiceStatus.textContent = 'En servicio';
+                activeServiceStatus.classList.add('in-progress');
+            }
             setText('activeServiceClient', active.client_name || 'Cliente');
             setText('activeServiceType', active.service_type || 'Servicio');
             setText('activeServiceEstimated', `${active.estimated_duration || 0} minutos`);
             updateActiveServiceTimer(active.actual_start_time, active.estimated_duration, data.next_appointment);
         } else {
+            if (activeServiceStatus) {
+                activeServiceStatus.textContent = 'Sin cita activa';
+                activeServiceStatus.classList.remove('in-progress');
+            }
             updateActiveServiceTimer(null);
             setText('activeServiceClient', 'Sin servicio activo');
             setText('activeServiceType', 'Esperando próximas citas');
@@ -907,7 +996,7 @@ async function loadBarberDashboardData() {
             setText('activeServiceProgress', '0%');
             const progressBar = document.getElementById('activeServiceProgressBar');
             if (progressBar) progressBar.style.width = '0%';
-            setText('activeServiceAlert', '⏳ Sin servicio activo en este momento');
+            setText('activeServiceAlert', 'Sin servicio activo en este momento');
         }
 
         renderNextAppointment(data.next_appointment);
@@ -2073,7 +2162,7 @@ function resetSessionInterface(message = '') {
     const dashboard = document.getElementById('dashboardSection');
     if (dashboard) dashboard.style.display = 'none';
     const login = document.getElementById('loginSection');
-    if (login) login.style.display = 'flex';
+    if (login) login.style.display = 'grid';
     const userInfo = document.getElementById('userInfo');
     if (userInfo) userInfo.style.display = 'none';
     const notificationButton = document.getElementById('notificationInboxButton');
@@ -2417,35 +2506,15 @@ async function deleteService(serviceId) {
     }
 }
 
-document.getElementById('loginForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-
-    try {
-        const response = await fetch(`${API_ROOT}/api/v1/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-            showToast(`❌ ${data.detail || 'Credenciales inválidas'}`);
-            return;
-        }
-
-        accessToken = data.access_token;
-        KingFlowAuth.setTokens(data.access_token, data.refresh_token);
-        localStorage.setItem('userEmail', data.user.email);
-
+async function initializeAuthenticatedDashboard(user, { showWelcome = false } = {}) {
+        accessToken = sessionStorage.getItem('token') || accessToken;
         currentUser = {
-            email: data.user.email,
-            name: data.user.full_name,
-            role: data.user.role,
-            feature_flags: data.user.feature_flags || {},
+            email: user.email,
+            name: user.full_name || user.name || user.email,
+            role: user.role,
+            feature_flags: user.feature_flags || {},
         };
+        localStorage.setItem('userEmail', currentUser.email);
         const newServiceBtn = document.getElementById('newServiceBtn');
         if (newServiceBtn) newServiceBtn.hidden = currentUser.role !== 'barbershop_owner';
         const ownerTabButton = document.getElementById('ownerManagementTabButton');
@@ -2503,18 +2572,58 @@ document.getElementById('loginForm').addEventListener('submit', async function (
         await loadFinancialReport();
         await loadBarberCommissionSummary();
 
-        const welcomeMessage = barbershopProfile
-            ? `✅ Bienvenido a ${barbershopProfile.name}`
-            : '✅ Login exitoso';
-        showToast(welcomeMessage, 'info');
+        if (showWelcome) {
+            const welcomeMessage = barbershopProfile
+                ? `Bienvenido a ${barbershopProfile.name}`
+                : 'Acceso correcto';
+            showToast(welcomeMessage, 'info');
+        }
+}
+
+async function restoreAuthenticatedSession() {
+    if (!accessToken) return;
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/auth/me`);
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                resetSessionInterface('Tu sesión expiró. Inicia sesión nuevamente para continuar.');
+            }
+            return;
+        }
+        await initializeAuthenticatedDashboard(await response.json());
+    } catch (error) {
+        console.warn('Could not restore the existing session:', error);
+    }
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+        const response = await fetch(`${API_ROOT}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            showToast(data.detail || 'Credenciales inválidas');
+            return;
+        }
+        accessToken = data.access_token;
+        KingFlowAuth.setTokens(data.access_token, data.refresh_token);
+        await initializeAuthenticatedDashboard(data.user, { showWelcome: true });
     } catch (error) {
         console.error(error);
-        showToast('❌ No fue posible conectar con el backend de autenticación');
+        showToast('No fue posible conectar con el backend de autenticación');
     }
 });
 
 accessToken = sessionStorage.getItem('token');
 setupLoginSupportPanel();
+if (accessToken) void restoreAuthenticatedSession();
 
 if (sessionStorage.getItem('kingflow-password-changed') === '1') {
     sessionStorage.removeItem('kingflow-password-changed');
@@ -2527,7 +2636,6 @@ if (sessionStorage.getItem('kingflow-password-changed') === '1') {
 
 document.getElementById('logoutButton')?.addEventListener('click', logout);
 document.getElementById('finishServiceButton')?.addEventListener('click', finishService);
-document.getElementById('testConnectionButton')?.addEventListener('click', testConnection);
 document.getElementById('quickStatsButton')?.addEventListener('click', () => showTab('performance'));
 document.getElementById('quickAgendaButton')?.addEventListener('click', () => showTab('appointments'));
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
