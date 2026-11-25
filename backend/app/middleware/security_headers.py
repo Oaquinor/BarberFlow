@@ -12,7 +12,9 @@ async def add_security_headers(request: Request, call_next) -> Response:
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
     is_debug_api_docs = getattr(get_settings(), "DEBUG", False) and request.url.path in {
-        "/docs", "/docs/oauth2-redirect", "/redoc",
+        "/docs",
+        "/docs/oauth2-redirect",
+        "/redoc",
     }
     if not is_debug_api_docs:
         connect_sources = "'self' https:"
@@ -31,7 +33,11 @@ async def add_security_headers(request: Request, call_next) -> Response:
         )
 
     if request.url.path == "/api" or request.url.path.startswith("/api/"):
-        response.headers["Cache-Control"] = "no-store"
+        cache_control = response.headers.get("Cache-Control", "")
+        directives = {item.strip().lower() for item in cache_control.split(",")}
+        response.headers["Cache-Control"] = (
+            "private, no-store, max-age=0" if "private" in directives else "no-store"
+        )
         response.headers["Pragma"] = "no-cache"
 
     return response
