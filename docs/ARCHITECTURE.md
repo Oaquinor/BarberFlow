@@ -36,7 +36,7 @@ Los límites y consultas concurrentes deben respetar las garantías de MySQL. En
 
 Los routers se montan bajo `/api/v1`; la referencia de rutas y permisos está en `docs/API_REFERENCE.md`. El cliente público reserva sin crear una cuenta. El seguimiento, cancelación y reprogramación de la reserva requieren un token privado aleatorio cuyo hash se conserva en la base de datos.
 
-Los usuarios autenticados derivan el tenant de su identidad. Las operaciones de administración general que permiten elegir barbería lo hacen explícitamente y deben comprobar el rol autorizado. Las consultas y mutaciones del negocio restringen sus registros al tenant correspondiente.
+Los usuarios autenticados derivan el tenant de su identidad. Las operaciones de administración general que permiten elegir barbería lo hacen explícitamente y deben comprobar el rol autorizado. Las consultas y mutaciones del negocio restringen sus registros al tenant correspondiente. La ruta compartida de reprogramación acepta un token privado para el flujo público o una sesión cliente verificada junto con la cita CRM vinculada; el ID de cita no funciona como credencial.
 
 Los cobros se guardan como pagos reales y alimentan conciliación, rendimiento y reportes. El registro del pago y el cambio de estado de la cita se realizan dentro de una sola transacción. El sistema no debe presentar reservas pendientes como ingresos recibidos.
 
@@ -44,7 +44,7 @@ Los cobros se guardan como pagos reales y alimentan conciliación, rendimiento y
 
 La API emite JWT de acceso y refresh; las sesiones refresh se guardan y revocan en MySQL. La rotación y la versión de autenticación invalidan sesiones anteriores al cambiar o recuperar la contraseña. Las dependencias de API validan identidad y rol; la pertenencia al tenant se verifica en las consultas y operaciones.
 
-Las cuentas autenticadas de cliente son globales (`users.barbershop_id=NULL`) y solo se activan después de verificar correo. `client_account_shop_links` une cada cuenta con un perfil CRM nuevo y tenant-scoped. Una cita guest se puede reclamar únicamente mediante su token privado aleatorio, cuyo hash ya está asociado a la cita; el teléfono no autoriza acceso ni fusiona historiales. El portal incluye login verificado, historial, reserva autenticada, reclamación por token y cancelación autenticada de citas futuras vinculadas. La reprogramación sigue usando el enlace privado.
+Las cuentas autenticadas de cliente son globales (`users.barbershop_id=NULL`) y solo se activan después de verificar correo. `client_account_shop_links` une cada cuenta con un perfil CRM nuevo y tenant-scoped. Una cita guest se puede reclamar únicamente mediante su token privado aleatorio, cuyo hash ya está asociado a la cita; el teléfono no autoriza acceso ni fusiona historiales. El portal incluye login verificado, historial, reserva autenticada, reclamación por token, cancelación y reprogramación autenticadas de citas futuras vinculadas.
 
 Los límites por IP de login, recuperación de contraseña, solicitudes de soporte y reservas públicas se guardan en MySQL con actualizaciones atómicas. La IP procede del socket por defecto; `CLIENT_IP_HEADER` permite seleccionar únicamente `CF-Connecting-IP` o `X-Real-IP` cuando un proxy confiable los sobrescribe. No se confía en `X-Forwarded-For`. Las credenciales de producción y URLs se suministran por variables de entorno. En producción, `main.py` exige clave secreta robusta, HTTPS para los orígenes configurados y URL de frontend HTTPS.
 

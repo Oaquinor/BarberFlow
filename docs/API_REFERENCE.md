@@ -39,14 +39,14 @@ La solicitud de recuperación devuelve el mismo mensaje para correos registrados
 | `GET` | `/public/{slug}/slots?duration_minutes={minutes}` | Turnos que caben en la duración del servicio y no se solapan con citas ni ausencias |
 | `POST` | `/public/{slug}/appointments` | Crea una reserva como invitado con nombre/teléfono o autenticada con una cuenta de cliente verificada; esta última se guarda en el historial |
 | `POST` | `/public/{slug}/track` | Consulta con token privado |
-| `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado |
+| `POST` | `/public/{slug}/appointments/reschedule` | Cambia turno con token privado o sesión autenticada de la cuenta propietaria |
 | `POST` | `/public/{slug}/appointments/cancel` | Cancela turno con token privado |
 
 Reserva:
 
 La reserva autenticada acepta `Authorization: Bearer <access_token>` y no requiere repetir `client_name` ni `phone`; la identidad se toma de la cuenta y se vincula a un perfil CRM separado de la barbería. Sin token, ambos campos siguen siendo obligatorios para una reserva de invitado. La respuesta incluye `saved_to_account`.
 
-La cuenta cliente puede cancelar sus citas futuras `pending` o `confirmed` desde el historial. El API verifica el enlace de propiedad CRM, aplica la política de anticipación del negocio, cambia el estado y libera el turno en una transacción; confirma y notifica usando el outbox existente. Reprogramar desde la cuenta todavía no está habilitado.
+La cuenta cliente puede cancelar y reprogramar sus citas futuras `pending` o `confirmed` desde el historial. El API verifica el enlace de propiedad CRM y aplica la política de anticipación. Cancelar actualiza estado y libera el turno; reprogramar requiere `appointment_id` junto con `availability_id` y un `Authorization: Bearer <access_token>` de cliente verificado. El ID por sí solo nunca autoriza el acceso. El flujo confirma el nuevo turno y libera el anterior dentro de la misma transacción, con validación de disponibilidad, conflictos, notificación y auditoría.
 
 ```json
 {
@@ -67,7 +67,7 @@ El enlace de seguimiento contiene un token aleatorio; la base de datos guarda su
 
 Las rutas de consulta, servicios, disponibilidad y reserva requieren una suscripción activa. Cancelar una reserva futura no requiere iniciar sesión.
 
-Las cuentas de cliente son identidades globales (`role=client`, sin `barbershop_id`) y no sustituyen los registros tenant-scoped del CRM. El email debe verificarse antes de iniciar sesión. Las citas existentes se importan presentando el token privado de seguimiento; no se enlazan registros por teléfono. Al reclamar se crea un perfil CRM separado para ese cliente y barbería, y una cita ya vinculada a otra cuenta no se puede transferir con el mismo token. Gestionar una cita desde su enlace privado sigue disponible; el portal de cuenta muestra el historial y permite importarlo, pero todavía no ofrece todos los controles de cancelación/reprogramación del mandato.
+Las cuentas de cliente son identidades globales (`role=client`, sin `barbershop_id`) y no sustituyen los registros tenant-scoped del CRM. El email debe verificarse antes de iniciar sesión. Las citas existentes se importan presentando el token privado de seguimiento; no se enlazan registros por teléfono. Al reclamar se crea un perfil CRM separado para ese cliente y barbería, y una cita ya vinculada a otra cuenta no se puede transferir con el mismo token. El endpoint de reprogramación también acepta el token privado sin sesión para conservar el flujo existente; alternativamente, permite `appointment_id` solo si una cuenta cliente verificada autenticada tiene el enlace CRM correspondiente.
 
 ## Bandeja autenticada
 
