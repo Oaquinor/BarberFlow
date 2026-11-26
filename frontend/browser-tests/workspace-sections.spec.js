@@ -25,6 +25,7 @@ test('owner workspace exposes FlowJ-style sections with working data and safe sc
 
   await page.goto('/index.html');
   await expect(page.locator('#dashboardSection')).toBeVisible();
+  await page.getByRole('button', {name:'Agenda',exact:true}).click();
   await expect(page.locator('#appointmentsList .agenda-lane')).toHaveCount(4);
   await page.getByRole('button', { name: 'Lista', exact: true }).click();
   await expect(page.locator('#appointmentsList .agenda-lane')).toHaveCount(0);
