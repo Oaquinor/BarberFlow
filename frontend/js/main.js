@@ -319,7 +319,7 @@ function statusClassForStatus(status) {
 function canMarkAppointmentNoShow(appointment, now = Date.now()) {
     const scheduledAt = Date.parse(appointment?.scheduled_time);
     const durationMinutes = Number(appointment?.estimated_duration);
-    return ['pending', 'confirmed'].includes(appointment?.status) &&
+    return !appointment?.checked_in_at && ['pending', 'confirmed'].includes(appointment?.status) &&
         Number.isFinite(scheduledAt) && Number.isFinite(durationMinutes) && durationMinutes >= 0 &&
         now >= scheduledAt + durationMinutes * 60_000;
 }
@@ -526,8 +526,24 @@ async function loadShareLink() {
         const input = document.getElementById('shareLinkInput');
         const copyBtn = document.getElementById('copyShareLinkBtn');
         const waBtn = document.getElementById('shareWhatsappBtn');
+        const openClientBtn = document.getElementById('openPublicBookingBtn');
 
         if (input) input.value = data.client_link;
+
+        if (openClientBtn) {
+            let clientLink = '';
+            try {
+                const url = new URL(data.client_link, window.location.origin);
+                const apiOrigin = new URL(API_ROOT, window.location.origin).origin;
+                if (url.origin === apiOrigin && ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) {
+                    clientLink = url.href;
+                }
+            } catch (_) { /* Invalid share links remain disabled. */ }
+            openClientBtn.disabled = !clientLink;
+            openClientBtn.onclick = clientLink
+                ? () => window.open(clientLink, '_blank', 'noopener,noreferrer')
+                : null;
+        }
 
         if (copyBtn) {
             copyBtn.onclick = async () => {
@@ -693,13 +709,20 @@ function renderAppointmentDay(businessDate, appointments) {
         appointmentsList.innerHTML = '<div class="appointment-card"><div class="appointment-content"><p class="service-name">No hay citas para este día.</p></div></div>';
         return;
     }
-    appointmentsList.innerHTML = items.map((appointment) => `
-        <div class="appointment-card ${cardClassForStatus(appointment.status)}">
+    const waitingAppointments = items.filter((item) => item.status === 'confirmed' && item.checked_in_at)
+        .sort((left, right) => Date.parse(left.checked_in_at) - Date.parse(right.checked_in_at));
+    const queuePositions = new Map(waitingAppointments.map((item, index) => [Number(item.id), index + 1]));
+    appointmentsList.innerHTML = items.map((appointment) => {
+        const queuePosition = queuePositions.get(Number(appointment.id));
+        const isWaiting = Number.isInteger(queuePosition);
+        const statusLabel = isWaiting ? `En espera · turno ${queuePosition}` : labelStatus(appointment.status);
+        return `
+        <div class="appointment-card ${isWaiting ? 'waiting' : cardClassForStatus(appointment.status)}">
             <div class="appointment-time-badge ${appointment.status === 'in_progress' ? 'current' : ''}">${fmtHour(appointment.scheduled_time)}</div>
             <div class="appointment-content">
                 <div class="appointment-header">
                     <h4>${escapeHtml(appointment.client_name || 'Cliente')}</h4>
-                    <span class="status-badge ${statusClassForStatus(appointment.status)}">${escapeHtml(labelStatus(appointment.status))}</span>
+                    <span class="status-badge ${isWaiting ? 'waiting' : statusClassForStatus(appointment.status)}">${escapeHtml(statusLabel)}</span>
                 </div>
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
                 ${renderAppointmentPreferences(appointment)}
@@ -723,7 +746,8 @@ function renderAppointmentDay(businessDate, appointments) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderAppointmentPreferences(appointment) {
@@ -962,6 +986,16 @@ function renderServiceCatalog(services) {
         </div>
     `;
     }).join('');
+    list.querySelectorAll('.service-catalog-photo').forEach((image) => {
+        image.addEventListener('error', () => {
+            image.classList.add('is-unavailable');
+            const fallback = document.createElement('div');
+            fallback.className = 'service-icon';
+            fallback.setAttribute('aria-hidden', 'true');
+            fallback.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg>';
+            image.replaceWith(fallback);
+        }, { once: true });
+    });
 }
 
 function handleServiceCategoryClick(event) {
@@ -1350,6 +1384,9 @@ function renderServiceImagePreview() {
     const image = document.createElement('img');
     image.src = src;
     image.alt = 'Vista previa de la foto del servicio';
+    image.addEventListener('error', () => {
+        preview.textContent = 'No se pudo cargar esta foto. Selecciona otra desde la galería.';
+    }, { once: true });
     preview.append(image);
 }
 
@@ -2798,18 +2835,25 @@ document.getElementById('ownerCommissionsBody')?.addEventListener('click', async
     }
 });
 
-document.getElementById('walkInForm')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
+async function registerWalkIn(startImmediately) {
+    const form = document.getElementById('walkInForm');
+    if (!form?.reportValidity()) return;
     const result = document.getElementById('walkInResult');
+    const buttons = [document.getElementById('queueWalkInButton'), form.querySelector('button[type="submit"]')].filter(Boolean);
+    const originalLabels = buttons.map((button) => button.textContent);
     const payload = {
         client_name: document.getElementById('walkInClientName').value.trim(),
         phone: document.getElementById('walkInClientPhone').value.trim(),
         service_id: Number(document.getElementById('walkInServiceSelect').value),
+        start_immediately: startImmediately,
     };
     if (currentUser?.role === 'barbershop_owner') {
         payload.barber_id = Number(document.getElementById('walkInBarberSelect').value);
     }
-    result.textContent = 'Registrando y comenzando el servicio…';
+    buttons.forEach((button) => { button.disabled = true; });
+    if (buttons[0]) buttons[0].textContent = 'Añadiendo…';
+    if (buttons[1] && startImmediately) buttons[1].textContent = 'Iniciando…';
+    result.textContent = startImmediately ? 'Registrando y comenzando el servicio…' : 'Añadiendo al final de la fila…';
     try {
         const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/appointments/walk-in`, {
             method: 'POST',
@@ -2818,13 +2862,28 @@ document.getElementById('walkInForm')?.addEventListener('submit', async (event) 
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.detail || 'No se pudo registrar el turno');
-        event.currentTarget.reset();
-        result.textContent = `Servicio iniciado para ${data.client_name}: ${data.service_type}.`;
+        form.reset();
+        result.textContent = startImmediately
+            ? `Servicio iniciado para ${data.client_name}: ${data.service_type}.`
+            : `Turno añadido a la fila para ${data.client_name}: ${data.service_type}.`;
         selectedAppointmentsDate = dashboardBusinessDate;
         await loadBarberDashboardData();
     } catch (error) {
         result.textContent = error.message;
+    } finally {
+        buttons.forEach((button, index) => {
+            button.disabled = false;
+            button.textContent = originalLabels[index];
+        });
     }
+}
+
+document.getElementById('walkInForm')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void registerWalkIn(true);
+});
+document.getElementById('queueWalkInButton')?.addEventListener('click', () => {
+    void registerWalkIn(false);
 });
 
 async function sendLoginSupportRequest() {
@@ -3438,6 +3497,7 @@ document.getElementById('serviceCategories')?.addEventListener('click', handleSe
 serviceForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const result = document.getElementById('serviceFormResult');
+    const submitButton = serviceForm.querySelector('button[type="submit"]');
     const payload = {
         name: document.getElementById('serviceName').value.trim(),
         description: document.getElementById('serviceDescription').value.trim() || null,
@@ -3446,6 +3506,10 @@ serviceForm?.addEventListener('submit', async (event) => {
         price: Math.round(Number(document.getElementById('servicePrice').value) * 100),
         category: document.getElementById('serviceCategory').value.trim()
     };
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Guardando…';
+    }
     try {
         const url = editingServiceId ? `${API_ROOT}/api/v1/services/${editingServiceId}` : `${API_ROOT}/api/v1/services/`;
         const response = await KingFlowAuth.fetch(url, {
@@ -3460,6 +3524,11 @@ serviceForm?.addEventListener('submit', async (event) => {
     } catch (error) {
         console.error('Error saving service:', error);
         result.textContent = 'Error de conexión al guardar el servicio.';
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Guardar servicio';
+        }
     }
 });
 
@@ -3515,6 +3584,8 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         localStorage.setItem('userEmail', currentUser.email);
         const newServiceBtn = document.getElementById('newServiceBtn');
         if (newServiceBtn) newServiceBtn.hidden = currentUser.role !== 'barbershop_owner';
+        const quickServicesButton = document.getElementById('quickServicesButton');
+        if (quickServicesButton) quickServicesButton.hidden = currentUser.role !== 'barbershop_owner';
         const ownerTabButton = document.getElementById('ownerManagementTabButton');
         if (ownerTabButton) ownerTabButton.hidden = currentUser.role !== 'barbershop_owner';
         const ownerLiveChairPanel = document.getElementById('ownerLiveChair');
@@ -3527,10 +3598,11 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (achievementsPanel) achievementsPanel.hidden = currentUser.role !== 'barber';
         const financialReportPanel = document.getElementById('ownerFinancialReport');
         if (financialReportPanel) financialReportPanel.hidden = currentUser.role !== 'barbershop_owner';
+        const walkInBarberField = document.getElementById('walkInBarberField');
         const walkInBarberSelect = document.getElementById('walkInBarberSelect');
         if (walkInBarberSelect) {
             const isOwner = currentUser.role === 'barbershop_owner';
-            walkInBarberSelect.hidden = !isOwner;
+            if (walkInBarberField) walkInBarberField.hidden = !isOwner;
             walkInBarberSelect.disabled = !isOwner;
         }
         const barberAvailabilityTools = document.getElementById('barberAvailabilityTools');
@@ -3673,6 +3745,13 @@ document.getElementById('startNextAppointmentButton')?.addEventListener('click',
 });
 document.getElementById('quickStatsButton')?.addEventListener('click', () => showTab('performance'));
 document.getElementById('quickAgendaButton')?.addEventListener('click', () => showTab('appointments'));
+document.getElementById('quickServicesButton')?.addEventListener('click', () => showTab('services'));
+document.getElementById('quickWalkInButton')?.addEventListener('click', () => {
+    showTab('appointments');
+    const clientName = document.getElementById('walkInClientName');
+    clientName?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => clientName?.focus(), 180);
+});
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
     tab.addEventListener('click', () => showTab(tab.dataset.tab));
 });

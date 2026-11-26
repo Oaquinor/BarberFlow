@@ -27,7 +27,7 @@ function createButton() {
 
 function createCatalogSandbox() {
   const categories = { buttons: [], replaceChildren(...buttons) { this.buttons = buttons; } };
-  const list = { innerHTML: "" };
+  const list = { innerHTML: "", querySelectorAll: () => [] };
   const elements = { serviceCategories: categories, servicesList: list };
   const sandbox = {
     document: {

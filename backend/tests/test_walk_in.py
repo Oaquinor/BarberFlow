@@ -5,6 +5,7 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.api.v1.endpoints import booking as booking_api
 from app.api.v1.endpoints import platform as platform_api
 from app.core.security import create_access_token
 from app.models import Appointment, Barbershop, Payment, Service, Subscription, User
@@ -14,7 +15,8 @@ from app.utils.datetime import utc_now_naive
 def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     client: TestClient, test_db: Session, monkeypatch
 ):
-    now = utc_now_naive()
+    now = utc_now_naive().replace(microsecond=0)
+    monkeypatch.setattr(booking_api, "utc_now_naive", lambda: now)
     monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now)
     subscription = Subscription(
         plan="free", status="active", current_period_start=now - timedelta(days=1),
@@ -64,6 +66,22 @@ def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     )
     assert duplicate.status_code == 409
 
+    queued = client.post(
+        "/api/v1/barber/appointments/walk-in",
+        headers=headers,
+        json={
+            "client_name": "Cliente En Espera", "phone": "809-555-0503",
+            "service_id": service.id, "start_immediately": False,
+        },
+    )
+    assert queued.status_code == 201, queued.text
+    queued_payload = queued.json()
+    assert queued_payload["queued"] is True
+    assert queued_payload["status"] == "confirmed"
+    queued_appointment = test_db.get(Appointment, queued_payload["appointment_id"])
+    assert queued_appointment.checked_in_at == now
+    assert queued_appointment.actual_start_time is None
+
     monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now + timedelta(minutes=6))
     paid = client.post(
         f"/api/v1/barber/appointments/{appointment.id}/payment",
@@ -75,3 +93,16 @@ def test_walk_in_starts_service_and_uses_the_standard_payment_flow(
     test_db.refresh(appointment)
     assert appointment.status == "completed"
     assert test_db.query(Payment).filter(Payment.appointment_id == appointment.id).count() == 1
+
+    # A checked-in walk-in must remain startable even if their wait exceeds the
+    # normal 15-minute appointment arrival window.
+    monkeypatch.setattr(platform_api, "utc_now_naive", lambda: now + timedelta(minutes=30))
+    started = client.put(
+        f"/api/v1/barber/appointments/{queued_appointment.id}/status",
+        headers=headers,
+        json={"status": "in_progress"},
+    )
+    assert started.status_code == 200, started.text
+    test_db.refresh(queued_appointment)
+    assert queued_appointment.status == "in_progress"
+    assert queued_appointment.actual_start_time == now + timedelta(minutes=30)

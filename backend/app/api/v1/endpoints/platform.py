@@ -1386,7 +1386,7 @@ def barber_update_appointment_status(
 
     now = utc_now_naive()
     if status == "in_progress":
-        if abs((now - appointment.scheduled_time).total_seconds()) > 15 * 60:
+        if not appointment.checked_in_at and abs((now - appointment.scheduled_time).total_seconds()) > 15 * 60:
             raise HTTPException(status_code=409, detail="Solo se puede iniciar el servicio dentro de los 15 minutos de la hora programada")
         if not assigned_barber.is_active:
             raise HTTPException(status_code=409, detail="El barbero asignado ya no está activo en esta barbería")
@@ -2057,6 +2057,7 @@ def barber_dashboard(
         Appointment.barbershop_id == shop_id,
         Appointment.scheduled_time >= now,
         Appointment.status.in_(["pending", "confirmed"]),
+        Appointment.checked_in_at.is_(None),
         Appointment.is_deleted == False,
     )
     if user.role == "barber":
@@ -2192,6 +2193,7 @@ def barber_dashboard(
                 "service_price": a.service_price,
                 "client_notes": a.client_notes,
                 "booking_answers": a.booking_answers or {},
+                "checked_in_at": _utc_aware(a.checked_in_at) if a.checked_in_at else None,
                 "status": a.status,
             }
             for a in appointments_today
@@ -2204,6 +2206,7 @@ def barber_dashboard(
                 "duration_minutes": s.duration_minutes,
                 "price_cents": s.price,
                 "category": s.category,
+                "image_url": s.image_url,
             }
             for s in services
         ],
@@ -2267,6 +2270,7 @@ def barber_appointments_for_date(
             "service_price": item.service_price,
             "client_notes": item.client_notes,
             "booking_answers": item.booking_answers or {},
+            "checked_in_at": _utc_aware(item.checked_in_at) if item.checked_in_at else None,
             "status": item.status,
         } for item in appointments],
     }
@@ -2478,6 +2482,7 @@ def barber_appointments_calendar(
             "service_price": item.service_price,
             "client_notes": item.client_notes,
             "booking_answers": item.booking_answers or {},
+            "checked_in_at": _utc_aware(item.checked_in_at) if item.checked_in_at else None,
             "status": item.status,
         })
     return {

@@ -603,7 +603,7 @@ def create_walk_in_appointment(
     db: Session = Depends(get_db),
     authorization: Optional[str] = Header(default=None),
 ):
-    """Start an in-person appointment without requiring a prior availability slot."""
+    """Register a walk-in as queued or start it immediately without a prior slot."""
     user = _get_current_user(db, authorization)
     if user.role not in {"barber", "barbershop_owner"} or not user.barbershop_id:
         raise HTTPException(status_code=403, detail="No autorizado para registrar turnos presenciales")
@@ -680,7 +680,7 @@ def create_walk_in_appointment(
         Appointment.scheduled_time < service_end,
         Appointment.is_deleted == False,
     ).with_for_update().all()
-    if any(
+    if data.start_immediately and any(
         appointment.scheduled_time + timedelta(minutes=appointment.estimated_duration) > now
         for appointment in existing
     ):
@@ -727,19 +727,24 @@ def create_walk_in_appointment(
         estimated_duration=service.duration_minutes,
         service_type=service.name,
         service_price=service.price,
-        status="in_progress",
-        actual_start_time=now,
+        status="in_progress" if data.start_immediately else "confirmed",
+        actual_start_time=now if data.start_immediately else None,
+        checked_in_at=None if data.start_immediately else now,
         client_notes="Turno presencial",
     )
     db.add(appointment)
     db.flush()
+    queued = not data.start_immediately
     _notify_appointment_staff(
-        db, appointment, "appointment_walk_in", "Turno presencial iniciado",
+        db, appointment,
+        "appointment_walk_in_queued" if queued else "appointment_walk_in",
+        "Turno presencial añadido a la fila" if queued else "Turno presencial iniciado",
         f"{client.full_name} · {service.name}", exclude_user_id=user.id,
     )
-    _audit(db, user, "appointment.walk_in_started", "appointment", appointment.id, shop.id,
+    _audit(db, user, "appointment.walk_in_queued" if queued else "appointment.walk_in_started",
+           "appointment", appointment.id, shop.id,
            {"barber_id": barber.id, "service_id": service.id, "client_id": client.id})
-    if phone:
+    if phone and data.start_immediately:
         _queue_appointment_whatsapp(
             db, appointment, phone,
             f"💈 {shop.name}: comenzamos tu servicio de {service.name} con {barber.full_name}.",
@@ -756,6 +761,7 @@ def create_walk_in_appointment(
         "success": True,
         "appointment_id": appointment.id,
         "status": appointment.status,
+        "queued": queued,
         "client_name": client.full_name,
         "barber_name": barber.full_name,
         "service_type": service.name,

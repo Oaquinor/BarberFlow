@@ -343,7 +343,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-break-return-1">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-workspace-flow-2">
 </head>
 <body>
     <div class="container">
@@ -571,15 +571,22 @@
                 <!-- Quick Actions -->
                 <div class="quick-actions">
                     <h3>Accesos rápidos</h3>
-                    <div style="background:#fff; border:1px solid #e0e0e0; border-radius:10px; padding:12px; margin-bottom:14px;">
-                        <div style="font-weight:700; margin-bottom:8px;">Enlace público de reservas</div>
-                        <input id="shareLinkInput" aria-label="Enlace público de reservas" type="text" readonly style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px;" placeholder="Cargando link...">
+                    <div class="workspace-booking-link">
+                        <div class="workspace-booking-link-copy"><strong>Tu página de reservas</strong><span>Compártela para que tus clientes reserven en línea.</span></div>
+                        <input id="shareLinkInput" aria-label="Enlace público de reservas" type="text" readonly placeholder="Cargando link...">
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button id="openPublicBookingBtn" class="btn-secondary" type="button" disabled>Abrir página</button>
                             <button id="copyShareLinkBtn" class="btn-secondary" type="button">Copiar link</button>
                             <button id="shareWhatsappBtn" class="btn-secondary" type="button">Compartir por WhatsApp</button>
                         </div>
                     </div>
                     <div class="actions-grid">
+                        <button class="action-btn" id="quickWalkInButton" type="button">
+                            <span class="action-text">Iniciar servicio presencial</span>
+                        </button>
+                        <button class="action-btn" id="quickServicesButton" type="button" hidden>
+                            <span class="action-text">Administrar servicios</span>
+                        </button>
                         <button class="action-btn" id="quickStatsButton" type="button">
                             <span class="action-text">Ver rendimiento</span>
                         </button>
@@ -595,17 +602,17 @@
             <div id="appointmentsTab" class="tab-content" style="display: none;">
                 <h2>Agenda</h2>
 
-                <form id="walkInForm" style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:14px;margin-bottom:18px;">
-                    <h3 style="margin-bottom:10px;">Registrar cliente presencial</h3>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
-                        <input id="walkInClientName" aria-label="Nombre del cliente presencial" required minlength="2" maxlength="120" placeholder="Nombre del cliente">
-                        <input id="walkInClientPhone" aria-label="Teléfono del cliente presencial" required minlength="6" maxlength="30" placeholder="Teléfono">
-                        <select id="walkInServiceSelect" aria-label="Servicio del turno presencial" required><option value="">Selecciona un servicio</option></select>
-                        <select id="walkInBarberSelect" aria-label="Barbero que atenderá el turno presencial" required disabled hidden><option value="">Selecciona un barbero</option></select>
+                <form id="walkInForm" class="walk-in-form">
+                    <div class="walk-in-heading"><div><span class="service-editor-eyebrow">ATENCIÓN PRESENCIAL</span><h3>Registrar cliente que llegó al local</h3></div><p>Elige si debe esperar su turno o si empieza ahora.</p></div>
+                    <div class="walk-in-fields">
+                        <label for="walkInClientName">Nombre del cliente<input id="walkInClientName" required minlength="2" maxlength="120" placeholder="Nombre y apellido" autocomplete="name"></label>
+                        <label for="walkInClientPhone">Teléfono<input id="walkInClientPhone" type="tel" required minlength="6" maxlength="30" placeholder="809 555 0123" autocomplete="tel"></label>
+                        <label for="walkInServiceSelect">Servicio<select id="walkInServiceSelect" required><option value="">Selecciona un servicio</option></select></label>
+                        <label id="walkInBarberField" for="walkInBarberSelect" hidden>Barbero<select id="walkInBarberSelect" required disabled><option value="">Selecciona un barbero</option></select></label>
                     </div>
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
-                        <button class="btn-primary" type="submit">Iniciar servicio presencial</button>
-                        <span id="walkInResult" role="status" aria-live="polite"></span>
+                    <div class="walk-in-footer">
+                        <p id="walkInResult" role="status" aria-live="polite">El nombre y el teléfono son datos internos; no aparecen en la vista pública del equipo.</p>
+                        <div><button id="queueWalkInButton" class="btn-secondary" type="button">Añadir a la fila</button><button class="btn-primary" type="submit">Iniciar servicio presencial</button></div>
                     </div>
                 </form>
 
@@ -730,23 +737,19 @@
                     <button id="newServiceBtn" class="btn-primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nuevo Servicio</button>
                     <input id="serviceSearch" aria-label="Buscar servicios" type="search" placeholder="Buscar servicio..." class="search-input">
                 </div>
-                <form id="serviceForm" hidden style="max-width:640px; padding:16px; margin:12px 0; border:1px solid #ddd; border-radius:10px;">
-                    <h3 id="serviceFormTitle">Nuevo servicio</h3>
-                    <label for="serviceName">Nombre</label><input id="serviceName" required minlength="2" maxlength="100">
-                    <label for="serviceDescription">Descripción</label><textarea id="serviceDescription" maxlength="2000"></textarea>
-                    <label for="serviceImageUrl">Foto de este servicio</label><select id="serviceImageUrl"><option value="">Sin foto</option></select>
-                    <p>Elige una foto de tu galería o sube una nueva. La imagen aparecerá en la página de reservas.</p>
-                    <div id="serviceImagePreview" class="service-image-preview" aria-live="polite"></div>
-                    <label for="serviceImageFile">Subir foto para el servicio</label><input id="serviceImageFile" type="file" accept="image/png,image/jpeg">
-                    <p id="serviceImageUploadResult" role="status" aria-live="polite"></p>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-                        <div><label for="serviceDuration">Duración (minutos)</label><input id="serviceDuration" type="number" required min="10" max="180" value="30"></div>
-                        <div><label for="servicePrice">Precio</label><input id="servicePrice" type="number" required min="0.01" step="0.01"></div>
-                        <div><label for="serviceCategory">Categoría</label><input id="serviceCategory" required minlength="2" maxlength="50" value="haircut"></div>
+                <form id="serviceForm" class="service-editor" hidden>
+                    <div class="service-editor-heading"><div><span class="service-editor-eyebrow">CATÁLOGO</span><h3 id="serviceFormTitle">Nuevo servicio</h3></div><p>Define cómo aparecerá en tu página de reservas.</p></div>
+                    <div class="service-editor-grid">
+                        <div class="service-editor-field"><label for="serviceName">Nombre del servicio</label><input id="serviceName" required minlength="2" maxlength="100" placeholder="Ej. Corte clásico"></div>
+                        <div class="service-editor-field"><label for="serviceCategory">Categoría</label><input id="serviceCategory" required minlength="2" maxlength="50" value="haircut" placeholder="Ej. haircut, beard"></div>
+                        <div class="service-editor-field service-editor-wide"><label for="serviceDescription">Descripción</label><textarea id="serviceDescription" maxlength="2000" placeholder="Describe qué incluye este servicio"></textarea></div>
+                        <div class="service-editor-field"><label for="serviceDuration">Duración (minutos)</label><input id="serviceDuration" type="number" required min="10" max="180" value="30"></div>
+                        <div class="service-editor-field"><label for="servicePrice">Precio (DOP)</label><input id="servicePrice" type="number" required min="0.01" step="0.01" placeholder="0.00"></div>
+                        <div class="service-editor-field service-editor-wide"><label for="serviceImageUrl">Foto del servicio</label><select id="serviceImageUrl"><option value="">Sin foto</option></select><small>Elige una foto de tu galería o sube una nueva.</small></div>
+                        <div class="service-editor-field service-editor-wide"><label for="serviceImageFile">Subir una foto</label><input id="serviceImageFile" type="file" accept="image/png,image/jpeg"><p id="serviceImageUploadResult" role="status" aria-live="polite"></p></div>
+                        <div id="serviceImagePreview" class="service-image-preview service-editor-wide" aria-live="polite"></div>
                     </div>
-                    <button class="btn-primary" type="submit">Guardar servicio</button>
-                    <button id="cancelServiceForm" class="btn-secondary" type="button">Cancelar</button>
-                    <p id="serviceFormResult" role="status"></p>
+                    <div class="service-editor-actions"><p id="serviceFormResult" role="status" aria-live="polite"></p><div><button id="cancelServiceForm" class="btn-secondary" type="button">Cancelar</button><button class="btn-primary" type="submit">Guardar servicio</button></div></div>
                 </form>
 
                 <div id="serviceCategories" class="services-categories" role="group" aria-label="Filtrar servicios por categoría">
@@ -758,6 +761,7 @@
 
             <div id="ownerManagementTab" class="tab-content" style="display:none;">
                 <h2>Equipo y clientes</h2>
+                <nav class="owner-section-shortcuts" aria-label="Accesos de gestión"><a href="#ownerBusinessSettings">Página pública</a><a href="#ownerTeamCreate">Equipo</a><a href="#ownerInventoryHeading">Inventario</a><a href="#ownerWaitlistSection">Lista de espera</a><a href="#ownerClientsSection">Clientes</a></nav>
                 <section class="card owner-live-chair" id="ownerLiveChair" aria-labelledby="ownerLiveChairTitle" hidden>
                     <div class="services-header"><div><h3 id="ownerLiveChairTitle">Live Chair · estado del equipo</h3><p>Atención, clientes que confirmaron llegada y siguiente turno. Se actualiza cada 30 segundos mientras esta sección esté abierta.</p></div><button id="refreshOwnerLiveChair" class="btn-secondary" type="button">Actualizar</button></div>
                     <div id="ownerLiveChairGrid" class="owner-live-chair-grid" aria-live="polite"></div>
@@ -770,7 +774,7 @@
                     <button id="ownerRenewalRequestBtn" class="btn-secondary" type="button" hidden>Solicitar revisión de renovación</button>
                     <p id="ownerRenewalRequestResult" role="status" aria-live="polite"></p>
                 </section>
-                <section class="card" aria-labelledby="businessSettingsTitle">
+                <section class="card" id="ownerBusinessSettings" aria-labelledby="businessSettingsTitle">
                     <h3 id="businessSettingsTitle">Configuración del negocio y página pública</h3>
                     <p>Actualiza el horario, la zona local, la imagen de marca y las políticas de datos que afectan la experiencia de tus clientes.</p>
                     <form id="businessSettingsForm" class="grid">
@@ -832,7 +836,7 @@
                     <ul id="demandForecastInsights" aria-label="Hallazgos del pronóstico"></ul>
                     <div id="demandForecastDays" class="demand-forecast-days"></div>
                 </section>
-                <section class="card">
+                <section class="card" id="ownerTeamCreate">
                     <h3>Agregar barbero</h3>
                     <form id="createBarberForm" class="grid">
                         <div class="field"><label for="newBarberFirstName">Nombre</label><input id="newBarberFirstName" required minlength="2" maxlength="100"></div>
@@ -844,7 +848,7 @@
                     </form>
                     <p id="createBarberResult" role="status" aria-live="polite"></p>
                 </section>
-                <section class="card">
+                <section class="card" id="ownerBarbersSection">
                     <div class="services-header"><h3>Barberos</h3><button id="refreshOwnerManagement" class="btn-secondary" type="button">Actualizar</button></div>
                     <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Comisión (%)</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="ownerBarbersBody"></tbody></table></div>
                     <form id="ownerBarberEditForm" class="grid" hidden style="margin-top:16px;">
@@ -856,7 +860,7 @@
                     </form>
                     <p id="ownerBarbersResult" role="status" aria-live="polite"></p>
                 </section>
-                <section class="card">
+                <section class="card" id="ownerCommissionSection">
                     <div class="services-header"><h3>Comisiones del equipo</h3><button id="refreshOwnerCommissions" class="btn-secondary" type="button">Actualizar</button></div>
                     <p id="ownerCommissionTotals" role="status"></p>
                     <div class="table-wrap"><table><thead><tr><th>Barbero</th><th>Fecha</th><th>Importe</th><th>Tasa</th><th>Estado</th><th>Liquidación</th></tr></thead><tbody id="ownerCommissionsBody"></tbody></table></div>
@@ -888,13 +892,13 @@
                     <p id="ownerInventoryMovementResult" role="status" aria-live="polite"></p>
                     <div class="table-wrap inventory-table-wrap"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Movimiento</th><th>Variación</th><th>Costo por unidad</th><th>Nota</th></tr></thead><tbody id="ownerInventoryMovementsBody"></tbody></table></div>
                 </section>
-                <section class="card">
+                <section class="card" id="ownerWaitlistSection">
                     <div class="services-header"><div><h3>Lista de espera</h3><p>Solicitudes reales pendientes de contacto; no representan citas.</p></div><button id="refreshOwnerWaitlist" class="btn-secondary" type="button">Actualizar</button></div>
                     <div class="field"><label for="ownerWaitlistStatus">Estado</label><select id="ownerWaitlistStatus"><option value="">Todos</option><option value="new">Pendientes</option><option value="contacted">Contactados</option><option value="closed">Cerrados</option></select></div>
                     <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Servicio</th><th>Barbero</th><th>Fechas preferidas</th><th>Detalle</th><th>Recibida</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerWaitlistBody"></tbody></table></div>
                     <p id="ownerWaitlistResult" role="status" aria-live="polite"></p>
                 </section>
-                <section class="card">
+                <section class="card" id="ownerClientsSection">
                     <div class="services-header"><h3>Clientes registrados</h3><button id="showOwnerClientCreate" class="btn-primary" type="button">Agregar cliente</button></div>
                     <div class="field"><label for="ownerClientSearch">Buscar por nombre, teléfono o correo</label><input id="ownerClientSearch" type="search" maxlength="100" autocomplete="off"></div>
                     <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Teléfono</th><th>Citas</th><th>Completadas</th><th>Última visita</th><th>Total pagado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="ownerClientsBody"></tbody></table></div>
@@ -1054,7 +1058,7 @@
     <script src="js/mfa-settings.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-break-return-1"></script>
+    <script src="js/main.js?v=20261125-workspace-flow-2"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -145,6 +145,13 @@ function renderServiceCards() {
       image.alt = '';
       image.loading = 'lazy';
       image.className = 'service-photo';
+      image.addEventListener('error', () => {
+        const visual = document.createElement('span');
+        visual.className = 'service-visual';
+        visual.setAttribute('aria-hidden', 'true');
+        visual.innerHTML = '<svg viewBox="0 0 48 48"><path d="M9 9l30 30M39 9 9 39"/><circle cx="10" cy="10" r="5"/><circle cx="38" cy="38" r="5"/><path d="m28 12 8 8m-13 13 8 8"/></svg><span>ELIGE TU ESTILO</span>';
+        image.replaceWith(visual);
+      }, { once: true });
       selectButton.append(image);
     } else {
       const visual = document.createElement('span');

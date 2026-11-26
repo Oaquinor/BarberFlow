@@ -199,6 +199,7 @@ class WalkInAppointmentRequest(BaseModel):
     phone: str = Field(..., min_length=6, max_length=30)
     service_id: int = Field(..., gt=0)
     barber_id: Optional[int] = Field(None, gt=0)
+    start_immediately: bool = True
 
     @field_validator("client_name")
     @classmethod
