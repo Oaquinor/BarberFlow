@@ -701,3 +701,18 @@ body, button, input, select, textarea, #dashboardSection { font-family:Arial,Hel
 .business-photo-dialog > div { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; padding-top:14px; }
 .business-photo-dialog a { text-decoration:none; }
 .business-gallery-item > p { display:grid; min-height:120px; align-items:center; padding:12px; border:1px dashed #b9aa98; border-radius:9px; font-size:.85rem; }
+.agenda-layout-controls { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; }
+.agenda-layout-controls button { min-height:40px; }
+.agenda-layout-controls [aria-pressed="true"] { background:#29251f; color:#fff; border-color:#29251f; }
+#appointmentsList.agenda-board { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.agenda-lane { min-width:0; padding:14px; border:1px solid #ded9d0; border-radius:12px; background:#f9f7f2; }
+.agenda-lane h3 { margin:0 0 14px; font-size:.92rem; }
+.agenda-lane-attending { background:#edf3ee; border-color:#cbdccf; }
+.agenda-lane-waiting { background:#faf4e9; border-color:#e5d5b9; }
+.agenda-lane-finished { grid-column:1 / -1; }
+.agenda-empty { min-height:130px; display:grid; align-content:center; padding:16px; border:1px dashed #d8d1c5; border-radius:9px; font-size:.86rem; }
+.agenda-lane-finished .agenda-empty { min-height:70px; }
+.agenda-lane .appointment-card { display:flex; flex-direction:column; align-items:stretch; gap:12px; padding:14px; margin:0 0 12px; }
+.agenda-lane .appointment-time-badge { align-self:flex-start; }
+.agenda-lane .appointment-header { flex-wrap:wrap; gap:8px; }
+@media(max-width:1100px) { #appointmentsList.agenda-board { grid-template-columns:minmax(0,1fr); } .agenda-empty { min-height:90px; } }

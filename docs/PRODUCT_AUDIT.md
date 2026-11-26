@@ -118,3 +118,11 @@ Hay controles útiles ya presentes: roles, aislamiento de tenant, refresh revoca
 - Seguimiento de lista de espera: configurar preferencias y controles de consentimiento/canal más granulares y visibilidad del estado de entrega; la emisión compatible ya corre en el worker.
 - Definir país, proveedor y modelo comercial antes de diseñar cobros online; decidir fidelidad/sucursales antes de esos dominios.
 4. Completar threat model, MFA y revisión ASVS automatizada/dinámica antes de afirmar preparación para producción.
+
+## Referencia FlowJ: agenda (26 de noviembre de 2026)
+
+Observado en la sesión de Edge: resumen diario, selector Tablero/Lista, filtro de estado, actualización manual, registro rápido y columnas En atención, En espera, Por llegar y Finalizadas.
+
+KingFlow incorpora el tablero y la lista sobre las citas reales y conserva las acciones existentes de confirmación, inicio, cobro/finalización, cancelación e inasistencia. La posición de espera se calcula sobre la fila completa aunque se filtre por búsqueda.
+
+Pendiente de inspección en la referencia: formularios internos de Citas/Turnos, detalle de Cierre e Historial, opciones de Pantallas, Mi sitio y Configuración. Edge devolvió geometría no disponible y una captura recortada al intentar navegar; no se afirma equivalencia completa con funciones no observadas.

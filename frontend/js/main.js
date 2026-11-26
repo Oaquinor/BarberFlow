@@ -12,6 +12,7 @@ let editingServiceId = null;
 let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
 let appointmentWorkspaceMode = 'agenda';
+let agendaLayout = 'board';
 let latestAppointmentDay = [];
 let appointmentsRequestSequence = 0;
 let dashboardRequestSequence = 0;
@@ -728,9 +729,10 @@ function renderAppointmentDay(businessDate, appointments) {
                 ? 'No hay citas reservadas para esta fecha.'
                 : 'No hay citas ni turnos para este día.';
         appointmentsList.innerHTML = `<div class="appointment-card"><div class="appointment-content"><p class="service-name">${escapeHtml(emptyMessage)}</p></div></div>`;
+        applyAgendaLayout(appointmentsList);
         return;
     }
-    const waitingAppointments = items.filter((item) => item.status === 'confirmed' && item.checked_in_at)
+    const waitingAppointments = latestAppointmentDay.filter((item) => item.status === 'confirmed' && item.checked_in_at)
         .sort((left, right) => Date.parse(left.checked_in_at) - Date.parse(right.checked_in_at));
     const queuePositions = new Map(waitingAppointments.map((item, index) => [Number(item.id), index + 1]));
     appointmentsList.innerHTML = items.map((appointment) => {
@@ -738,7 +740,7 @@ function renderAppointmentDay(businessDate, appointments) {
         const isWaiting = Number.isInteger(queuePosition);
         const statusLabel = isWaiting ? `En espera · turno ${queuePosition}` : labelStatus(appointment.status);
         return `
-        <div class="appointment-card ${isWaiting ? 'waiting' : cardClassForStatus(appointment.status)}">
+        <div data-flow-group="${appointment.status === 'in_progress' ? 'attending' : isWaiting ? 'waiting' : ['pending', 'confirmed'].includes(appointment.status) ? 'arriving' : 'finished'}" class="appointment-card ${isWaiting ? 'waiting' : cardClassForStatus(appointment.status)}">
             <div class="appointment-time-badge ${appointment.status === 'in_progress' ? 'current' : ''}">${fmtHour(appointment.scheduled_time)}</div>
             <div class="appointment-content">
                 <div class="appointment-header">
@@ -769,6 +771,7 @@ function renderAppointmentDay(businessDate, appointments) {
         </div>
     `;
     }).join('');
+    applyAgendaLayout(appointmentsList);
 }
 
 function renderAppointmentPreferences(appointment) {
@@ -4051,3 +4054,37 @@ function openBusinessPhoto(src) {
     dialog.showModal();
     close.focus();
 }
+
+function applyAgendaLayout(list) {
+    const board = agendaLayout === 'board' && selectedAppointmentsView === 'day';
+    list.classList.toggle('agenda-board', board);
+    if (!board) return;
+    const cards = [...list.querySelectorAll('[data-flow-group]')];
+    list.replaceChildren();
+    for (const [key, title, empty] of [
+        ['attending', 'En atención', 'Sin servicios en curso.'],
+        ['waiting', 'En espera', 'Sin clientes en sala. Registra una llegada para añadirla a la fila.'],
+        ['arriving', 'Por llegar', 'No hay citas pendientes de llegada.'],
+        ['finished', 'Finalizadas', 'Todavía no hay servicios finalizados.'],
+    ]) {
+        const section = document.createElement('section');
+        section.className = 'agenda-lane agenda-lane-' + key;
+        section.setAttribute('aria-label', title);
+        const group = cards.filter(card => card.dataset.flowGroup === key);
+        const heading = document.createElement('h3');
+        heading.textContent = title + ' · ' + group.length;
+        section.append(heading);
+        if (group.length) section.append(...group);
+        else { const message = document.createElement('p'); message.className = 'agenda-empty'; message.textContent = empty; section.append(message); }
+        list.append(section);
+    }
+}
+document.querySelectorAll('[data-agenda-layout]').forEach(button => button.addEventListener('click', () => {
+    agendaLayout = button.dataset.agendaLayout;
+    document.querySelectorAll('[data-agenda-layout]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    selectedAppointmentsView = 'day';
+    const view = document.getElementById('appointmentsView');
+    if (view) view.value = 'day';
+    renderAppointmentDay(selectedAppointmentsDate || businessTodayDate(), latestAppointmentDay);
+}));
+document.getElementById('refreshAgendaButton')?.addEventListener('click', () => loadAppointmentsForDate(selectedAppointmentsDate || businessTodayDate()));
