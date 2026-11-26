@@ -48,9 +48,9 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v82");
-  assert.ok(worker.addedAssets[0].assets.includes("/css/owner-dashboard.css?v=20261126-responsive-workspace-2"));
-  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261126-responsive-workspace-2"));
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v83");
+  assert.ok(worker.addedAssets[0].assets.includes("/css/owner-dashboard.css?v=20261126-visual-audit-3"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261126-visual-audit-3"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-style-retention-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js?v=20261125-workspace-flow-2"));
   assert.ok(worker.addedAssets[0].assets.includes("/client-account.html"));

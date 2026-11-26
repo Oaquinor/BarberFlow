@@ -3085,7 +3085,21 @@ function updateAppointmentWorkspaceMode() {
     if (form) form.hidden = appointmentWorkspaceMode === 'bookings';
 }
 
+const workspaceMenu = document.createElement('button');
+workspaceMenu.type = 'button';
+workspaceMenu.className = 'workspace-menu-toggle';
+workspaceMenu.textContent = 'Menú del espacio de trabajo';
+workspaceMenu.setAttribute('aria-expanded', 'false');
+const workspaceTabs = document.querySelector('#dashboardSection > .tabs');
+workspaceTabs?.before(workspaceMenu);
+workspaceMenu.addEventListener('click', () => {
+    const expanded = workspaceMenu.getAttribute('aria-expanded') !== 'true';
+    workspaceMenu.setAttribute('aria-expanded', String(expanded));
+    workspaceTabs?.classList.toggle('mobile-menu-open', expanded);
+});
 function showTab(tabName, requestedButton = null) {
+    workspaceTabs?.classList.remove('mobile-menu-open');
+    workspaceMenu.setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
 
@@ -3130,8 +3144,20 @@ function showTab(tabName, requestedButton = null) {
         screenRefreshTimer = null;
     }
     const anchorId = requestedButton?.dataset?.anchor;
+    const ownerPanel = document.getElementById('ownerManagementTab');
+    if (tabName === 'ownerManagement' && ownerPanel) {
+        ownerPanel.dataset.module = anchorId || 'overview';
+        const anchor = anchorId ? document.getElementById(anchorId) : null;
+        const sections = [...ownerPanel.children].filter(el => el.matches('section, .card'));
+        const targetSection = sections.find(el => el === anchor || el.contains(anchor));
+        sections.forEach(el => el.classList.toggle('owner-module-hidden', Boolean(targetSection) && el !== targetSection && !(anchorId === 'ownerTeamCreate' && el.id === 'ownerLiveChair')));
+        const heading = ownerPanel.querySelector('h2');
+        if (heading) heading.textContent = selectedTab?.textContent.trim() || 'Panel de gestión';
+        ownerPanel.querySelector('.owner-section-shortcuts')?.classList.toggle('owner-module-hidden', Boolean(targetSection));
+    }
+
     if (tabName === 'ownerManagement' && anchorId && currentUser?.role === 'barbershop_owner') {
-        window.setTimeout(() => document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+        window.scrollTo({ top: 0, behavior: 'instant' });
     }
 }
 

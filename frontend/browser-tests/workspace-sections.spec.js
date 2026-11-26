@@ -46,7 +46,8 @@ test('owner workspace exposes FlowJ-style sections with working data and safe sc
 
   await page.getByRole('button', { name: 'Mi sitio', exact: true }).click();
   await expect(page.locator('#ownerManagementTab')).toBeVisible();
-  await expect(page.locator('#publicGalleryEditorTitle')).toBeInViewport();
+  await expect(page.locator('.public-logo-editor')).toBeInViewport();
+  await expect(page.locator('#businessSettingsForm')).toBeHidden();
   await page.getByRole('button', { name: 'Configuración', exact: true }).click();
   await expect(page.locator('#businessSettingsTitle')).toBeInViewport();
   await page.getByRole('button', { name: 'Acerca de', exact: true }).click();
