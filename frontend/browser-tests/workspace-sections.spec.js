@@ -55,3 +55,24 @@ test('owner workspace exposes FlowJ-style sections with working data and safe sc
   expect(requests).toContain('/barber/cash/history');
   expect(pageErrors).toEqual([]);
 });
+
+test('every workspace section fits mobile and desktop', async ({ page }) => {
+  await page.goto('/index.html');
+  await page.evaluate(() => {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'grid';
+    document.querySelectorAll('#dashboardSection > .tabs button').forEach(el => el.hidden = false);
+    currentUser = { role: 'barbershop_owner' };
+  });
+  const panels = await page.locator('#dashboardSection > .tab-content').evaluateAll(els => els.map(el => el.id));
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const id of panels) {
+      await page.evaluate(id => {
+        document.querySelectorAll('#dashboardSection > .tab-content').forEach(el => el.style.display = el.id === id ? 'block' : 'none');
+      }, id);
+      const size = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+      expect(size.content, `${id} at ${width}px`).toBeLessThanOrEqual(size.viewport + 1);
+    }
+  }
+});

@@ -588,3 +588,51 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .barber-break-duration select { min-height:42px; padding:8px 10px; border:1px solid var(--kf-line); border-radius:9px; background:var(--kf-paper); color:var(--kf-ink); font:inherit; }
 #barberLivePresenceResult { flex-basis:100%; margin:0; color:var(--kf-muted); font-size:.76rem; }
 @media(max-width:640px) { .barber-live-presence { align-items:flex-start; flex-direction:column; padding:15px; } .barber-live-presence-actions, .barber-live-presence-actions button, .barber-break-duration { width:100%; } .barber-break-duration { justify-content:space-between; } }
+
+/* Consistent application typography and compact viewport layout. */
+#dashboardSection { font-size:1rem; line-height:1.5; }
+#dashboardSection h2, #dashboardSection h3, #dashboardSection h4,
+#dashboardSection .stat-value, #dashboardSection .summary-number {
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  letter-spacing:-.025em;
+}
+#dashboardSection h2 { font-size:clamp(1.45rem,2.5vw,2rem); font-weight:700; line-height:1.25; }
+#dashboardSection .stat-value, #dashboardSection .summary-number { font-weight:700; font-variant-numeric:tabular-nums; }
+#dashboardSection p { overflow-wrap:anywhere; }
+#dashboardSection button { line-height:1.35; white-space:normal; }
+#dashboardSection input, #dashboardSection select, #dashboardSection textarea { max-width:100%; }
+#dashboardSection label { line-height:1.5; }
+#dashboardSection .card { margin-bottom:24px; }
+.header, .header-actions, .user-info { flex-wrap:wrap; gap:12px; }
+@media(max-width:1100px) {
+  #dashboardSection { grid-template-columns:190px minmax(0,1fr); gap:18px; }
+  .header-actions { justify-content:flex-start; }
+}
+@media(max-width:900px) {
+  #dashboardSection { grid-template-columns:minmax(0,1fr); }
+  #dashboardSection > .tab-content { grid-column:1; grid-row:2; }
+  #dashboardSection > .tabs { max-height:220px; overflow-y:auto; }
+  #dashboardSection .tab { flex:1 1 145px; min-width:0; font-size:.86rem; }
+  #dashboardSection .nav-label { flex-basis:100%; }
+}
+@media(max-width:600px) {
+  body { padding:12px 12px 32px; }
+  .container, .header, #dashboardSection, .tab-content { width:100%; min-width:0; }
+  .header { padding:14px; margin-bottom:16px; border-radius:12px; }
+  .logo { min-width:0; }
+  .logo h1 { font-size:1rem; overflow-wrap:anywhere; }
+  .header-actions, .user-info { width:100%; }
+  .header-actions button { min-height:44px; }
+  #dashboardSection > .tabs { max-height:190px; margin:0; padding:8px; gap:6px; }
+  #dashboardSection .tab { flex:1 1 calc(50% - 6px); width:auto; min-height:44px; padding:10px; }
+  #dashboardSection .card, #dashboardSection .demand-forecast-card { padding:16px; border-radius:12px; }
+  #dashboardSection input:not([type="checkbox"]):not([type="radio"]),
+  #dashboardSection select, #dashboardSection textarea { font-size:16px; min-height:44px; }
+  .appointment-workspace-tools > div, .appointment-workspace-tools label,
+  .appointment-workspace-tools input { width:100%; min-width:0; }
+  .retail-pos-controls { flex-direction:column; }
+  .retail-pos-controls > label { flex:auto; width:100%; }
+  .barber-live-presence-actions { flex-direction:column; }
+  #dashboardSection .stat-card { min-height:110px; padding:16px; }
+  #dashboardSection .services-header { flex-wrap:wrap; gap:12px; }
+}

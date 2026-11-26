@@ -18,7 +18,7 @@ test("barber reads and updates style notes only for an appointment client", asyn
         timezone: "America/Santo_Domingo", onboarding_completed: true,
         opening_time: "09:00:00", closing_time: "19:00:00", booking_questions: [], gallery_images: [],
       };
-    } else if (path === "/barber/dashboard") {
+    } else if ((path === "/barber/dashboard" || path === "/barber/appointments")) {
       payload = {
         business_date: "2026-11-25",
         summary: { total: 1, pending: 0, completed: 1, in_progress: 0 },
