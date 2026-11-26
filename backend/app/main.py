@@ -133,6 +133,11 @@ def create_application() -> FastAPI:
         """Prevent the public frontend mount from serving private media files."""
         raise HTTPException(status_code=404, detail="Recurso no encontrado")
 
+    # Serve only public business assets from the configured upload location.
+    public_uploads = Path(settings.UPLOAD_DIR).resolve() / "barbershops"
+    public_uploads.mkdir(parents=True, exist_ok=True)
+    application.mount("/uploads/barbershops", StaticFiles(directory=str(public_uploads)), name="business-images")
+
     # Mount the whole frontend directory last so it acts as a catch-all for
     # static assets and PWA pages (client.html, onboarding.html, admin.html,
     # manifest.webmanifest, sw.js, offline.html, css/, js/, icons/) without

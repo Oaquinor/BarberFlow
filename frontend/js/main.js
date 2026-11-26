@@ -1378,7 +1378,19 @@ function renderBusinessGallery(images) {
         remove.className = 'btn-secondary';
         remove.textContent = 'Quitar';
         remove.dataset.galleryImage = imageUrl;
-        item.append(image, remove);
+        const open = document.createElement('button');
+        open.type = 'button';
+        open.className = 'btn-secondary';
+        open.textContent = 'Ver y descargar';
+        open.addEventListener('click', () => openBusinessPhoto(src));
+        image.addEventListener('error', () => {
+            const notice = document.createElement('p');
+            notice.textContent = 'Archivo no disponible. Vuelve a subir esta foto.';
+            notice.setAttribute('role', 'status');
+            image.replaceWith(notice);
+            open.disabled = true;
+        }, { once: true });
+        item.append(image, open, remove);
         container.append(item);
     });
     const imageSelect = document.getElementById('serviceImageUrl');
@@ -4013,3 +4025,29 @@ document.getElementById('servicesList')?.addEventListener('click', (event) => {
 
 console.log('KingFlow Barber Frontend Ready');
 console.log('API Base:', API_ROOT);
+
+function openBusinessPhoto(src) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'business-photo-dialog';
+    dialog.setAttribute('aria-label', 'Vista ampliada de la foto');
+    const image = document.createElement('img');
+    image.src = src;
+    image.alt = 'Trabajo de la barbería';
+    const actions = document.createElement('div');
+    const download = document.createElement('a');
+    download.href = src;
+    download.download = new URL(src).pathname.split('/').pop() || 'foto.jpg';
+    download.textContent = 'Descargar foto';
+    download.className = 'btn-secondary';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Cerrar';
+    close.className = 'btn-secondary';
+    close.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    actions.append(download, close);
+    dialog.append(image, actions);
+    document.body.append(dialog);
+    dialog.showModal();
+    close.focus();
+}
