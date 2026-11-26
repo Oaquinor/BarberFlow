@@ -89,6 +89,8 @@ test("appointment rendering escapes untrusted names and status labels", () => {
   const sandbox = {
     currentUser: { role: "barbershop_owner" },
     barbershopProfile: { currency: "DOP", timezone: "America/Santo_Domingo" },
+    appointmentWorkspaceMode: "agenda",
+    latestAppointmentDay: [],
     document: { getElementById: (id) => elements[id] || null },
     setText() {},
   };

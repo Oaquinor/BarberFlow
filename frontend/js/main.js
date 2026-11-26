@@ -11,9 +11,13 @@ let serviceSearchQuery = '';
 let editingServiceId = null;
 let selectedAppointmentsDate = null;
 let selectedAppointmentsView = 'day';
+let appointmentWorkspaceMode = 'agenda';
+let latestAppointmentDay = [];
 let appointmentsRequestSequence = 0;
 let dashboardRequestSequence = 0;
 let cashSummaryRequestSequence = 0;
+let cashHistoryRequestSequence = 0;
+let screenRefreshTimer = null;
 let dashboardBusinessDate = null;
 let notificationRefreshTimer = null;
 let liveChairRefreshTimer = null;
@@ -692,7 +696,19 @@ function renderAppointmentDay(businessDate, appointments) {
         weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
     }));
 
-    const items = Array.isArray(appointments) ? appointments : [];
+    if (Array.isArray(appointments)) latestAppointmentDay = appointments;
+    const modeItems = appointmentWorkspaceMode === 'bookings'
+        ? latestAppointmentDay.filter((item) => item.client_notes !== 'Turno presencial')
+        : appointmentWorkspaceMode === 'queue'
+            ? latestAppointmentDay.filter((item) => Boolean(item.checked_in_at) && ['confirmed', 'in_progress'].includes(item.status))
+            : latestAppointmentDay;
+    const normalizedSearch = String(document.getElementById('appointmentSearch')?.value || '').trim().toLocaleLowerCase();
+    const statusFilter = document.getElementById('appointmentStatusFilter')?.value || '';
+    const items = modeItems.filter((item) => {
+        if (statusFilter && item.status !== statusFilter) return false;
+        if (!normalizedSearch) return true;
+        return [item.client_name, item.service_type].some((value) => String(value || '').toLocaleLowerCase().includes(normalizedSearch));
+    });
     setText('summaryTotal', String(items.length));
     setText('summaryCompleted', String(items.filter((item) => item.status === 'completed').length));
     setText('summaryPending', String(items.filter((item) => ['pending', 'confirmed'].includes(item.status)).length));
@@ -706,7 +722,12 @@ function renderAppointmentDay(businessDate, appointments) {
     if (dateInput) dateInput.value = businessDate;
     if (!appointmentsList) return;
     if (!items.length) {
-        appointmentsList.innerHTML = '<div class="appointment-card"><div class="appointment-content"><p class="service-name">No hay citas para este día.</p></div></div>';
+        const emptyMessage = appointmentWorkspaceMode === 'queue'
+            ? 'No hay clientes esperando turno. Al registrar una llegada presencial, aparecerá en esta fila.'
+            : appointmentWorkspaceMode === 'bookings'
+                ? 'No hay citas reservadas para esta fecha.'
+                : 'No hay citas ni turnos para este día.';
+        appointmentsList.innerHTML = `<div class="appointment-card"><div class="appointment-content"><p class="service-name">${escapeHtml(emptyMessage)}</p></div></div>`;
         return;
     }
     const waitingAppointments = items.filter((item) => item.status === 'confirmed' && item.checked_in_at)
@@ -901,6 +922,8 @@ document.getElementById('appointmentsView')?.addEventListener('change', event =>
 document.getElementById('appointmentsAnchorDate')?.addEventListener('change', event => {
     if (event.target.value) loadAppointmentsForDate(event.target.value);
 });
+document.getElementById('appointmentSearch')?.addEventListener('input', () => renderAppointmentDay(selectedAppointmentsDate, latestAppointmentDay));
+document.getElementById('appointmentStatusFilter')?.addEventListener('change', () => renderAppointmentDay(selectedAppointmentsDate, latestAppointmentDay));
 document.getElementById('appointmentsCalendarGrid')?.addEventListener('click', event => {
     const button = event.target.closest('.calendar-day-select');
     if (!button) return;
@@ -2963,16 +2986,126 @@ async function testConnection() {
     }
 }
 
-function showTab(tabName) {
+function setCashHistoryLast30Days() {
+    const end = businessTodayDate();
+    const start = new Date(`${end}T12:00:00Z`);
+    start.setUTCDate(start.getUTCDate() - 29);
+    const startInput = document.getElementById('cashHistoryStart');
+    const endInput = document.getElementById('cashHistoryEnd');
+    if (startInput) startInput.value = start.toISOString().slice(0, 10);
+    if (endInput) endInput.value = end;
+}
+
+async function loadCashHistory() {
+    const body = document.getElementById('cashHistoryBody');
+    const result = document.getElementById('cashHistoryResult');
+    const summary = document.getElementById('cashHistorySummary');
+    if (!body || !result || !summary || !accessToken) return;
+    const startInput = document.getElementById('cashHistoryStart');
+    const endInput = document.getElementById('cashHistoryEnd');
+    if (!startInput?.value || !endInput?.value) setCashHistoryLast30Days();
+    const start = startInput.value;
+    const end = endInput.value;
+    if (start > end) {
+        result.textContent = 'La fecha inicial debe ser anterior a la fecha final.';
+        return;
+    }
+    const requestSequence = ++cashHistoryRequestSequence;
+    result.textContent = 'Consultando cierres…';
+    body.replaceChildren();
+    summary.replaceChildren();
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/cash/history?start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}&limit=200`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo cargar el historial.');
+        if (requestSequence !== cashHistoryRequestSequence) return;
+        const items = Array.isArray(data.items) ? data.items : [];
+        const currency = /^[A-Z]{3}$/.test(data.currency || '') ? data.currency : 'DOP';
+        const format = (cents) => new Intl.NumberFormat('es-DO', { style: 'currency', currency }).format((Number(cents) || 0) / 100);
+        const differenceCents = items.reduce((total, item) => total + Number(item.difference_cents || 0), 0);
+        const discrepancies = items.filter((item) => Number(item.difference_cents || 0) !== 0).length;
+        summary.innerHTML = `<div class="stat-card"><div class="stat-value">${items.length}</div><div class="stat-label">Cierres en el periodo</div></div><div class="stat-card"><div class="stat-value">${discrepancies}</div><div class="stat-label">Cierres con diferencia</div></div><div class="stat-card"><div class="stat-value">${escapeHtml(format(differenceCents))}</div><div class="stat-label">Diferencia acumulada</div></div>`;
+        body.innerHTML = items.map((item) => `<tr><td data-label="Fecha">${escapeHtml(item.business_date)}</td><td data-label="Cerrada por">${escapeHtml(item.closed_by_name || 'Usuario')}</td><td data-label="Efectivo esperado">${escapeHtml(format(item.expected_cash_cents))}</td><td data-label="Declarado">${escapeHtml(format(item.declared_cash_cents))}</td><td data-label="Diferencia"><strong>${escapeHtml(format(item.difference_cents))}</strong></td><td data-label="Operaciones">${Number(item.payment_count) || 0}</td><td data-label="Hora del cierre">${escapeHtml(new Date(item.closed_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'America/Santo_Domingo' }))}</td></tr>`).join('');
+        result.textContent = items.length ? `${items.length} cierre(s) · ${start} a ${end}` : 'No hay cierres registrados en este periodo.';
+    } catch (error) {
+        if (requestSequence !== cashHistoryRequestSequence) return;
+        result.textContent = error.message || 'No se pudo consultar el historial.';
+    }
+}
+
+function renderScreenBoard(appointments) {
+    const active = appointments.filter((item) => item.status === 'in_progress');
+    const waiting = appointments.filter((item) => item.status === 'confirmed' && item.checked_in_at)
+        .sort((left, right) => Date.parse(left.checked_in_at) - Date.parse(right.checked_in_at));
+    const upcoming = appointments.filter((item) => ['pending', 'confirmed'].includes(item.status) && !item.checked_in_at)
+        .sort((left, right) => Date.parse(left.scheduled_time) - Date.parse(right.scheduled_time));
+    const activeContainer = document.getElementById('screenBoardActive');
+    const queueContainer = document.getElementById('screenBoardQueue');
+    const now = Date.now();
+    const renderActive = active.length
+        ? active.map((item) => `<article class="screen-turn screen-turn-active"><strong>En atención</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>${Number(item.estimated_duration) || 0} min</small></article>`).join('')
+        : '<p class="screen-board-empty">En este momento no hay servicios en curso.</p>';
+    const renderWaiting = waiting.map((item, index) => `<article class="screen-turn"><strong>Turno ${index + 1}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>En espera desde hace ${Math.max(0, Math.round((now - Date.parse(item.checked_in_at)) / 60000))} min</small></article>`).join('');
+    const renderUpcoming = upcoming.slice(0, Math.max(0, 6 - waiting.length)).map((item) => `<article class="screen-turn screen-turn-upcoming"><strong>Próxima cita · ${escapeHtml(fmtHour(item.scheduled_time))}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>Prepárate para tu hora reservada</small></article>`).join('');
+    if (activeContainer) activeContainer.innerHTML = renderActive;
+    if (queueContainer) queueContainer.innerHTML = `${renderWaiting}${renderUpcoming || (!waiting.length ? '<p class="screen-board-empty">No hay turnos ni citas próximos.</p>' : '')}`;
+    setText('screenBoardShopName', barbershopProfile?.name || 'Tu barbería');
+    setText('screenBoardClock', new Date().toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'America/Santo_Domingo', weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }));
+    setText('screenBoardStatus', `${waiting.length} turno(s) en espera · ${active.length} servicio(s) en curso`);
+    setText('screenBoardUpdatedAt', `Actualizado ${new Date().toLocaleTimeString('es-DO', { timeZone: barbershopProfile?.timezone || 'America/Santo_Domingo', hour: '2-digit', minute: '2-digit' })}`);
+    setText('screenBoardResult', 'Datos de hoy actualizados. La vista pública omite la identidad y los datos de contacto de los clientes.');
+}
+
+async function loadScreenBoard() {
+    const result = document.getElementById('screenBoardResult');
+    if (!accessToken || !result) return;
+    result.textContent = 'Actualizando el tablero…';
+    try {
+        const response = await KingFlowAuth.fetch(`${API_ROOT}/api/v1/barber/appointments?target_date=${encodeURIComponent(businessTodayDate())}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar el tablero.');
+        renderScreenBoard(Array.isArray(data.appointments) ? data.appointments : []);
+    } catch (error) {
+        result.textContent = error.message || 'No se pudo actualizar el tablero.';
+    }
+}
+
+function updateAppointmentWorkspaceMode() {
+    const title = document.querySelector('#appointmentsTab > h2');
+    const description = document.getElementById('appointmentWorkspaceDescription');
+    const form = document.getElementById('walkInForm');
+    const titles = { agenda: 'Agenda', bookings: 'Citas', queue: 'Turnos' };
+    const descriptions = {
+        agenda: 'Vista diaria y calendario de las reservas y la atención presencial.',
+        bookings: 'Reservas del día con sus preferencias, estado y acciones de atención.',
+        queue: 'Orden de llegada de los clientes que ya están esperando en el local.',
+    };
+    if (title) title.textContent = titles[appointmentWorkspaceMode] || titles.agenda;
+    if (description) description.textContent = descriptions[appointmentWorkspaceMode] || descriptions.agenda;
+    if (form) form.hidden = appointmentWorkspaceMode === 'bookings';
+}
+
+function showTab(tabName, requestedButton = null) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
 
-    const selectedTab = [...document.querySelectorAll('.tab[data-tab]')]
-        .find((tab) => tab.dataset.tab === tabName);
+    const selectedTab = requestedButton?.classList?.contains('tab')
+        ? requestedButton
+        : [...document.querySelectorAll('.tab[data-tab]')].find((tab) => tab.dataset.tab === tabName && (!tab.dataset.appointmentMode || tab.dataset.appointmentMode === 'agenda'));
     if (selectedTab) selectedTab.classList.add('active');
 
     const content = document.getElementById(`${tabName}Tab`);
     if (content) content.style.display = 'block';
+    if (tabName === 'appointments') {
+        appointmentWorkspaceMode = selectedTab?.dataset.appointmentMode || requestedButton?.dataset.appointmentMode || 'agenda';
+        if (appointmentWorkspaceMode !== 'agenda') {
+            selectedAppointmentsView = 'day';
+            const viewSelect = document.getElementById('appointmentsView');
+            if (viewSelect) viewSelect.value = 'day';
+        }
+        updateAppointmentWorkspaceMode();
+        void loadAppointmentsForDate(appointmentWorkspaceMode === 'queue' ? businessTodayDate() : (selectedAppointmentsDate || businessTodayDate()));
+    }
     if (tabName === 'ownerManagement' && currentUser?.role === 'barbershop_owner') {
         void loadOwnerSubscription();
         void loadOwnerLiveChair();
@@ -2985,13 +3118,66 @@ function showTab(tabName) {
             }, 30000);
         }
     }
+    if (tabName === 'cashHistory') void loadCashHistory();
+    if (tabName === 'screens') {
+        void loadScreenBoard();
+        if (!screenRefreshTimer) screenRefreshTimer = setInterval(() => {
+            const screenPanel = document.getElementById('screensTab');
+            if (currentUser && !document.hidden && screenPanel?.style.display !== 'none') void loadScreenBoard();
+        }, 30000);
+    } else if (screenRefreshTimer) {
+        clearInterval(screenRefreshTimer);
+        screenRefreshTimer = null;
+    }
+    const anchorId = requestedButton?.dataset?.anchor;
+    if (tabName === 'ownerManagement' && anchorId && currentUser?.role === 'barbershop_owner') {
+        window.setTimeout(() => document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
 }
+
+document.getElementById('cashHistoryForm')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void loadCashHistory();
+});
+document.getElementById('cashHistoryLast30')?.addEventListener('click', () => {
+    setCashHistoryLast30Days();
+    void loadCashHistory();
+});
+document.getElementById('refreshScreenBoard')?.addEventListener('click', loadScreenBoard);
+document.getElementById('testConnectionBtn')?.addEventListener('click', testConnection);
+document.getElementById('screenFullscreenButton')?.addEventListener('click', async () => {
+    const surface = document.getElementById('screenBoard');
+    if (!surface) return;
+    try {
+        if (document.fullscreenElement === surface) await document.exitFullscreen();
+        else await surface.requestFullscreen();
+    } catch (error) {
+        setText('screenBoardResult', 'El navegador no permitió abrir pantalla completa.');
+    }
+});
+document.addEventListener('fullscreenchange', () => {
+    const button = document.getElementById('screenFullscreenButton');
+    if (button) button.textContent = document.fullscreenElement?.id === 'screenBoard' ? 'Salir de pantalla completa' : 'Abrir pantalla completa';
+});
+document.querySelectorAll('.workspace-help-card').forEach((card) => card.addEventListener('click', (event) => {
+    event.preventDefault();
+    const target = card.dataset.helpTarget;
+    const navButton = document.querySelector(`.tab[data-tab="${target}"]${card.dataset.anchor ? `[data-anchor="${card.dataset.anchor}"]` : ''}`);
+    showTab(target, navButton || null);
+    if (target === 'appointments' && card.dataset.appointmentMode) {
+        appointmentWorkspaceMode = card.dataset.appointmentMode;
+        updateAppointmentWorkspaceMode();
+        void loadAppointmentsForDate(selectedAppointmentsDate || businessTodayDate());
+    }
+}));
 
 document.addEventListener('visibilitychange', () => {
     const ownerPanel = document.getElementById('ownerManagementTab');
     if (!document.hidden && currentUser?.role === 'barbershop_owner' && ownerPanel?.style.display !== 'none') {
         void loadOwnerLiveChair();
     }
+    const screenPanel = document.getElementById('screensTab');
+    if (!document.hidden && currentUser && screenPanel?.style.display !== 'none') void loadScreenBoard();
 });
 
 async function loadNotificationInbox() {
@@ -3586,8 +3772,12 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (newServiceBtn) newServiceBtn.hidden = currentUser.role !== 'barbershop_owner';
         const quickServicesButton = document.getElementById('quickServicesButton');
         if (quickServicesButton) quickServicesButton.hidden = currentUser.role !== 'barbershop_owner';
+        const isOwner = currentUser.role === 'barbershop_owner';
+        document.querySelectorAll('.owner-only').forEach((element) => { element.hidden = !isOwner; });
+        const ownerNavLabel = document.querySelector('[data-owner-nav-label]');
+        if (ownerNavLabel) ownerNavLabel.hidden = !isOwner;
         const ownerTabButton = document.getElementById('ownerManagementTabButton');
-        if (ownerTabButton) ownerTabButton.hidden = currentUser.role !== 'barbershop_owner';
+        if (ownerTabButton) ownerTabButton.hidden = !isOwner;
         const ownerLiveChairPanel = document.getElementById('ownerLiveChair');
         if (ownerLiveChairPanel) ownerLiveChairPanel.hidden = currentUser.role !== 'barbershop_owner';
         const barberLivePresencePanel = document.getElementById('barberLivePresence');
@@ -3753,7 +3943,7 @@ document.getElementById('quickWalkInButton')?.addEventListener('click', () => {
     window.setTimeout(() => clientName?.focus(), 180);
 });
 document.querySelectorAll('.tab[data-tab]').forEach((tab) => {
-    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+    tab.addEventListener('click', () => showTab(tab.dataset.tab, tab));
 });
 document.getElementById('appointmentsList')?.addEventListener('click', async (event) => {
     const stylePassportButton = event.target.closest('.barber-style-passport-load');

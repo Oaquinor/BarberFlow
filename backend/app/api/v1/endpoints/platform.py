@@ -1779,6 +1779,70 @@ def barber_cash_today(
     }
 
 
+@router.get("/barber/cash/history")
+def barber_cash_history(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Return immutable daily closes within the authenticated user's barber shop."""
+    user = _get_current_user(db, authorization)
+    if user.role not in {"barber", "barbershop_owner", "super_admin"} or not user.barbershop_id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    shop = db.query(Barbershop).filter(
+        Barbershop.id == user.barbershop_id,
+        Barbershop.is_active == True,
+        Barbershop.is_deleted == False,
+    ).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Barbería no encontrada")
+
+    today = _utc_aware(utc_now_naive()).astimezone(_get_timezone(shop)).date()
+    end_day = end_date or today
+    start_day = start_date or (end_day - timedelta(days=29))
+    if start_day > end_day:
+        raise HTTPException(status_code=422, detail="La fecha inicial debe ser anterior a la fecha final")
+    if end_day > today:
+        raise HTTPException(status_code=422, detail="El historial no admite fechas futuras")
+    if (end_day - start_day).days > 365:
+        raise HTTPException(status_code=422, detail="El rango máximo del historial es de 366 días")
+
+    query = db.query(CashRegisterClose, User).join(
+        User, User.id == CashRegisterClose.closed_by_user_id,
+    ).filter(
+        CashRegisterClose.barbershop_id == shop.id,
+        CashRegisterClose.business_date >= datetime.combine(start_day, time.min),
+        CashRegisterClose.business_date < datetime.combine(end_day + timedelta(days=1), time.min),
+        CashRegisterClose.is_deleted == False,
+    )
+    if user.role == "barber":
+        query = query.filter(or_(
+            CashRegisterClose.closed_by_user_id == user.id,
+            (User.role == "barbershop_owner") & (User.barbershop_id == shop.id),
+        ))
+    rows = query.order_by(
+        CashRegisterClose.business_date.desc(), CashRegisterClose.closed_at.desc(),
+    ).limit(max(1, min(int(limit), 200))).all()
+    return {
+        "start_date": start_day.isoformat(),
+        "end_date": end_day.isoformat(),
+        "currency": shop.currency,
+        "items": [{
+            "business_date": close.business_date.date().isoformat(),
+            "closed_by_name": f"{closer.first_name} {closer.last_name}".strip(),
+            "closed_by_role": closer.role,
+            "expected_cash_cents": close.expected_cash_cents,
+            "opening_cash_cents": close.opening_cash_cents,
+            "declared_cash_cents": close.declared_cash_cents,
+            "difference_cents": close.difference_cents,
+            "payment_count": close.payment_count,
+            "closed_at": _utc_aware(close.closed_at).isoformat(),
+        } for close, closer in rows],
+    }
+
+
 @router.post("/barber/cash/close", status_code=201)
 def barber_close_cash_register(
     data: CashRegisterCloseRequest,

@@ -27,3 +27,16 @@ test("walk-in panel offers distinct queue and immediate-start actions", () => {
   assert.match(script, /checked_in_at/);
   assert.match(script, /En espera · turno/);
 });
+
+test("workspace exposes the operating, close, business, screen, and help areas", () => {
+  for (const label of ["Agenda", "Citas", "Turnos", "Cerrar jornada", "Historial", "Rendimiento", "Servicios", "Mi sitio", "Pantallas", "Configuración", "Equipo", "Inventario", "Lista de espera", "Clientes", "Plan y uso", "Acerca de"]) {
+    assert.ok(html.includes(`>${label}</span></button>`) || html.includes(`>${label}</p>`), `missing workspace entry: ${label}`);
+  }
+  assert.match(html, /data-appointment-mode="bookings"/);
+  assert.match(html, /data-appointment-mode="queue"/);
+  assert.match(html, /id="cashHistoryForm"/);
+  assert.match(html, /id="screenFullscreenButton"/);
+  assert.match(script, /function loadCashHistory\(/);
+  assert.match(script, /function loadScreenBoard\(/);
+  assert.match(script, /function showTab\(tabName, requestedButton = null\)/);
+});

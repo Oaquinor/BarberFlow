@@ -343,7 +343,7 @@
         .service-image-preview { margin: 8px 0; color: #62635d; font-size: 13px; }
         .service-image-preview img { display: block; width: min(100%, 360px); height: 170px; object-fit: cover; border-radius: 12px; border: 1px solid #e3e0d8; }
     </style>
-    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261125-workspace-flow-2">
+    <link rel="stylesheet" href="/css/owner-dashboard.css?v=20261126-admin-workspace-1">
 </head>
 <body>
     <div class="container">
@@ -442,14 +442,29 @@
             </section>
             <!-- Navigation Tabs -->
             <nav class="tabs">
-                <p class="nav-label">ESPACIO DE TRABAJO</p>
-                <button class="tab active" data-tab="serviceMode"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.3 2"/></svg></span><span>Mi jornada</span></button>
-                <button class="tab" data-tab="appointments"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/></svg></span><span>Agenda</span></button>
+                <p class="nav-label">OPERACIÓN</p>
+                <button class="tab active" data-tab="appointments" data-appointment-mode="agenda"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/></svg></span><span>Agenda</span></button>
+                <button class="tab" data-tab="appointments" data-appointment-mode="bookings"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4.5h14v16H5zM8 3v3M16 3v3M8 11h8M8 15h5"/><path d="m14 18 1.5 1.5L19 16"/></svg></span><span>Citas</span></button>
+                <button class="tab" data-tab="appointments" data-appointment-mode="queue"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="7" cy="5" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="7" cy="19" r="2"/></svg></span><span>Turnos</span></button>
+                <button class="tab" data-tab="screens"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 9h10M7 13h6"/></svg></span><span>Pantallas</span></button>
+                <p class="nav-label">JORNADA</p>
+                <button class="tab" data-tab="serviceMode"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.3 2"/></svg></span><span>Mi jornada</span></button>
+                <button class="tab" data-tab="cashRegister"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2.5"/><path d="M3 10h18M7 15h4M16 15h.01"/></svg></span><span>Cerrar jornada</span></button>
+                <button class="tab" data-tab="cashHistory"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/><path d="M18 15v2l1.3.8"/></svg></span><span>Historial</span></button>
                 <button class="tab" data-tab="performance"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M7 15l4-4 3 2 6-7"/><path d="M16 6h4v4"/></svg></span><span>Rendimiento</span></button>
                 <button class="tab" id="achievementsTabButton" data-tab="achievements"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.2 5.1 5.5.5-4.2 3.6 1.3 5.4L12 14.7l-4.8 2.9 1.3-5.4-4.2-3.6 5.5-.5L12 3Z"/><path d="m5 17-1 4 4-1M19 17l1 4-4-1"/></svg></span><span>Logros</span></button>
+                <p class="nav-label owner-only" data-owner-nav-label hidden>NEGOCIO</p>
                 <button class="tab" data-tab="services"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5c1-1 2.5.5 1.5 1.5L17 10M14 14l-2 2"/></svg></span><span>Servicios</span></button>
-                <button class="tab" data-tab="cashRegister"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2.5"/><path d="M3 10h18M7 15h4M16 15h.01"/></svg></span><span>Caja</span></button>
-                <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.3-5.5 5.5-5.5s5.5 2.3 5.5 5.5M16 5.2a3.1 3.1 0 0 1 0 5.8M17 14.8c2.2.4 3.5 2.1 3.5 4.8"/></svg></span><span>Equipo y clientes</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="publicGalleryEditorTitle" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m4 17 5-5 3 3 3-4 5 6"/></svg></span><span>Mi sitio</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerBusinessSettings" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.3 1-1.5 2.6-1.6-.6a7 7 0 0 1-1.4.8l-.3 1.7h-3l-.3-1.7a7 7 0 0 1-1.4-.8l-1.6.6-1.5-2.6 1.3-1a7 7 0 0 1 0-1.6l-1.3-1 1.5-2.6 1.6.6a7 7 0 0 1 1.4-.8l.3-1.7h3l.3 1.7a7 7 0 0 1 1.4.8l1.6-.6 1.5 2.6-1.3 1a7 7 0 0 1 0 1.5Z"/></svg></span><span>Configuración</span></button>
+                <button class="tab owner-only" id="ownerManagementTabButton" data-tab="ownerManagement" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.3-5.5 5.5-5.5s5.5 2.3 5.5 5.5M16 5.2a3.1 3.1 0 0 1 0 5.8M17 14.8c2.2.4 3.5 2.1 3.5 4.8"/></svg></span><span>Panel de gestión</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerTeamCreate" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.2 2.3-5.5 5.5-5.5s5.5 2.3 5.5 5.5M16 5.2a3.1 3.1 0 0 1 0 5.8M17 14.8c2.2.4 3.5 2.1 3.5 4.8"/></svg></span><span>Equipo</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerInventoryHeading" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5-9-5ZM3 8v9l9 5 9-5V8M12 13v9"/></svg></span><span>Inventario</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerWaitlistSection" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span>Lista de espera</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerClientsSection" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.5-5.5 6-5.5s6 2.2 6 5.5M17 8h4M19 6v4"/></svg></span><span>Clientes</span></button>
+                <button class="tab owner-only" data-tab="ownerManagement" data-anchor="ownerSubscriptionPanel" hidden><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M7 15h3M16 15h.01"/></svg></span><span>Plan y uso</span></button>
+                <p class="nav-label">AYUDA</p>
+                <button class="tab" data-tab="about"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4.7 1.2c-.8 1.2-2.2 1.5-2.2 3.3M12 17h.01"/></svg></span><span>Acerca de</span></button>
             </nav>
 
             <!-- SERVICE MODE TAB -->
@@ -601,6 +616,7 @@
             <!-- APPOINTMENTS TAB -->
             <div id="appointmentsTab" class="tab-content" style="display: none;">
                 <h2>Agenda</h2>
+                <div class="appointment-workspace-tools"><p id="appointmentWorkspaceDescription">Citas y atención presencial de hoy.</p><div><label for="appointmentSearch">Buscar<input id="appointmentSearch" type="search" placeholder="Cliente o servicio"></label><label for="appointmentStatusFilter">Estado<select id="appointmentStatusFilter"><option value="">Todos</option><option value="pending">Pendiente</option><option value="confirmed">Confirmada</option><option value="in_progress">En curso</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option><option value="no_show">Inasistencia</option></select></label></div></div>
 
                 <form id="walkInForm" class="walk-in-form">
                     <div class="walk-in-heading"><div><span class="service-editor-eyebrow">ATENCIÓN PRESENCIAL</span><h3>Registrar cliente que llegó al local</h3></div><p>Elige si debe esperar su turno o si empieza ahora.</p></div>
@@ -768,7 +784,7 @@
                     <p id="ownerLiveChairResult" role="status" aria-live="polite">Abre esta sección para cargar el estado actual.</p>
                     <small>Las esperas son aproximadas. Este panel no permite cambiar estados de trabajo y no muestra nombres ni notas de clientes.</small>
                 </section>
-                <section class="card" aria-labelledby="ownerSubscriptionTitle">
+                <section class="card" id="ownerSubscriptionPanel" aria-labelledby="ownerSubscriptionTitle">
                     <div class="services-header"><h3 id="ownerSubscriptionTitle">Plan y uso</h3><button id="refreshOwnerSubscription" class="btn-secondary" type="button">Actualizar</button></div>
                     <div id="ownerSubscriptionSummary" role="status" aria-live="polite">Cargando suscripción…</div>
                     <button id="ownerRenewalRequestBtn" class="btn-secondary" type="button" hidden>Solicitar revisión de renovación</button>
@@ -921,6 +937,47 @@
                 </section>
             </div>
 
+            <div id="screensTab" class="tab-content" style="display:none;">
+                <h2>Pantalla de sala</h2>
+                <p>Proyecta el orden de atención y el servicio en curso. La pantalla no revela nombres, teléfonos ni notas de clientes.</p>
+                <section class="card screen-controls" aria-label="Controles de pantalla">
+                    <div><strong id="screenBoardStatus">Tablero listo</strong><p id="screenBoardUpdatedAt">Actualiza el estado del día antes de proyectar.</p></div>
+                    <div><button id="refreshScreenBoard" class="btn-secondary" type="button">Actualizar tablero</button><button id="screenFullscreenButton" class="btn-primary" type="button">Abrir pantalla completa</button></div>
+                </section>
+                <section id="screenBoard" class="screen-board" aria-live="polite" aria-label="Tablero público de turnos">
+                    <header><span class="screen-brand-mark" aria-hidden="true">K</span><div><small>KINGFLOW · SALA DE ESPERA</small><h3 id="screenBoardShopName">Tu barbería</h3></div><time id="screenBoardClock"></time></header>
+                    <div class="screen-board-columns">
+                        <section><span class="screen-section-kicker">EN ATENCIÓN</span><div id="screenBoardActive" class="screen-board-list"></div></section>
+                        <section><span class="screen-section-kicker">SIGUIENTES TURNOS</span><div id="screenBoardQueue" class="screen-board-list"></div></section>
+                    </div>
+                    <footer>Gracias por esperar · Pregunta al equipo si necesitas ayuda</footer>
+                </section>
+                <p id="screenBoardResult" role="status" aria-live="polite"></p>
+            </div>
+
+            <div id="cashHistoryTab" class="tab-content" style="display:none;">
+                <h2>Historial de cierres</h2>
+                <p>Consulta cierres diarios registrados en esta barbería. Las filas reflejan los registros contables y no se pueden editar desde aquí.</p>
+                <form id="cashHistoryForm" class="toolbar cash-history-filters">
+                    <label for="cashHistoryStart">Desde <input id="cashHistoryStart" type="date" required></label>
+                    <label for="cashHistoryEnd">Hasta <input id="cashHistoryEnd" type="date" required></label>
+                    <button class="btn-primary" type="submit">Consultar cierres</button>
+                    <button id="cashHistoryLast30" class="btn-secondary" type="button">Últimos 30 días</button>
+                </form>
+                <p id="cashHistoryResult" role="status" aria-live="polite"></p>
+                <div id="cashHistorySummary" class="stats-grid" aria-live="polite"></div>
+                <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Cerrada por</th><th>Efectivo esperado</th><th>Declarado</th><th>Diferencia</th><th>Operaciones</th><th>Hora del cierre</th></tr></thead><tbody id="cashHistoryBody"></tbody></table></div>
+            </div>
+
+            <div id="aboutTab" class="tab-content" style="display:none;">
+                <h2>Acerca de KingFlow</h2>
+                <section class="card about-workspace-card">
+                    <span class="about-workspace-mark" aria-hidden="true">K</span><div><h3>KingFlow Barber</h3><p>Agenda, turnos, caja, equipo y página pública de tu barbería en un mismo espacio de trabajo.</p><p>Los cambios de marca, servicios y galería se reflejan en tu página de reservas.</p></div>
+                </section>
+                <section class="card about-health-card"><div><h3>Estado del sistema</h3><p>Comprueba que la API y MySQL estén disponibles.</p></div><button id="testConnectionBtn" class="btn-secondary" type="button">Probar conexión</button><div id="connectionResult" role="status" aria-live="polite"></div></section>
+                <div class="workspace-help-grid"><a href="#" class="workspace-help-card" data-help-target="appointments" data-appointment-mode="agenda"><strong>Organizar la jornada</strong><span>Ver agenda, citas y turnos presenciales.</span></a><a href="#" class="workspace-help-card owner-only" data-help-target="ownerManagement" data-anchor="ownerBusinessSettings" hidden><strong>Personalizar la barbería</strong><span>Configurar colores, horario, portada, logo y galería.</span></a><a href="#" class="workspace-help-card" data-help-target="cashRegister"><strong>Revisar la caja</strong><span>Consultar cobros y cerrar la jornada.</span></a></div>
+            </div>
+
             <div id="cashRegisterTab" class="tab-content" style="display: none;">
                 <h2>Caja y cierre diario</h2>
                 <p id="cashRegisterDate">Cargando...</p>
@@ -1058,7 +1115,7 @@
     <script src="js/mfa-settings.js"></script>
     <script src="js/ui-feedback.js"></script>
     <script src="js/security.js"></script>
-    <script src="js/main.js?v=20261125-workspace-flow-2"></script>
+    <script src="js/main.js?v=20261126-admin-workspace-1"></script>
     <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -51,7 +51,7 @@ test("barber reads and updates style notes only for an appointment client", asyn
   });
 
   await page.goto("/index.html");
-  await page.locator('.tab[data-tab="appointments"]').click();
+  await page.locator('.tab[data-tab="appointments"][data-appointment-mode="agenda"]').click();
   await expect(page.getByText("Ana Cliente", { exact: true })).toBeVisible();
   const passport = page.locator(".barber-style-passport");
   await expect(passport).toBeVisible();
