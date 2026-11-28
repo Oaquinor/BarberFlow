@@ -109,10 +109,10 @@ test("service photos appear in the owner catalog only from the trusted API origi
     { ...services[1], image_url: "https://untrusted.example/cut.jpg" },
   ]);
 
-  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-catalog-photo"/);
+  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-catalog-photo[^"]*"/);
   assert.match(sandbox.elements.servicesList.innerHTML, /Foto de Corte clásico/);
   assert.doesNotMatch(sandbox.elements.servicesList.innerHTML, /untrusted\.example/);
-  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-icon"/);
+  assert.match(sandbox.elements.servicesList.innerHTML, /class="service-icon[^"]*"/);
 });
 
 test("category button clicks update selection and rerender the current service list", () => {

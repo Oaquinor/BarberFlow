@@ -7,140 +7,139 @@
   <meta name="theme-color" content="#11110f">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
-  <link rel="stylesheet" href="/css/ui-feedback.css">
-  <link rel="stylesheet" href="/css/client.css?v=20261125-waitlist-offer-1">
   <title>Reserva - KingFlow Barber</title>
+  <link rel="stylesheet" href="/css/tailwind.css?v=20261128-2">
 </head>
-<body>
-  <div class="site-shell">
-    <header class="site-header">
-      <a class="brand-lockup" href="#inicio" aria-label="Inicio">
-        <span class="brand-mark" id="shopInitial" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 6v20M24 6 9 16l15 10"/><path d="M13 16h11"/></svg></span><img id="shopLogo" class="brand-logo" alt="" hidden>
+<body class="min-h-dvh bg-[var(--kf-page,#fafaf9)] p-4 data-[theme=dark]:bg-stone-950 data-[theme=dark]:text-stone-100 font-[Arial,Helvetica,sans-serif] text-[var(--kf-ink,#1c1917)] antialiased sm:p-6 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_a]:underline-offset-4 [&_a:hover]:underline [&_p]:leading-relaxed">
+  <div class="site-shell mx-auto w-full max-w-7xl space-y-6">
+    <header class="site-header flex flex-wrap items-center justify-between gap-5 border-b border-[var(--kf-line,#e7e5e4)] py-5">
+      <a class="brand-lockup flex min-w-0 items-center gap-3 [&_strong]:block [&_small]:block [&_small]:text-xs" href="#inicio" aria-label="Inicio">
+        <span class="brand-mark grid size-12 shrink-0 place-items-center rounded-xl bg-stone-900 text-amber-200" id="shopInitial" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M8 6v20M24 6 9 16l15 10"/><path d="M13 16h11"/></svg></span><img id="shopLogo" class="brand-logo size-12 rounded-xl object-cover" alt="" hidden>
         <span><strong id="shopName">Cargando barbería…</strong><small>BARBERÍA · RESERVAS</small></span>
       </a>
-      <nav class="header-nav" aria-label="Navegación principal">
+      <nav class="header-nav flex flex-wrap items-center gap-3" aria-label="Navegación principal">
         <a href="#equipo">Equipo</a><a href="#servicios">Servicios</a><a href="#galeria">Galería</a>
         <a class="account-link" href="/client-account.html">Mi cuenta</a>
-        <button id="themeToggle" type="button" class="nav-track" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span>Tema oscuro</span></button>
-        <button id="showTrackBtn" type="button" class="nav-track">Consultar cita</button>
+        <button id="themeToggle" type="button" class="nav-track inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span>Tema oscuro</span></button>
+        <button id="showTrackBtn" type="button" class="nav-track inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">Consultar cita</button>
       </nav>
     </header>
 
     <main id="inicio">
-      <section class="hero" aria-labelledby="heroTitle">
-        <div class="hero-copy">
-          <p class="eyebrow"><span class="live-dot"></span> RESERVAS ABIERTAS</p>
-          <h1 id="heroTitle">Tu estilo.<br><em>En buenas manos.</em></h1>
-          <p id="shopDescription" class="hero-description">Un buen corte empieza con una buena conversación. Elige el servicio y cuéntanos qué tienes en mente.</p>
-          <div class="hero-actions"><a class="hero-primary-cta" href="#reserva">Reservar mi cita <span>↗</span></a><a class="hero-cta" href="#servicios">Ver servicios <span>↓</span></a><button id="shopFavoriteButton" class="public-favorite-button shop-favorite-button" type="button" aria-pressed="false">♡ Guardar barbería</button></div>
+      <section class="hero grid min-w-0 grid-cols-1 items-center gap-8 py-10 lg:grid-cols-2 lg:py-16" aria-labelledby="heroTitle">
+        <div class="hero-copy space-y-6 [&_h1]:text-5xl [&_h1]:font-bold [&_h1]:tracking-tight lg:[&_h1]:text-6xl">
+          <p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800"><span class="live-dot"></span> RESERVAS ABIERTAS</p>
+          <h1 id="heroTitle" class="text-3xl font-bold tracking-tight sm:text-4xl">Tu estilo.<br><em>En buenas manos.</em></h1>
+          <p id="shopDescription" class="hero-description max-w-xl text-lg leading-relaxed text-[var(--kf-muted,#57534e)]">Un buen corte empieza con una buena conversación. Elige el servicio y cuéntanos qué tienes en mente.</p>
+          <div class="hero-actions flex flex-wrap items-center gap-3"><a class="hero-primary-cta inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" href="#reserva">Reservar mi cita <span>↗</span></a><a class="hero-cta inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" href="#servicios">Ver servicios <span>↓</span></a><button id="shopFavoriteButton" class="public-favorite-button shop-favorite-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button" aria-pressed="false">♡ Guardar barbería</button></div>
         </div>
-        <div class="hero-art hero-photo-wrap">
-          <img id="shopCover" class="hero-photo" alt="" hidden fetchpriority="high">
-          <div id="shopCoverFallback" class="shop-cover-fallback" aria-hidden="true">
-            <span id="shopCoverInitial" class="shop-cover-initial">KF</span>
-            <span id="shopCoverName" class="shop-cover-name">KingFlow Barber</span>
+        <div class="hero-art hero-photo-wrap grid min-w-0 overflow-hidden rounded-2xl bg-stone-200">
+          <img id="shopCover" class="hero-photo aspect-[4/3] w-full object-cover" alt="" hidden fetchpriority="high">
+          <div id="shopCoverFallback" class="shop-cover-fallback flex min-h-72 flex-col items-center justify-center gap-5 p-8 text-center" aria-hidden="true">
+            <span id="shopCoverInitial" class="shop-cover-initial grid size-24 place-items-center rounded-full border border-stone-400 text-4xl font-bold">KF</span>
+            <span id="shopCoverName" class="shop-cover-name text-2xl font-bold">KingFlow Barber</span>
             <span class="shop-cover-caption">EL ESPACIO · EL ESTILO · EL EQUIPO</span>
           </div>
-          <span id="shopCoverCaption" class="hero-photo-caption" hidden>EL ESPACIO · EL ESTILO · EL EQUIPO</span>
+          <span id="shopCoverCaption" class="hero-photo-caption bg-stone-900 p-4 text-xs uppercase tracking-widest text-white" hidden>EL ESPACIO · EL ESTILO · EL EQUIPO</span>
         </div>
-        <div class="hero-rule"><span>01 <i>ELIGE</i></span><span>02 <i>PERSONALIZA</i></span><span>03 <i>RESERVA</i></span></div>
+        <div class="hero-rule flex flex-wrap gap-3 border-t border-[var(--kf-line,#e7e5e4)] py-4 text-xs uppercase tracking-widest"><span>01 <i>ELIGE</i></span><span>02 <i>PERSONALIZA</i></span><span>03 <i>RESERVA</i></span></div>
       </section>
 
-      <section class="shop-facts" aria-label="Información de la barbería">
-        <div><span class="fact-label">DÓNDE</span><strong id="shopAddress">Cargando ubicación</strong></div>
-        <div><span class="fact-label">HORARIO</span><strong id="shopHours">Consulta disponibilidad</strong></div>
-        <div><span class="fact-label">CONTACTO</span><a id="shopPhone" href="#reserva">Escríbenos</a></div>
+      <section class="shop-facts grid grid-cols-1 gap-4 py-5 sm:grid-cols-3" aria-label="Información de la barbería">
+        <div><span class="fact-label block text-xs font-semibold uppercase tracking-widest text-stone-500">DÓNDE</span><strong id="shopAddress">Cargando ubicación</strong></div>
+        <div><span class="fact-label block text-xs font-semibold uppercase tracking-widest text-stone-500">HORARIO</span><strong id="shopHours">Consulta disponibilidad</strong></div>
+        <div><span class="fact-label block text-xs font-semibold uppercase tracking-widest text-stone-500">CONTACTO</span><a id="shopPhone" href="#reserva">Escríbenos</a></div>
       </section>
 
-      <section class="section team-section" id="equipo">
-        <div class="section-heading"><div><p class="eyebrow">QUIÉNES TE ATIENDEN</p><h2>El equipo</h2></div><p>Conoce a las personas detrás de cada detalle.</p></div>
-        <div id="publicTeam" class="team-grid" aria-live="polite"><p class="loading-copy">Cargando equipo…</p></div>
+      <section class="section team-section space-y-6 border-t border-[var(--kf-line,#e7e5e4)] py-10" id="equipo">
+        <div class="section-heading flex flex-wrap items-end justify-between gap-3 [&_h2]:text-3xl [&_h2]:font-bold"><div><p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">QUIÉNES TE ATIENDEN</p><h2 class="text-2xl font-semibold tracking-tight">El equipo</h2></div><p>Conoce a las personas detrás de cada detalle.</p></div>
+        <div id="publicTeam" class="team-grid grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite"><p class="loading-copy">Cargando equipo…</p></div>
       </section>
 
-      <section class="section services-section" id="servicios">
-        <div class="section-heading"><div><p class="eyebrow">HECHOS PARA TI</p><h2>Elige tu servicio</h2></div><p>Precios claros. Tiempo reservado para ti.</p></div>
-        <div id="publicServices" class="service-grid" aria-live="polite"><p class="loading-copy">Cargando servicios…</p></div>
+      <section class="section services-section space-y-6 border-t border-[var(--kf-line,#e7e5e4)] py-10" id="servicios">
+        <div class="section-heading flex flex-wrap items-end justify-between gap-3 [&_h2]:text-3xl [&_h2]:font-bold"><div><p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">HECHOS PARA TI</p><h2 class="text-2xl font-semibold tracking-tight">Elige tu servicio</h2></div><p>Precios claros. Tiempo reservado para ti.</p></div>
+        <div id="publicServices" class="service-grid grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3" aria-live="polite"><p class="loading-copy">Cargando servicios…</p></div>
       </section>
 
-      <section class="section gallery-section" id="galeria" hidden>
-        <div class="section-heading"><div><p class="eyebrow">EL TRABAJO HABLA</p><h2>El estilo, en detalle</h2></div><p>Una muestra de nuestro trabajo.</p></div>
-        <div id="publicGallery" class="gallery-grid"></div>
+      <section class="section gallery-section space-y-6 border-t border-[var(--kf-line,#e7e5e4)] py-10" id="galeria" hidden>
+        <div class="section-heading flex flex-wrap items-end justify-between gap-3 [&_h2]:text-3xl [&_h2]:font-bold"><div><p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">EL TRABAJO HABLA</p><h2 class="text-2xl font-semibold tracking-tight">El estilo, en detalle</h2></div><p>Una muestra de nuestro trabajo.</p></div>
+        <div id="publicGallery" class="gallery-grid grid grid-cols-2 gap-3 lg:grid-cols-4"></div>
       </section>
 
-      <section class="section booking-section" id="reserva">
-        <div class="booking-intro"><p class="eyebrow">TU PRÓXIMA CITA</p><h2>Cuéntanos<br>qué buscas.</h2><p>Unas preguntas rápidas nos ayudan a preparar el servicio para ti. No necesitas crear una cuenta.</p>
-          <div class="booking-steps"><span><b>01</b> Servicio</span><span><b>02</b> Preferencias</span><span><b>03</b> Horario</span></div>
+      <section class="section booking-section space-y-6 border-t border-[var(--kf-line,#e7e5e4)] py-10 grid grid-cols-1 gap-8 py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" id="reserva">
+        <div class="booking-intro space-y-4 [&_h2]:text-3xl [&_h2]:font-bold"><p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">TU PRÓXIMA CITA</p><h2 class="text-2xl font-semibold tracking-tight">Cuéntanos<br>qué buscas.</h2><p>Unas preguntas rápidas nos ayudan a preparar el servicio para ti. No necesitas crear una cuenta.</p>
+          <div class="booking-steps flex flex-wrap items-center gap-3"><span><b>01</b> Servicio</span><span><b>02</b> Preferencias</span><span><b>03</b> Horario</span></div>
         </div>
-        <div class="booking-card">
-          <div class="panel-switcher" role="group" aria-label="Opciones de reserva">
-            <button id="showBookBtn" type="button" class="switch active">Reservar</button>
-            <button id="showSupportBtn" type="button" class="switch">Ayuda</button>
+        <div class="booking-card min-w-0 space-y-4 rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 sm:p-7">
+          <div class="panel-switcher flex flex-wrap items-center gap-3" role="group" aria-label="Opciones de reserva">
+            <button id="showBookBtn" type="button" class="switch active inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 [&.active]:bg-amber-100 [&.active]:border-amber-800 cursor-pointer">Reservar</button>
+            <button id="showSupportBtn" type="button" class="switch inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 [&.active]:bg-amber-100 [&.active]:border-amber-800 cursor-pointer">Ayuda</button>
           </div>
-          <button id="retryShopBtn" type="button" class="secondary" hidden>Reintentar carga</button>
+          <button id="retryShopBtn" type="button" class="secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" hidden>Reintentar carga</button>
           <div id="optionsContainer">
-            <section id="bookSection" class="booking-form" style="display:none">
-              <div class="form-heading"><span class="step-number">1</span><div><h3>Tu cita</h3><p>Elige quién te atiende y cuándo.</p></div></div>
-              <div class="form-grid">
-                <div class="field"><label for="clientName">¿Cómo te llamas?</label><input id="clientName" autocomplete="name" placeholder="Tu nombre" required></div>
-                <div class="field"><label for="clientPhone">Teléfono</label><input id="clientPhone" autocomplete="tel" inputmode="tel" placeholder="809 555 0000" required></div>
+            <section id="bookSection" class="booking-form grid min-w-0 gap-5" style="display:none">
+              <div class="form-heading flex items-center gap-3 [&_h3]:text-xl [&_h3]:font-semibold"><span class="step-number grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--kf-soft,#f5f5f4)] font-bold">1</span><div><h3 class="text-lg font-semibold">Tu cita</h3><p>Elige quién te atiende y cuándo.</p></div></div>
+              <div class="form-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="field flex min-w-0 flex-col gap-2"><label for="clientName" class="text-sm font-medium">¿Cómo te llamas?</label><input id="clientName" autocomplete="name" placeholder="Tu nombre" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                <div class="field flex min-w-0 flex-col gap-2"><label for="clientPhone" class="text-sm font-medium">Teléfono</label><input id="clientPhone" autocomplete="tel" inputmode="tel" placeholder="809 555 0000" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
               </div>
-              <div class="field"><label for="serviceSelect">Servicio elegido</label><select id="serviceSelect" required></select></div>
-              <div class="form-grid">
-                <div class="field"><label for="barberSelect">Barbero</label><select id="barberSelect"><option value="">Cualquier barbero</option></select></div>
-                <div class="field"><label for="scheduledTime">Horario disponible</label><select id="scheduledTime"></select></div>
+              <div class="field flex min-w-0 flex-col gap-2"><label for="serviceSelect" class="text-sm font-medium">Servicio elegido</label><select id="serviceSelect" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"></select></div>
+              <div class="form-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="field flex min-w-0 flex-col gap-2"><label for="barberSelect" class="text-sm font-medium">Barbero</label><select id="barberSelect" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"><option value="">Cualquier barbero</option></select></div>
+                <div class="field flex min-w-0 flex-col gap-2"><label for="scheduledTime" class="text-sm font-medium">Horario disponible</label><select id="scheduledTime" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"></select></div>
               </div>
-              <div class="consultation">
-                <div class="form-heading compact"><span class="step-number">2</span><div><h3>Tu estilo</h3><p>Así podemos preparar mejor tu servicio.</p></div></div>
-                <div class="field"><label for="stylePreference">¿Qué estilo tienes en mente?</label><select id="stylePreference"><option value="">Selecciona una opción</option><option>Degradado / fade</option><option>Clásico con tijera</option><option>Corte al ras</option><option>Texturizado</option><option>Quiero que me asesoren</option><option>Otro estilo</option></select></div>
-                <div class="form-grid">
-                  <div class="field"><label for="hairLength">¿Cómo llevas el cabello ahora?</label><select id="hairLength"><option value="">Selecciona</option><option>Corto</option><option>Medio</option><option>Largo</option><option>Es mi primera visita</option></select></div>
-                  <div class="field"><label for="finishPreference">¿Alguna preferencia?</label><select id="finishPreference"><option value="">Sin preferencia</option><option>Definir barba y contornos</option><option>Acabado natural</option><option>Peinado al finalizar</option><option>Conversar el resultado con el barbero</option></select></div>
+              <div class="consultation min-w-0 space-y-4 rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 sm:p-7">
+                <div class="form-heading compact flex items-center gap-3 [&_h3]:text-xl [&_h3]:font-semibold"><span class="step-number grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--kf-soft,#f5f5f4)] font-bold">2</span><div><h3 class="text-lg font-semibold">Tu estilo</h3><p>Así podemos preparar mejor tu servicio.</p></div></div>
+                <div class="field flex min-w-0 flex-col gap-2"><label for="stylePreference" class="text-sm font-medium">¿Qué estilo tienes en mente?</label><select id="stylePreference" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"><option value="">Selecciona una opción</option><option>Degradado / fade</option><option>Clásico con tijera</option><option>Corte al ras</option><option>Texturizado</option><option>Quiero que me asesoren</option><option>Otro estilo</option></select></div>
+                <div class="form-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div class="field flex min-w-0 flex-col gap-2"><label for="hairLength" class="text-sm font-medium">¿Cómo llevas el cabello ahora?</label><select id="hairLength" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"><option value="">Selecciona</option><option>Corto</option><option>Medio</option><option>Largo</option><option>Es mi primera visita</option></select></div>
+                  <div class="field flex min-w-0 flex-col gap-2"><label for="finishPreference" class="text-sm font-medium">¿Alguna preferencia?</label><select id="finishPreference" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] w-full"><option value="">Sin preferencia</option><option>Definir barba y contornos</option><option>Acabado natural</option><option>Peinado al finalizar</option><option>Conversar el resultado con el barbero</option></select></div>
                 </div>
-                <div class="field"><label for="clientNotes">Referencias o algo que debamos saber <span class="optional">OPCIONAL</span></label><textarea id="clientNotes" maxlength="700" placeholder="Ej.: laterales bajos, mantener largo arriba. Puedes describir una foto de referencia."></textarea></div>
-                <div id="customBookingQuestions" class="custom-booking-questions" hidden></div>
+                <div class="field flex min-w-0 flex-col gap-2"><label for="clientNotes" class="text-sm font-medium">Referencias o algo que debamos saber <span class="optional text-xs font-normal text-stone-500">OPCIONAL</span></label><textarea id="clientNotes" maxlength="700" placeholder="Ej.: laterales bajos, mantener largo arriba. Puedes describir una foto de referencia." class="min-h-28 w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)]"></textarea></div>
+                <div id="customBookingQuestions" class="custom-booking-questions grid min-w-0 gap-5" hidden></div>
                 <p id="consultationSummary" class="consultation-summary" aria-live="polite">Tus preferencias se compartirán con el barbero para preparar la cita.</p>
               </div>
               <p id="cancellationPolicyNotice" class="cancellation-policy-notice" role="note"></p>
-              <button id="refreshSlotsBtn" type="button" class="secondary refresh-button">↻ Actualizar horarios</button>
-              <button id="bookBtn" class="book-button" type="button">Confirmar cita <span>→</span></button>
+              <button id="refreshSlotsBtn" type="button" class="secondary refresh-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">↻ Actualizar horarios</button>
+              <button id="bookBtn" class="book-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="button">Confirmar cita <span>→</span></button>
               <p id="bookResult" class="result-message" role="status"></p>
-              <button id="waitlistToggleBtn" class="secondary" type="button" hidden>Avísenme si se libera un horario</button>
-              <form id="waitlistForm" class="consultation" hidden>
-                <div class="form-heading compact"><span class="step-number">+</span><div><h3>Lista de espera</h3><p>Deja tu preferencia. Esta solicitud no crea una cita ni garantiza un horario.</p></div></div>
+              <button id="waitlistToggleBtn" class="secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button" hidden>Avísenme si se libera un horario</button>
+              <form id="waitlistForm" class="consultation min-w-0 space-y-4 rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 sm:p-7" hidden>
+                <div class="form-heading compact flex items-center gap-3 [&_h3]:text-xl [&_h3]:font-semibold"><span class="step-number grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--kf-soft,#f5f5f4)] font-bold">+</span><div><h3 class="text-lg font-semibold">Lista de espera</h3><p>Deja tu preferencia. Esta solicitud no crea una cita ni garantiza un horario.</p></div></div>
                 <div id="waitlistFields">
-                  <div class="form-grid">
-                    <div class="field"><label for="waitlistDateStart">Desde (opcional)</label><input id="waitlistDateStart" type="date"></div>
-                    <div class="field"><label for="waitlistDateEnd">Hasta (opcional)</label><input id="waitlistDateEnd" type="date"></div>
+                  <div class="form-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="field flex min-w-0 flex-col gap-2"><label for="waitlistDateStart" class="text-sm font-medium">Desde (opcional)</label><input id="waitlistDateStart" type="date" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                    <div class="field flex min-w-0 flex-col gap-2"><label for="waitlistDateEnd" class="text-sm font-medium">Hasta (opcional)</label><input id="waitlistDateEnd" type="date" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
                   </div>
-                  <div class="field"><label for="waitlistNotes">Preferencia de horario o detalle (opcional)</label><textarea id="waitlistNotes" maxlength="500" placeholder="Ej.: tardes después de las 5"></textarea></div>
-                  <button id="waitlistSubmitBtn" class="book-button" type="submit">Solicitar aviso <span>→</span></button>
+                  <div class="field flex min-w-0 flex-col gap-2"><label for="waitlistNotes" class="text-sm font-medium">Preferencia de horario o detalle (opcional)</label><textarea id="waitlistNotes" maxlength="500" placeholder="Ej.: tardes después de las 5" class="min-h-28 w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)]"></textarea></div>
+                  <button id="waitlistSubmitBtn" class="book-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="submit">Solicitar aviso <span>→</span></button>
                 </div>
                 <p id="waitlistResult" class="result-message" role="status"></p>
               </form>
             </section>
-            <section id="trackSection" class="booking-form" style="display:none">
-              <div class="form-heading"><span class="step-number">⌕</span><div><h3>Consulta tu cita</h3><p>El enlace privado recibido al reservar.</p></div></div>
-              <div class="field"><label for="trackToken">Código privado de seguimiento</label><input id="trackToken" autocomplete="off" placeholder="Pega aquí tu código"></div>
-              <button id="trackBtn" class="book-button" type="button">Ver mi cita <span>→</span></button><div id="trackList" class="track-list"></div>
+            <section id="trackSection" class="booking-form grid min-w-0 gap-5" style="display:none">
+              <div class="form-heading flex items-center gap-3 [&_h3]:text-xl [&_h3]:font-semibold"><span class="step-number grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--kf-soft,#f5f5f4)] font-bold">⌕</span><div><h3 class="text-lg font-semibold">Consulta tu cita</h3><p>El enlace privado recibido al reservar.</p></div></div>
+              <div class="field flex min-w-0 flex-col gap-2"><label for="trackToken" class="text-sm font-medium">Código privado de seguimiento</label><input id="trackToken" autocomplete="off" placeholder="Pega aquí tu código" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <button id="trackBtn" class="book-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="button">Ver mi cita <span>→</span></button><div id="trackList" class="track-list grid min-w-0 gap-5"></div>
             </section>
           </div>
-          <section id="supportSection" class="booking-form" style="display:none">
-            <div class="form-heading"><span class="step-number">?</span><div><h3>¿En qué te ayudamos?</h3><p>Envíanos el detalle y guardaremos tu solicitud.</p></div></div>
-            <div class="field"><label for="supportName">Tu nombre</label><input id="supportName" placeholder="Tu nombre"></div>
-            <div class="form-grid"><div class="field"><label for="supportEmail">Correo (opcional)</label><input id="supportEmail" type="email" placeholder="tu@email.com"></div><div class="field"><label for="supportPhone">Teléfono (opcional)</label><input id="supportPhone" placeholder="809 555 0000"></div></div>
-            <div class="field"><label for="supportMessage">Mensaje</label><textarea id="supportMessage" placeholder="Cuéntanos qué necesitas"></textarea></div><button id="supportBtn" class="book-button" type="button">Enviar mensaje <span>→</span></button><p id="supportResult" class="result-message" role="status"></p>
+          <section id="supportSection" class="booking-form grid min-w-0 gap-5" style="display:none">
+            <div class="form-heading flex items-center gap-3 [&_h3]:text-xl [&_h3]:font-semibold"><span class="step-number grid size-10 shrink-0 place-items-center rounded-lg bg-[var(--kf-soft,#f5f5f4)] font-bold">?</span><div><h3 class="text-lg font-semibold">¿En qué te ayudamos?</h3><p>Envíanos el detalle y guardaremos tu solicitud.</p></div></div>
+            <div class="field flex min-w-0 flex-col gap-2"><label for="supportName" class="text-sm font-medium">Tu nombre</label><input id="supportName" placeholder="Tu nombre" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+            <div class="form-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"><div class="field flex min-w-0 flex-col gap-2"><label for="supportEmail" class="text-sm font-medium">Correo (opcional)</label><input id="supportEmail" type="email" placeholder="tu@email.com" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div><div class="field flex min-w-0 flex-col gap-2"><label for="supportPhone" class="text-sm font-medium">Teléfono (opcional)</label><input id="supportPhone" placeholder="809 555 0000" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)] focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div></div>
+            <div class="field flex min-w-0 flex-col gap-2"><label for="supportMessage" class="text-sm font-medium">Mensaje</label><textarea id="supportMessage" placeholder="Cuéntanos qué necesitas" class="min-h-28 w-full min-w-0 rounded-lg border border-stone-300 bg-[var(--kf-surface,#fff)] p-3 text-base text-[var(--kf-ink,#1c1917)]"></textarea></div><button id="supportBtn" class="book-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="button">Enviar mensaje <span>→</span></button><p id="supportResult" class="result-message" role="status"></p>
           </section>
         </div>
       </section>
     </main>
-    <section id="waitlistOfferPanel" class="booking-card waitlist-offer-panel" aria-labelledby="waitlistOfferTitle" hidden>
-      <p class="eyebrow">UN HORARIO PARA TI</p>
-      <h2 id="waitlistOfferTitle">Oferta de lista de espera</h2>
+    <section id="waitlistOfferPanel" class="booking-card waitlist-offer-panel min-w-0 space-y-4 rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 sm:p-7" aria-labelledby="waitlistOfferTitle" hidden>
+      <p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">UN HORARIO PARA TI</p>
+      <h2 id="waitlistOfferTitle" class="text-2xl font-semibold tracking-tight">Oferta de lista de espera</h2>
       <div id="waitlistOfferDetails" role="status" aria-live="polite">Consultando la oferta…</div>
-      <button id="acceptWaitlistOfferBtn" class="book-button" type="button" hidden>Aceptar horario <span>→</span></button>
+      <button id="acceptWaitlistOfferBtn" class="book-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="button" hidden>Aceptar horario <span>→</span></button>
       <p id="waitlistOfferResult" class="result-message" role="status"></p>
     </section>
-    <footer class="site-footer"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
+    <footer class="site-footer flex flex-wrap justify-between gap-4 border-t border-[var(--kf-line,#e7e5e4)] py-8 text-sm text-stone-500"><span>KINGFLOW <i>BARBER</i></span><span>Hecho con intención. Reservado con facilidad.</span></footer>
   </div>
   <script src="js/config.js"></script><script src="js/auth.js"></script><script src="js/pwa.js"></script><script src="js/ui-feedback.js"></script><script src="js/client.js?v=20261125-workspace-flow-2"></script>
 </body>

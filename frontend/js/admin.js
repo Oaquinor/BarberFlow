@@ -142,7 +142,7 @@ async function loadTenants() {
             empty.style.display = 'none';
             body.innerHTML = currentTenants.map((t) => `
                 <tr>
-                    <td data-label="Barbería">${escapeHtml(t.barbershop_name)} <span style="color:#a1a1aa;">(${escapeHtml(t.slug)})</span></td>
+                    <td data-label="Barbería">${escapeHtml(t.barbershop_name)} <span class="text-stone-500">(${escapeHtml(t.slug)})</span></td>
                     <td data-label="Owner">${escapeHtml(t.owner_email || '—')}</td>
                     <td data-label="Plan">${t.plan ? `<span class="pill plan">${escapeHtml(t.plan)}</span>` : '—'}</td>
                     <td data-label="Estado suscripción">${escapeHtml(t.subscription_status || '—')}</td>
@@ -467,7 +467,7 @@ async function loadUsers() {
 
             return `
                 <tr>
-                    <td data-label="Usuario">${escapeHtml(u.full_name)}<br><span style="color:#a1a1aa;font-size:.85em;">${escapeHtml(u.email)}</span></td>
+                    <td data-label="Usuario">${escapeHtml(u.full_name)}<br><span class="text-sm text-stone-500">${escapeHtml(u.email)}</span></td>
                     <td data-label="Rol">${escapeHtml(u.role)}</td>
                     <td data-label="Barbería">${escapeHtml(tenant ? tenant.barbershop_name : '—')}</td>
                     <td data-label="Estado">${renderTenantPill(u.is_active)}</td>

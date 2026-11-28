@@ -79,7 +79,7 @@ test('public brand preview uses actual business details and catalog service', ()
 
 test('recommended brand palettes have unique valid color pairs and accessible state', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const block = html.match(/<div class="brand-presets"[\s\S]*?<\/div>/)?.[0] || '';
+  const block = html.match(/<div class="brand-presets[^"]*"[\s\S]*?<\/div>/)?.[0] || '';
   const pairs = [...block.matchAll(/data-primary="(#[\da-f]{6})" data-secondary="(#[\da-f]{6})" aria-pressed="false"/gi)]
     .map((match) => `${match[1].toLowerCase()}:${match[2].toLowerCase()}`);
 

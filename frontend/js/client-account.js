@@ -85,7 +85,7 @@
     }
     const details = document.createElement("button");
     details.type = "button";
-    details.className = "button-secondary next-appointment-action";
+    details.className = "button-secondary next-appointment-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
     details.textContent = "Ver detalles de la cita";
     details.addEventListener("click", () => {
       const card = document.getElementById(`appointment-${item.appointment_id}`);
@@ -106,7 +106,7 @@
     }
     items.forEach((item) => {
       const card = document.createElement("article");
-      card.className = "appointment-card";
+      card.className = "appointment-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7";
       card.id = `appointment-${Number(item.appointment_id)}`;
       const title = document.createElement("h3");
       title.tabIndex = -1;
@@ -121,7 +121,7 @@
       if (item.status === "completed") {
         const saveStyle = document.createElement("button");
         saveStyle.type = "button";
-        saveStyle.className = "button-secondary style-appointment-action";
+        saveStyle.className = "button-secondary style-appointment-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
         saveStyle.dataset.action = "add-style-passport";
         saveStyle.dataset.appointmentId = String(item.appointment_id);
         saveStyle.textContent = "Guardar detalles de este corte";
@@ -150,7 +150,7 @@
           save.textContent = "Confirmar nuevo horario";
           const dismiss = document.createElement("button");
           dismiss.type = "button";
-          dismiss.className = "button-secondary";
+          dismiss.className = "button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
           dismiss.dataset.action = "dismiss-reschedule";
           dismiss.textContent = "Conservar horario actual";
           chooser.append(select, save, dismiss);
@@ -174,7 +174,7 @@
         confirmButton.textContent = "Confirmar cancelación";
         const keepButton = document.createElement("button");
         keepButton.type = "button";
-        keepButton.className = "button-secondary";
+        keepButton.className = "button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
         keepButton.dataset.action = "dismiss-cancel";
         keepButton.textContent = "Conservar cita";
         confirmation.append(warning, confirmButton, keepButton);
@@ -282,7 +282,7 @@
     }
     stylePassportItems.forEach((entry) => {
       const card = document.createElement("article");
-      card.className = "style-passport-card";
+      card.className = "style-passport-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7";
       const title = document.createElement("h3");
       title.textContent = entry.haircut_type || entry.service || "Corte guardado";
       const meta = document.createElement("p");
@@ -334,14 +334,14 @@
       actions.className = "style-card-actions";
       const edit = document.createElement("button");
       edit.type = "button";
-      edit.className = "button-secondary";
+      edit.className = "button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
       edit.dataset.action = "edit-style-passport";
       edit.dataset.entryId = String(entry.id);
       edit.textContent = "Editar registro";
       actions.append(edit);
       if (entry.barbershop_slug && entry.service_id) {
         const repeat = document.createElement("a");
-        repeat.className = "button-secondary";
+        repeat.className = "button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
         const params = new URLSearchParams({
           shop: entry.barbershop_slug,
           service_id: String(entry.service_id),
@@ -420,7 +420,7 @@
     }
     data.items.forEach((item) => {
       const card = document.createElement("article");
-      card.className = "favorite-card";
+      card.className = "favorite-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7";
       const title = document.createElement("h3");
       title.textContent = item.name;
       const imageUrl = trustedFavoriteImage(item.image_url);
@@ -448,7 +448,7 @@
         } catch (error) { message(error.message); remove.disabled = false; }
       });
       const visit = document.createElement("a");
-      visit.className = "button-secondary favorite-visit";
+      visit.className = "button-secondary favorite-visit inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50";
       visit.href = `/client.html?shop=${encodeURIComponent(item.barbershop_slug)}`;
       visit.textContent = item.target_type === "barbershop" ? "Volver a esta barbería" : "Ver barbería";
       card.append(title, description, remove, visit);

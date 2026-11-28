@@ -20,7 +20,7 @@ test("privileged portals load account MFA management and accessible login challe
   assert.match(loginScript, /payload\.otp_code = mfaInput\.value\.trim\(\)/);
   assert.match(loginScript, /KingFlowMfaSettings\?\.mount\(\)/);
   assert.match(loginScript, /KingFlowMfaSettings\?\.unmount\(\)/);
-  assert.match(html, /href="\/css\/mfa-settings\.css"/);
+  assert.match(html, /href="\/css\/tailwind\.css\?/);
 });
 
 test("MFA settings use the protected API and never persist recovery codes in markup storage", () => {

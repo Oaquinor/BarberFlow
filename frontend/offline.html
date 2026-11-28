@@ -5,56 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#141412">
   <title>Sin conexión - KingFlow Barber</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #141412;
-      color: #333;
-      padding: 20px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 28px;
-      max-width: 520px;
-      width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      text-align: center;
-    }
-    .icon { font-size: 56px; margin-bottom: 12px; }
-    h1 { margin-bottom: 10px; }
-    p { color: #666; line-height: 1.5; }
-    .actions { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    button, a {
-      border: none;
-      text-decoration: none;
-      cursor: pointer;
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-    .primary {
-      color: #fff;
-      background: #141412;
-    }
-    .secondary {
-      color: #333;
-      background: #f0f0f0;
-    }
-  </style>
+
+  <link rel="stylesheet" href="/css/tailwind.css?v=20261128-2">
 </head>
-<body>
-  <main class="card">
+<body class="min-h-dvh bg-stone-100 p-4 font-[Arial,Helvetica,sans-serif] text-stone-900 antialiased sm:p-6 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_a]:underline-offset-4 [&_a:hover]:underline [&_p]:leading-relaxed">
+  <main class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
     <div class="icon">📴</div>
-    <h1>Sin conexión a internet</h1>
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Sin conexión a internet</h1>
     <p>No se pudo conectar con el servidor. Las reservas y los datos de negocio requieren conexión; vuelve a intentarlo cuando la red esté disponible.</p>
-    <div class="actions">
-      <button class="primary" id="retryOfflineButton">Reintentar</button>
-      <a class="secondary" href="/index.html">Ir al inicio</a>
+    <div class="actions flex flex-wrap items-center gap-3">
+      <button class="primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" id="retryOfflineButton">Reintentar</button>
+      <a class="secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" href="/index.html">Ir al inicio</a>
     </div>
   </main>
   <script src="/js/offline.js"></script>

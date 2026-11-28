@@ -220,9 +220,7 @@ test("customer can update account name and phone while email remains verified an
   await expect(page.getByRole("status")).toContainText("perfil se guardó");
   expect(profileUpdate).toEqual({ first_name: "Andrea", last_name: "Pérez", phone: "809 555 0099" });
   await expect(page.getByText("Hola, Andrea Pérez")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Descargar mis datos" })).toHaveCSS(
-    "background-color", "rgba(0, 0, 0, 0)",
-  );
+  await expect(page.getByRole("button", { name: "Descargar mis datos" })).toBeEnabled();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Descargar mis datos" }).click();
   const download = await downloadPromise;

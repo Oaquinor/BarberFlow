@@ -238,7 +238,7 @@ function renderAchievements(achievements) {
 
     const items = Array.isArray(achievements?.items) ? achievements.items : [];
     if (!items.length) {
-        grid.innerHTML = '<div class="achievement-card"><h4>Sin logros aún</h4><p>Completa citas para desbloquear progreso.</p></div>';
+        grid.innerHTML = '<div class="achievement-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h4>Sin logros aún</h4><p>Completa citas para desbloquear progreso.</p></div>';
         return;
     }
 
@@ -249,7 +249,7 @@ function renderAchievements(achievements) {
         const unlocked = item.earned === true;
 
         return `
-            <div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-card ${unlocked ? 'unlocked' : 'locked'} min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
                 <div class="achievement-icon ${unlocked ? '' : 'locked-icon'}" aria-hidden="true">${unlocked
                     ? '<svg viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0V4ZM7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4M12 13v4m-4 3h8m-7-3h6"/></svg>'
                     : '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>'}</div>
@@ -257,8 +257,8 @@ function renderAchievements(achievements) {
                 <p>${escapeHtml(item.description)}</p>
                 <div class="achievement-points">${Number(item.points) || 0} puntos</div>
                 <div class="achievement-progress">
-                    <div class="progress-bar small">
-                        <div class="progress-fill" style="width: ${progress}%;"></div>
+                    <div class="progress-bar small h-2 overflow-hidden rounded-full bg-stone-200">
+                        <div class="progress-fill h-full rounded-full bg-amber-700" style="width: ${progress}%;"></div>
                     </div>
                     <span>${current}/${target}</span>
                 </div>
@@ -347,7 +347,7 @@ function applyBranding(profile) {
             const logo = document.createElement('img');
             logo.src = imageUrl.href;
             logo.alt = '';
-            logo.style.cssText = 'height:40px;vertical-align:middle;margin-right:10px';
+            logo.className = 'size-10 shrink-0 rounded-lg object-cover';
             logoElement.append(logo);
         }
         logoElement.append(document.createTextNode(profile.name || 'KingFlow Barber'));
@@ -486,9 +486,9 @@ async function loadSmartMessages() {
         const container = document.getElementById('smartMessages');
         if (container && message) {
             container.innerHTML = `
-                <div style="background: rgba(255,255,255,0.95); border-left: 5px solid var(--brand-primary); padding: 14px 16px; border-radius: 12px; margin-bottom: 16px;">
+                <div class="mb-4 rounded-xl border-l-4 border-amber-800 bg-white px-4 py-3">
                     <strong>${message.type === 'celebration' ? 'Buen avance' : 'Sugerencia para tu negocio'}</strong>
-                    <div style="margin-top: 6px; color: #444;">${escapeHtml(message.message)}</div>
+                    <div class="mt-2 text-stone-700">${escapeHtml(message.message)}</div>
                 </div>
             `;
         }
@@ -661,7 +661,7 @@ async function loadBarberAbsences() {
                 ${escapeHtml(new Date(row.starts_at).toLocaleString('es-DO', { timeZone: timezone }))}
                 — ${escapeHtml(new Date(row.ends_at).toLocaleTimeString('es-DO', { timeZone: timezone }))}
                 · ${escapeHtml(row.reason || 'Sin motivo indicado')}
-                <button type="button" class="btn-secondary cancel-barber-absence" data-id="${Number(row.id)}">Cancelar ausencia</button>
+                <button type="button" class="btn-secondary cancel-barber-absence inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-id="${Number(row.id)}">Cancelar ausencia</button>
             </li>`).join('') || '<li>No tienes ausencias futuras registradas.</li>';
     } catch (error) {
         list.textContent = error.message || 'No se pudieron cargar las ausencias.';
@@ -728,7 +728,7 @@ function renderAppointmentDay(businessDate, appointments) {
             : appointmentWorkspaceMode === 'bookings'
                 ? 'No hay citas reservadas para esta fecha.'
                 : 'No hay citas ni turnos para este día.';
-        appointmentsList.innerHTML = `<div class="appointment-card"><div class="appointment-content"><p class="service-name">${escapeHtml(emptyMessage)}</p></div></div>`;
+        appointmentsList.innerHTML = `<div class="appointment-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-4 flex flex-wrap gap-4"><div class="appointment-content min-w-0 flex-1 space-y-3"><p class="service-name">${escapeHtml(emptyMessage)}</p></div></div>`;
         applyAgendaLayout(appointmentsList);
         return;
     }
@@ -740,12 +740,12 @@ function renderAppointmentDay(businessDate, appointments) {
         const isWaiting = Number.isInteger(queuePosition);
         const statusLabel = isWaiting ? `En espera · turno ${queuePosition}` : labelStatus(appointment.status);
         return `
-        <div data-flow-group="${appointment.status === 'in_progress' ? 'attending' : isWaiting ? 'waiting' : ['pending', 'confirmed'].includes(appointment.status) ? 'arriving' : 'finished'}" class="appointment-card ${isWaiting ? 'waiting' : cardClassForStatus(appointment.status)}">
-            <div class="appointment-time-badge ${appointment.status === 'in_progress' ? 'current' : ''}">${fmtHour(appointment.scheduled_time)}</div>
-            <div class="appointment-content">
-                <div class="appointment-header">
+        <div data-flow-group="${appointment.status === 'in_progress' ? 'attending' : isWaiting ? 'waiting' : ['pending', 'confirmed'].includes(appointment.status) ? 'arriving' : 'finished'}" class="appointment-card ${isWaiting ? 'waiting' : cardClassForStatus(appointment.status)} min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-4 flex flex-wrap gap-4">
+            <div class="appointment-time-badge ${appointment.status === 'in_progress' ? 'current' : ''} rounded-lg bg-stone-100 px-3 py-2 text-sm font-semibold">${fmtHour(appointment.scheduled_time)}</div>
+            <div class="appointment-content min-w-0 flex-1 space-y-3">
+                <div class="appointment-header flex flex-wrap items-center justify-between gap-2">
                     <h4>${escapeHtml(appointment.client_name || 'Cliente')}</h4>
-                    <span class="status-badge ${isWaiting ? 'waiting' : statusClassForStatus(appointment.status)}">${escapeHtml(statusLabel)}</span>
+                    <span class="status-badge ${isWaiting ? 'waiting' : statusClassForStatus(appointment.status)} rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold">${escapeHtml(statusLabel)}</span>
                 </div>
                 <p class="service-name">${escapeHtml(appointment.service_type || 'Servicio')}</p>
                 ${renderAppointmentPreferences(appointment)}
@@ -754,18 +754,18 @@ function renderAppointmentDay(businessDate, appointments) {
                         <summary>Style Passport compartido</summary>
                         <p class="barber-style-passport-status" role="status" aria-live="polite">Solo aparecerá la información que el cliente autorizó compartir.</p>
                         <div class="barber-style-passport-items"></div>
-                        <button class="btn-secondary barber-style-passport-load" type="button">Consultar registros compartidos</button>
+                        <button class="btn-secondary barber-style-passport-load inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button">Consultar registros compartidos</button>
                     </details>` : ''}
-                <div class="appointment-meta">
+                <div class="appointment-meta flex flex-wrap gap-3 text-sm text-stone-500">
                     <span>${Number(appointment.estimated_duration) || 0} min</span>
                     <span>${fmtMoneyFromCents(appointment.service_price || 0)}</span>
                 </div>
-                <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-                    ${appointment.status === 'pending' ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="confirmed">Confirmar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="in_progress">Iniciar servicio</button>` : ''}
-                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary appointment-payment" type="button" data-appointment-id="${Number(appointment.id)}">Cobrar y finalizar</button>` : ''}
-                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="cancelled">Cancelar</button>` : ''}
-                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary appointment-status-action" type="button" data-appointment-id="${Number(appointment.id)}" data-status="no_show">Marcar inasistencia</button>` : ''}
+                <div class="mt-3 flex flex-wrap gap-2">
+                    ${appointment.status === 'pending' ? `<button class="btn-secondary appointment-status-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-appointment-id="${Number(appointment.id)}" data-status="confirmed">Confirmar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-start appointment-status-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" type="button" data-appointment-id="${Number(appointment.id)}" data-status="in_progress">Iniciar servicio</button>` : ''}
+                    ${appointment.status === 'in_progress' ? `<button class="btn-secondary appointment-payment inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-appointment-id="${Number(appointment.id)}">Cobrar y finalizar</button>` : ''}
+                    ${['pending', 'confirmed'].includes(appointment.status) ? `<button class="btn-secondary appointment-status-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-appointment-id="${Number(appointment.id)}" data-status="cancelled">Cancelar</button>` : ''}
+                    ${canMarkAppointmentNoShow(appointment) ? `<button class="btn-secondary appointment-status-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-appointment-id="${Number(appointment.id)}" data-status="no_show">Marcar inasistencia</button>` : ''}
                 </div>
             </div>
         </div>
@@ -833,20 +833,20 @@ function renderAppointmentCalendar(data) {
     const days = data.days || [];
     if (data.view === 'month' && days.length) {
         const firstWeekday = (new Date(`${days[0].date}T12:00:00Z`).getUTCDay() + 6) % 7;
-        for (let index = 0; index < firstWeekday; index += 1) cells.push('<div class="calendar-day outside-month" aria-hidden="true"></div>');
+        for (let index = 0; index < firstWeekday; index += 1) cells.push('<div class="calendar-day outside-month space-y-3 rounded-xl border border-stone-200 bg-white p-4" aria-hidden="true"></div>');
     }
     const today = businessTodayDate();
     days.forEach(day => {
         const appointments = day.appointments || [];
         const entries = appointments.slice(0, data.view === 'month' ? 3 : 5).map(item => `
-            <div class="calendar-entry ${item.status === 'completed' ? 'completed' : item.status === 'in_progress' ? 'in-progress' : ''}"
+            <div class="calendar-entry ${item.status === 'completed' ? 'completed' : item.status === 'in_progress' ? 'in-progress' : ''} block w-full rounded-lg bg-stone-100 p-3 text-left text-sm"
                  title="${escapeHtml(`${fmtHour(item.scheduled_time)} · ${item.client_name || 'Cliente'} · ${item.service_type || 'Servicio'}`)}">
                 ${escapeHtml(fmtHour(item.scheduled_time))} · ${escapeHtml(item.service_type || 'Servicio')}
             </div>
         `).join('');
         const extraCount = appointments.length - (data.view === 'month' ? 3 : 5);
         cells.push(`
-            <section class="calendar-day ${day.date === today ? 'today' : ''}">
+            <section class="calendar-day ${day.date === today ? 'today' : ''} space-y-3 rounded-xl border border-stone-200 bg-white p-4">
                 <div class="calendar-day-heading">
                     <button class="calendar-day-select" type="button" data-date="${escapeHtml(day.date)}" aria-label="Ver citas del ${escapeHtml(day.date)}">${Number(day.date.slice(-2))}</button>
                     <span class="calendar-day-count">${appointments.length || ''}</span>
@@ -856,7 +856,7 @@ function renderAppointmentCalendar(data) {
         `);
     });
     const trailingCells = (7 - (cells.length % 7)) % 7;
-    for (let index = 0; index < trailingCells; index += 1) cells.push('<div class="calendar-day outside-month" aria-hidden="true"></div>');
+    for (let index = 0; index < trailingCells; index += 1) cells.push('<div class="calendar-day outside-month space-y-3 rounded-xl border border-stone-200 bg-white p-4" aria-hidden="true"></div>');
     grid.innerHTML = `${weekdays}${cells.join('')}`;
 }
 
@@ -981,34 +981,34 @@ function renderServiceCatalog(services) {
 
     renderServiceCategoryFilters(services);
     if (!services.length) {
-        list.innerHTML = '<div class="service-item"><div class="service-info"><h4>Sin servicios activos</h4><p>Crea servicios desde tu configuración para verlos aquí.</p></div></div>';
+        list.innerHTML = '<div class="service-item min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-4 lg:grid-cols-[3rem_minmax(0,1fr)_auto_auto_auto]"><div class="service-info min-w-0 space-y-2"><h4>Sin servicios activos</h4><p>Crea servicios desde tu configuración para verlos aquí.</p></div></div>';
         return;
     }
 
     const visibleServices = filterServices(services, selectedServiceCategory, serviceSearchQuery);
     if (!visibleServices.length) {
-        list.innerHTML = '<div class="service-item"><div class="service-info"><h4>No hay servicios coincidentes</h4><p>Prueba otra categoría o búsqueda.</p></div></div>';
+        list.innerHTML = '<div class="service-item min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-4 lg:grid-cols-[3rem_minmax(0,1fr)_auto_auto_auto]"><div class="service-info min-w-0 space-y-2"><h4>No hay servicios coincidentes</h4><p>Prueba otra categoría o búsqueda.</p></div></div>';
         return;
     }
 
     list.innerHTML = visibleServices.map((service) => {
         const imageUrl = trustedBusinessImage(service.image_url);
         const visual = imageUrl
-            ? `<img class="service-catalog-photo" src="${escapeHtml(imageUrl)}" alt="Foto de ${escapeHtml(service.name)}" loading="lazy">`
-            : '<div class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg></div>';
+            ? `<img class="service-catalog-photo size-12 rounded-xl object-cover" src="${escapeHtml(imageUrl)}" alt="Foto de ${escapeHtml(service.name)}" loading="lazy">`
+            : '<div class="service-icon grid size-12 place-items-center rounded-xl bg-stone-100 text-amber-900 [&_svg]:size-6 [&_svg]:fill-none [&_svg]:stroke-current" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg></div>';
         return `
-        <div class="service-item ${service.category === 'combo' ? 'featured' : ''}">
+        <div class="service-item ${service.category === 'combo' ? 'featured' : ''} min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-4 lg:grid-cols-[3rem_minmax(0,1fr)_auto_auto_auto]">
             ${visual}
-            <div class="service-info">
+            <div class="service-info min-w-0 space-y-2">
                 <h4>${escapeHtml(service.name)}</h4>
                 <p>${escapeHtml(service.description || 'Servicio personalizado de la barbería')}</p>
-                <div class="service-meta">
-                    <span class="tag">${escapeHtml(service.category || 'General')}</span>
+                <div class="service-meta flex flex-wrap items-center gap-3 text-sm text-stone-500">
+                    <span class="tag rounded-full bg-stone-100 px-3 py-1 text-xs">${escapeHtml(service.category || 'General')}</span>
                     <span>${service.duration_minutes || 0} min</span>
                 </div>
             </div>
-            <div class="service-price">${fmtMoneyFromCents(service.price_cents || 0)}</div>
-            ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l11.9-11.9a2.5 2.5 0 0 0-3.5-3.5L4 16Z"/><path d="m14.5 6.5 3.5 3.5"/></svg></button><button class="btn-icon service-action" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-13 0 .7 13h8.6L17 7M9 7V4h6v3m-4 4v5m2-5v5"/></svg></button>` : ''}
+            <div class="service-price text-lg font-bold tabular-nums text-amber-900">${fmtMoneyFromCents(service.price_cents || 0)}</div>
+            ${currentUser?.role === 'barbershop_owner' ? `<button class="btn-icon service-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 w-11 shrink-0 px-2 [&_svg]:size-5 [&_svg]:fill-none [&_svg]:stroke-current" type="button" aria-label="Editar servicio" data-action="edit" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-.8 4.8L8 20l11.9-11.9a2.5 2.5 0 0 0-3.5-3.5L4 16Z"/><path d="m14.5 6.5 3.5 3.5"/></svg></button><button class="btn-icon service-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 w-11 shrink-0 px-2 [&_svg]:size-5 [&_svg]:fill-none [&_svg]:stroke-current" type="button" aria-label="Desactivar servicio" data-action="delete" data-service-id="${Number(service.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-13 0 .7 13h8.6L17 7M9 7V4h6v3m-4 4v5m2-5v5"/></svg></button>` : ''}
         </div>
     `;
     }).join('');
@@ -1016,7 +1016,7 @@ function renderServiceCatalog(services) {
         image.addEventListener('error', () => {
             image.classList.add('is-unavailable');
             const fallback = document.createElement('div');
-            fallback.className = 'service-icon';
+            fallback.className = 'service-icon grid size-12 place-items-center rounded-xl bg-stone-100 text-amber-900 [&_svg]:size-6 [&_svg]:fill-none [&_svg]:stroke-current';
             fallback.setAttribute('aria-hidden', 'true');
             fallback.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="m8 8 12 12M8 16 19 5m-6 5 2 2"/></svg>';
             image.replaceWith(fallback);
@@ -1269,7 +1269,7 @@ async function loadBarberStylePassport(clientId, appointmentId, container) {
                 photos.forEach((photo) => {
                     const button = document.createElement('button');
                     button.type = 'button';
-                    button.className = 'btn-secondary';
+                    button.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
                     button.textContent = photo.kind === 'reference'
                         ? 'Ver referencia privada' : 'Ver resultado privado';
                     button.addEventListener('click', async () => {
@@ -1318,7 +1318,7 @@ async function loadBarberStylePassport(clientId, appointmentId, container) {
             recommendationsLabel.append(recommendations);
             const save = document.createElement('button');
             save.type = 'submit';
-            save.className = 'btn-secondary';
+            save.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
             save.textContent = 'Guardar notas técnicas';
             notesForm.append(notesLabel, recommendationsLabel, save);
             notesForm.addEventListener('submit', async (event) => {
@@ -1372,18 +1372,18 @@ function renderBusinessGallery(images) {
         const src = trustedBusinessImage(imageUrl);
         if (!src) return;
         const item = document.createElement('figure');
-        item.className = 'business-gallery-item';
+        item.className = 'business-gallery-item min-w-0 space-y-2 [&_img]:aspect-square [&_img]:w-full [&_img]:rounded-xl [&_img]:object-cover';
         const image = document.createElement('img');
         image.src = src;
         image.alt = 'Foto de la galería de cortes';
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.className = 'btn-secondary';
+        remove.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
         remove.textContent = 'Quitar';
         remove.dataset.galleryImage = imageUrl;
         const open = document.createElement('button');
         open.type = 'button';
-        open.className = 'btn-secondary';
+        open.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
         open.textContent = 'Ver y descargar';
         open.addEventListener('click', () => openBusinessPhoto(src));
         image.addEventListener('error', () => {
@@ -1490,7 +1490,7 @@ function renderBusinessCover(coverUrl) {
     if (src) {
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.className = 'btn-secondary';
+        remove.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
         remove.textContent = 'Restaurar portada predeterminada';
         remove.id = 'removeBusinessCoverBtn';
         preview.append(remove);
@@ -1642,10 +1642,10 @@ async function loadOwnerManagement() {
         barberBody.innerHTML = (barberData.items || []).map(barber => `
             <tr><td data-label="Nombre">${escapeHtml(barber.full_name)}</td><td data-label="Correo">${escapeHtml(barber.email)}</td>
                 <td data-label="Teléfono">${escapeHtml(barber.phone || '—')}</td>
-                <td data-label="Comisión (%)"><form class="owner-barber-rate-form" data-id="${Number(barber.id)}"><input aria-label="Tasa de comisión porcentual" type="number" min="0" max="100" step="0.01" value="${(Number(barber.commission_rate_basis_points || 0) / 100).toFixed(2)}" style="width:82px"><button class="btn-secondary" type="submit">Guardar</button></form></td>
+                <td data-label="Comisión (%)"><form class="owner-barber-rate-form flex flex-wrap items-center gap-2" data-id="${Number(barber.id)}"><input aria-label="Tasa de comisión porcentual" type="number" min="0" max="100" step="0.01" value="${(Number(barber.commission_rate_basis_points || 0) / 100).toFixed(2)}" class="w-full min-w-0 max-w-24"><button class="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="submit">Guardar</button></form></td>
                 <td data-label="Estado">${barber.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td data-label="Acción"><button class="btn-secondary owner-barber-edit" type="button" data-id="${Number(barber.id)}">Editar</button>
-                    <button class="btn-secondary owner-barber-status" type="button" data-id="${Number(barber.id)}" data-active="${barber.is_active}">${barber.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
+                <td data-label="Acción"><button class="btn-secondary owner-barber-edit inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(barber.id)}">Editar</button>
+                    <button class="btn-secondary owner-barber-status inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(barber.id)}" data-active="${barber.is_active}">${barber.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
         ownerBarberCache.clear();
         (barberData.items || []).forEach(barber => ownerBarberCache.set(Number(barber.id), barber));
@@ -1700,14 +1700,14 @@ async function loadOwnerWaitlist() {
             const nextStatus = entry.status === 'new' ? 'contacted' : entry.status === 'contacted' ? 'closed' : 'new';
             const actionLabel = nextStatus === 'contacted' ? 'Marcar contactado' : nextStatus === 'closed' ? 'Cerrar solicitud' : 'Reabrir';
             const matchesButton = ['new', 'contacted'].includes(entry.status)
-                ? `<button class="btn-secondary owner-waitlist-matches" data-id="${Number(entry.id)}" type="button">Buscar horarios</button><div class="owner-waitlist-match-results" id="ownerWaitlistMatches${Number(entry.id)}" role="status" aria-live="polite"></div>`
+                ? `<button class="btn-secondary owner-waitlist-matches inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-id="${Number(entry.id)}" type="button">Buscar horarios</button><div class="owner-waitlist-match-results" id="ownerWaitlistMatches${Number(entry.id)}" role="status" aria-live="polite"></div>`
                 : '';
             return `<tr><td data-label="Cliente">${escapeHtml(entry.client_name)}<br><a href="tel:${phone}">${escapeHtml(entry.phone)}</a></td>
                 <td data-label="Servicio">${escapeHtml(entry.service_name)}</td><td data-label="Barbero">${escapeHtml(entry.barber_name || 'Cualquiera')}</td>
                 <td data-label="Fechas preferidas">${escapeHtml(dateLabel)}</td><td data-label="Detalle">${escapeHtml(entry.notes || '—')}</td>
                 <td data-label="Recibida">${escapeHtml(new Date(entry.created_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' }))}</td>
-                <td data-label="Estado">${escapeHtml(statusLabel)}${offerLabel ? `<br><small>${escapeHtml(offerLabel)}</small>` : ''}</td><td data-label="Acciones">${matchesButton}${waUrl ? `<a class="btn-secondary" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
-                <button class="btn-secondary owner-waitlist-status" data-id="${Number(entry.id)}" data-next-status="${nextStatus}" type="button">${actionLabel}</button></td></tr>`;
+                <td data-label="Estado">${escapeHtml(statusLabel)}${offerLabel ? `<br><small>${escapeHtml(offerLabel)}</small>` : ''}</td><td data-label="Acciones">${matchesButton}${waUrl ? `<a class="btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" href="${waUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
+                <button class="btn-secondary owner-waitlist-status inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-id="${Number(entry.id)}" data-next-status="${nextStatus}" type="button">${actionLabel}</button></td></tr>`;
         }).join('');
         result.textContent = items.length ? `${items.length} solicitud(es) · ${Number(data.total)} en este filtro` : 'No hay solicitudes para mostrar.';
     } catch (error) {
@@ -1734,7 +1734,7 @@ document.getElementById('ownerWaitlistBody')?.addEventListener('click', async (e
             } else {
                 result.innerHTML = `<p>${items.length} horario(s) compatibles. El turno no queda reservado y podría ocuparse antes de confirmar.</p>${items.map(item => {
                     const when = new Date(item.slot_start).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' });
-                    return `<p>${escapeHtml(when)} · ${escapeHtml(item.barber_name || 'Barbero')} <button class="btn-secondary owner-waitlist-offer" data-entry-id="${id}" data-availability-id="${Number(item.availability_id)}" type="button">Enviar oferta con vencimiento</button></p>`;
+                    return `<p>${escapeHtml(when)} · ${escapeHtml(item.barber_name || 'Barbero')} <button class="btn-secondary owner-waitlist-offer inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" data-entry-id="${id}" data-availability-id="${Number(item.availability_id)}" type="button">Enviar oferta con vencimiento</button></p>`;
                 }).join('')}`;
             }
         } catch (error) {
@@ -1852,7 +1852,7 @@ function renderRetailCart() {
         const product = ownerInventoryProducts.find(candidate => Number(candidate.id) === item.product_id);
         if (!product) return '';
         const unitPrice = Number(product.unit_price_cents) || 0;
-        return `<tr><td data-label="Producto">${escapeHtml(product.name)}</td><td data-label="Cantidad">${item.quantity}</td><td data-label="Precio">${fmtMoneyFromCents(unitPrice)}</td><td data-label="Subtotal">${fmtMoneyFromCents(unitPrice * item.quantity)}</td><td data-label="Acción"><button class="btn-secondary retail-cart-remove" type="button" data-product-id="${item.product_id}" aria-label="Quitar ${escapeHtml(product.name)}">Quitar</button></td></tr>`;
+        return `<tr><td data-label="Producto">${escapeHtml(product.name)}</td><td data-label="Cantidad">${item.quantity}</td><td data-label="Precio">${fmtMoneyFromCents(unitPrice)}</td><td data-label="Subtotal">${fmtMoneyFromCents(unitPrice * item.quantity)}</td><td data-label="Acción"><button class="btn-secondary retail-cart-remove inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-product-id="${item.product_id}" aria-label="Quitar ${escapeHtml(product.name)}">Quitar</button></td></tr>`;
     }).filter(Boolean);
     const total = retailCart.reduce((sum, item) => {
         const product = ownerInventoryProducts.find(candidate => Number(candidate.id) === item.product_id);
@@ -2149,8 +2149,8 @@ async function loadOwnerClients() {
                 <td data-label="Citas">${Number(client.appointment_count || 0)}</td><td data-label="Completadas">${Number(client.completed_count || 0)}</td>
                 <td data-label="Última visita">${client.last_visit ? escapeHtml(new Date(client.last_visit).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'UTC' })) : '—'}</td>
                 <td data-label="Total pagado">${fmtMoneyFromCents(client.total_paid_cents || 0)}</td><td data-label="Estado">${client.is_active ? 'Activo' : 'Inactivo'}</td>
-                <td data-label="Acciones"><button class="btn-secondary owner-client-history" type="button" data-id="${Number(client.id)}">Historial</button><button class="btn-secondary owner-client-edit" type="button" data-id="${Number(client.id)}">Editar</button>
-                    <button class="btn-secondary owner-client-status" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
+                <td data-label="Acciones"><button class="btn-secondary owner-client-history inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(client.id)}">Historial</button><button class="btn-secondary owner-client-edit inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(client.id)}">Editar</button>
+                    <button class="btn-secondary owner-client-status inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(client.id)}" data-active="${client.is_active}">${client.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>
         `).join('');
         result.textContent = ownerClientsSearch
             ? `${totalClients} cliente(s) coinciden con la búsqueda`
@@ -2199,8 +2199,8 @@ async function loadOwnerClientHistory() {
                 : 'Sin cobro registrado';
             const actualDuration = item.actual_duration == null
                 ? '' : ` · Atención real: ${Number(item.actual_duration)} min`;
-            return `<article class="appointment-card">
-                <div class="appointment-header"><h4>${escapeHtml(item.service_type)}</h4><span class="status-badge">${escapeHtml(statusLabels[item.status] || item.status)}</span></div>
+            return `<article class="appointment-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-4 flex flex-wrap gap-4">
+                <div class="appointment-header flex flex-wrap items-center justify-between gap-2"><h4>${escapeHtml(item.service_type)}</h4><span class="status-badge rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold">${escapeHtml(statusLabels[item.status] || item.status)}</span></div>
                 <p>${escapeHtml(new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: timezone }))} · ${Number(item.estimated_duration)} min estimados${actualDuration}</p>
                 <p>Barbero: ${escapeHtml(item.barber_name || 'No disponible')} · Precio del servicio: ${fmtMoneyFromCents(item.service_price_cents || 0)}</p>
                 <p>${paymentSummary}</p>
@@ -2240,7 +2240,7 @@ async function loadOwnerStylePassport(requestId = ownerClientHistoryRequestId) {
         }
         entries.forEach((entry) => {
             const card = document.createElement('article');
-            card.className = 'owner-style-passport-card';
+            card.className = 'owner-style-passport-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6';
             const title = document.createElement('h4');
             title.textContent = entry.haircut_type || entry.service || 'Corte guardado';
             const meta = document.createElement('p');
@@ -2258,7 +2258,7 @@ async function loadOwnerStylePassport(requestId = ownerClientHistoryRequestId) {
             });
             if ((entry.photos || []).length) {
                 const photos = document.createElement('div');
-                photos.className = 'owner-style-passport-photos';
+                photos.className = 'owner-style-passport-photos grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2';
                 entry.photos.forEach((photo) => {
                     const button = document.createElement('button');
                     button.type = 'button';
@@ -2424,9 +2424,9 @@ async function loadOwnerLiveChair() {
                     timeZone: barbershopProfile?.timezone || 'UTC', hour: 'numeric', minute: '2-digit',
                 })
                 : '';
-            return `<article class="owner-live-chair-card">
-                <div class="owner-live-chair-card-heading"><h4>${escapeHtml(item.barber_name || 'Barbero')}</h4><span class="live-chair-state live-chair-state-${state}">${stateLabels[state]}</span></div>
-                ${active ? `<p><strong>${escapeHtml(active.service_type || 'Servicio')}</strong> · ${Number(active.elapsed_minutes) || 0} min transcurridos</p><div class="live-chair-progress" role="progressbar" aria-label="Progreso estimado del servicio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}"><span style="width:${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}%"></span></div>` : '<p>Sin servicio en curso</p>'}
+            return `<article class="owner-live-chair-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-3">
+                <div class="owner-live-chair-card-heading flex flex-wrap items-center justify-between gap-3"><h4>${escapeHtml(item.barber_name || 'Barbero')}</h4><span class="live-chair-state live-chair-state-${state}">${stateLabels[state]}</span></div>
+                ${active ? `<p><strong>${escapeHtml(active.service_type || 'Servicio')}</strong> · ${Number(active.elapsed_minutes) || 0} min transcurridos</p><div class="live-chair-progress h-2 overflow-hidden rounded-full bg-stone-200 [&_span]:block [&_span]:h-full [&_span]:bg-amber-700" role="progressbar" aria-label="Progreso estimado del servicio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}"><span style="width:${Math.max(0, Math.min(100, Number(active.progress_percent) || 0))}%"></span></div>` : '<p>Sin servicio en curso</p>'}
                 <p>${Number(item.checked_in_count) || 0} cliente(s) confirmaron llegada · ${escapeHtml(wait)}</p>
                 ${item.break_return_overdue ? '<p>La hora prevista de regreso ya pasó; confirma el estado con el barbero.</p>' : breakReturnAt ? `<p>Regreso estimado · ${escapeHtml(breakReturnAt)}</p>` : ''}
                 ${next ? `<p>Siguiente turno${nextAt ? ` · ${escapeHtml(nextAt)}` : ''}: ${escapeHtml(next.service_type || 'Servicio')}</p>` : ''}
@@ -2464,12 +2464,12 @@ async function loadOwnerSubscription() {
         const usageLabels = { barbers: 'Barberos', appointments: 'Citas del periodo', clients: 'Clientes' };
         const usage = Object.entries(data.usage || {}).map(([key, item]) => {
             const limit = item.limit == null ? 'sin límite' : String(Number(item.limit));
-            return `<div class="stat-card"><div class="stat-value">${Number(item.used)} / ${escapeHtml(limit)}</div><div class="stat-label">${escapeHtml(usageLabels[key] || key)}</div></div>`;
+            return `<div class="stat-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-2"><div class="stat-value text-3xl font-bold tabular-nums">${Number(item.used)} / ${escapeHtml(limit)}</div><div class="stat-label text-sm text-stone-500">${escapeHtml(usageLabels[key] || key)}</div></div>`;
         }).join('');
         summary.innerHTML = `<p><strong>${escapeHtml(planLabels[data.plan] || data.plan)}</strong> · ${escapeHtml(statusLabels[data.status] || data.status)} · ${Number(data.days_remaining)} días restantes</p>
             <p>Periodo: ${escapeHtml(new Date(data.current_period_start).toLocaleDateString('es-DO', dateOptions))} – ${escapeHtml(new Date(data.current_period_end).toLocaleDateString('es-DO', dateOptions))}.</p>
             <p>Renovación manual: cada periodo requiere que un administrador registre el pago recibido. El sistema no procesa ni programa cargos automáticos.</p>
-            <div class="stats-grid">${usage}</div>`;
+            <div class="stats-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">${usage}</div>`;
         const renewalButton = document.getElementById('ownerRenewalRequestBtn');
         if (renewalButton) renewalButton.hidden = data.status === 'active' && Number(data.days_remaining) > 7;
         const renewalResult = document.getElementById('ownerRenewalRequestResult');
@@ -2675,7 +2675,7 @@ function renderDemandForecast(data) {
         const peakText = (day.peak_hours || []).map(hour =>
             `${escapeHtml(hour.hour)} · ${Number(hour.expected_appointments).toFixed(1)}`
         ).join('<br>') || 'Sin hora pico identificada';
-        return `<article class="demand-forecast-day">
+        return `<article class="demand-forecast-day min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
             <h4>${escapeHtml(dateLabel)}</h4>
             <p><strong>${Number(day.expected_appointments).toFixed(1)}</strong> servicios estimados</p>
             <p>${Number(day.known_bookings) || 0} reservas conocidas · confianza ${escapeHtml(day.confidence)}</p>
@@ -2724,7 +2724,7 @@ function renderOwnerCommissions(data) {
             <td data-label="Importe">${fmtMoneyFromCents(row.amount_cents)}</td>
             <td data-label="Tasa">${(Number(row.rate_basis_points) / 100).toFixed(2)}%</td>
             <td data-label="Estado">${row.status === 'paid' ? 'Pagada' : 'Pendiente'}</td>
-            <td data-label="Liquidación">${row.status === 'pending' ? `<select class="owner-commission-method" aria-label="Método de pago"><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><input class="owner-commission-reference" maxlength="120" aria-label="Referencia de pago" placeholder="Referencia (opcional)"><button class="btn-secondary owner-commission-pay" type="button" data-id="${Number(row.id)}">Registrar pago</button>` : `${escapeHtml(row.payment_method || '')}${row.payment_reference ? ` · ${escapeHtml(row.payment_reference)}` : ''}`}</td></tr>
+            <td data-label="Liquidación">${row.status === 'pending' ? `<select class="owner-commission-method" aria-label="Método de pago"><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="other">Otro</option></select><input class="owner-commission-reference" maxlength="120" aria-label="Referencia de pago" placeholder="Referencia (opcional)"><button class="btn-secondary owner-commission-pay inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-id="${Number(row.id)}">Registrar pago</button>` : `${escapeHtml(row.payment_method || '')}${row.payment_reference ? ` · ${escapeHtml(row.payment_reference)}` : ''}`}</td></tr>
     `).join('');
     if (result) result.textContent = `${(data.items || []).length} registros recientes (máximo 200)`;
 }
@@ -3039,7 +3039,7 @@ async function loadCashHistory() {
         const format = (cents) => new Intl.NumberFormat('es-DO', { style: 'currency', currency }).format((Number(cents) || 0) / 100);
         const differenceCents = items.reduce((total, item) => total + Number(item.difference_cents || 0), 0);
         const discrepancies = items.filter((item) => Number(item.difference_cents || 0) !== 0).length;
-        summary.innerHTML = `<div class="stat-card"><div class="stat-value">${items.length}</div><div class="stat-label">Cierres en el periodo</div></div><div class="stat-card"><div class="stat-value">${discrepancies}</div><div class="stat-label">Cierres con diferencia</div></div><div class="stat-card"><div class="stat-value">${escapeHtml(format(differenceCents))}</div><div class="stat-label">Diferencia acumulada</div></div>`;
+        summary.innerHTML = `<div class="stat-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-2"><div class="stat-value text-3xl font-bold tabular-nums">${items.length}</div><div class="stat-label text-sm text-stone-500">Cierres en el periodo</div></div><div class="stat-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-2"><div class="stat-value text-3xl font-bold tabular-nums">${discrepancies}</div><div class="stat-label text-sm text-stone-500">Cierres con diferencia</div></div><div class="stat-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-2"><div class="stat-value text-3xl font-bold tabular-nums">${escapeHtml(format(differenceCents))}</div><div class="stat-label text-sm text-stone-500">Diferencia acumulada</div></div>`;
         body.innerHTML = items.map((item) => `<tr><td data-label="Fecha">${escapeHtml(item.business_date)}</td><td data-label="Cerrada por">${escapeHtml(item.closed_by_name || 'Usuario')}</td><td data-label="Efectivo esperado">${escapeHtml(format(item.expected_cash_cents))}</td><td data-label="Declarado">${escapeHtml(format(item.declared_cash_cents))}</td><td data-label="Diferencia"><strong>${escapeHtml(format(item.difference_cents))}</strong></td><td data-label="Operaciones">${Number(item.payment_count) || 0}</td><td data-label="Hora del cierre">${escapeHtml(new Date(item.closed_at).toLocaleString('es-DO', { timeZone: barbershopProfile?.timezone || 'America/Santo_Domingo' }))}</td></tr>`).join('');
         result.textContent = items.length ? `${items.length} cierre(s) · ${start} a ${end}` : 'No hay cierres registrados en este periodo.';
     } catch (error) {
@@ -3058,10 +3058,10 @@ function renderScreenBoard(appointments) {
     const queueContainer = document.getElementById('screenBoardQueue');
     const now = Date.now();
     const renderActive = active.length
-        ? active.map((item) => `<article class="screen-turn screen-turn-active"><strong>En atención</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>${Number(item.estimated_duration) || 0} min</small></article>`).join('')
+        ? active.map((item) => `<article class="screen-turn screen-turn-active grid grid-cols-1 gap-2 rounded-xl border border-stone-700 bg-stone-900 p-4 sm:grid-cols-2"><strong>En atención</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>${Number(item.estimated_duration) || 0} min</small></article>`).join('')
         : '<p class="screen-board-empty">En este momento no hay servicios en curso.</p>';
-    const renderWaiting = waiting.map((item, index) => `<article class="screen-turn"><strong>Turno ${index + 1}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>En espera desde hace ${Math.max(0, Math.round((now - Date.parse(item.checked_in_at)) / 60000))} min</small></article>`).join('');
-    const renderUpcoming = upcoming.slice(0, Math.max(0, 6 - waiting.length)).map((item) => `<article class="screen-turn screen-turn-upcoming"><strong>Próxima cita · ${escapeHtml(fmtHour(item.scheduled_time))}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>Prepárate para tu hora reservada</small></article>`).join('');
+    const renderWaiting = waiting.map((item, index) => `<article class="screen-turn grid grid-cols-1 gap-2 rounded-xl border border-stone-700 bg-stone-900 p-4 sm:grid-cols-2"><strong>Turno ${index + 1}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>En espera desde hace ${Math.max(0, Math.round((now - Date.parse(item.checked_in_at)) / 60000))} min</small></article>`).join('');
+    const renderUpcoming = upcoming.slice(0, Math.max(0, 6 - waiting.length)).map((item) => `<article class="screen-turn screen-turn-upcoming grid grid-cols-1 gap-2 rounded-xl border border-stone-700 bg-stone-900 p-4 sm:grid-cols-2"><strong>Próxima cita · ${escapeHtml(fmtHour(item.scheduled_time))}</strong><span>${escapeHtml(item.service_type || 'Servicio')}</span><small>Prepárate para tu hora reservada</small></article>`).join('');
     if (activeContainer) activeContainer.innerHTML = renderActive;
     if (queueContainer) queueContainer.innerHTML = `${renderWaiting}${renderUpcoming || (!waiting.length ? '<p class="screen-board-empty">No hay turnos ni citas próximos.</p>' : '')}`;
     setText('screenBoardShopName', barbershopProfile?.name || 'Tu barbería');
@@ -3102,7 +3102,7 @@ function updateAppointmentWorkspaceMode() {
 
 const workspaceMenu = document.createElement('button');
 workspaceMenu.type = 'button';
-workspaceMenu.className = 'workspace-menu-toggle';
+workspaceMenu.className = 'workspace-menu-toggle inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 w-full justify-between lg:hidden';
 workspaceMenu.textContent = 'Menú del espacio de trabajo';
 workspaceMenu.setAttribute('aria-expanded', 'false');
 const workspaceTabs = document.querySelector('#dashboardSection > .tabs');
@@ -3162,13 +3162,18 @@ function showTab(tabName, requestedButton = null) {
     const ownerPanel = document.getElementById('ownerManagementTab');
     if (tabName === 'ownerManagement' && ownerPanel) {
         ownerPanel.dataset.module = anchorId || 'overview';
+        const galleryView = anchorId === 'publicGalleryEditorTitle';
+        for (const selector of ['#businessSettingsForm', '#businessSettingsTitle', '#ownerBusinessSettings > p']) {
+            ownerPanel.querySelectorAll(selector).forEach(el => el.classList.toggle('hidden', galleryView));
+        }
+        ownerPanel.querySelectorAll('.public-logo-editor, .public-cover-editor, .public-gallery-editor').forEach(el => el.classList.toggle('hidden', anchorId === 'ownerBusinessSettings'));
         const anchor = anchorId ? document.getElementById(anchorId) : null;
         const sections = [...ownerPanel.children].filter(el => el.matches('section, .card'));
         const targetSection = sections.find(el => el === anchor || el.contains(anchor));
-        sections.forEach(el => el.classList.toggle('owner-module-hidden', Boolean(targetSection) && el !== targetSection && !(anchorId === 'ownerTeamCreate' && el.id === 'ownerLiveChair')));
+        sections.forEach(el => el.classList.toggle('hidden', Boolean(targetSection) && el !== targetSection && !(anchorId === 'ownerTeamCreate' && el.id === 'ownerLiveChair')));
         const heading = ownerPanel.querySelector('h2');
         if (heading) heading.textContent = selectedTab?.textContent.trim() || 'Panel de gestión';
-        ownerPanel.querySelector('.owner-section-shortcuts')?.classList.toggle('owner-module-hidden', Boolean(targetSection));
+        ownerPanel.querySelector('.owner-section-shortcuts')?.classList.toggle('hidden', Boolean(targetSection));
     }
 
     if (tabName === 'ownerManagement' && anchorId && currentUser?.role === 'barbershop_owner') {
@@ -3233,7 +3238,7 @@ async function loadNotificationInbox() {
         list.replaceChildren();
         (data.items || []).forEach(item => {
             const row = document.createElement('li');
-            row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border:1px solid #e4e4e7;border-radius:10px;padding:12px;';
+            row.className = 'flex flex-wrap items-start justify-between gap-3 rounded-xl border border-stone-200 p-3';
             const content = document.createElement('div');
             const title = document.createElement('strong');
             title.textContent = item.title;
@@ -3248,7 +3253,7 @@ async function loadNotificationInbox() {
             if (!item.read_at) {
                 const readButton = document.createElement('button');
                 readButton.type = 'button';
-                readButton.className = 'btn-secondary notification-mark-read';
+                readButton.className = 'btn-secondary notification-mark-read inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
                 readButton.dataset.id = String(Number(item.id));
                 readButton.textContent = 'Marcar leída';
                 row.append(readButton);
@@ -3677,7 +3682,7 @@ async function loadFinancialReport() {
             ['Propinas', format(data.tip_cents)],
             ['Transacciones', String(data.payment_count)],
             ['Pagos de servicios', String(data.service_payment_count)],
-        ].map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`).join('');
+        ].map(([label, value]) => `<div class="stat-card min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 space-y-2"><div class="stat-value text-3xl font-bold tabular-nums">${escapeHtml(value)}</div><div class="stat-label text-sm text-stone-500">${escapeHtml(label)}</div></div>`).join('');
 
         const sections = [
             ['Por día comercial', data.by_day || []],
@@ -3849,7 +3854,7 @@ async function initializeAuthenticatedDashboard(user, { showWelcome = false } = 
         if (currentUser.role === 'barber') await loadBarberLiveStatus();
 
         document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('dashboardSection').style.display = 'block';
+        document.getElementById('dashboardSection').style.display = 'grid';
         document.getElementById('serviceModeTab').style.display = 'block';
         document.getElementById('userInfo').style.display = 'flex';
         document.getElementById('userName').textContent = currentUser.name;
@@ -4031,7 +4036,7 @@ console.log('API Base:', API_ROOT);
 
 function openBusinessPhoto(src) {
     const dialog = document.createElement('dialog');
-    dialog.className = 'business-photo-dialog';
+    dialog.className = 'business-photo-dialog m-auto max-h-[90dvh] w-[min(94vw,60rem)] overflow-y-auto rounded-2xl border border-stone-200 bg-white p-4 backdrop:bg-black/80 [&_img]:max-h-[70dvh] [&_img]:w-full [&_img]:object-contain [&>div]:mt-4 [&>div]:flex [&>div]:justify-end [&>div]:gap-3';
     dialog.setAttribute('aria-label', 'Vista ampliada de la foto');
     const image = document.createElement('img');
     image.src = src;
@@ -4041,11 +4046,11 @@ function openBusinessPhoto(src) {
     download.href = src;
     download.download = new URL(src).pathname.split('/').pop() || 'foto.jpg';
     download.textContent = 'Descargar foto';
-    download.className = 'btn-secondary';
+    download.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
     const close = document.createElement('button');
     close.type = 'button';
     close.textContent = 'Cerrar';
-    close.className = 'btn-secondary';
+    close.className = 'btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
     close.addEventListener('click', () => dialog.close());
     dialog.addEventListener('close', () => dialog.remove(), { once: true });
     actions.append(download, close);
@@ -4068,14 +4073,14 @@ function applyAgendaLayout(list) {
         ['finished', 'Finalizadas', 'Todavía no hay servicios finalizados.'],
     ]) {
         const section = document.createElement('section');
-        section.className = 'agenda-lane agenda-lane-' + key;
+        section.className = '[&_.appointment-card]:flex-col [&_.appointment-card]:items-stretch agenda-lane min-w-0 space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-4 agenda-lane-' + key;
         section.setAttribute('aria-label', title);
         const group = cards.filter(card => card.dataset.flowGroup === key);
         const heading = document.createElement('h3');
         heading.textContent = title + ' · ' + group.length;
         section.append(heading);
         if (group.length) section.append(...group);
-        else { const message = document.createElement('p'); message.className = 'agenda-empty'; message.textContent = empty; section.append(message); }
+        else { const message = document.createElement('p'); message.className = 'agenda-empty rounded-xl border border-dashed border-stone-300 p-5 text-sm text-stone-600'; message.textContent = empty; section.append(message); }
         list.append(section);
     }
 }

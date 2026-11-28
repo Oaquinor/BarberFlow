@@ -9,13 +9,12 @@ const vm = require("node:vm");
 const frontend = path.join(__dirname, "..");
 
 test("registration and recovery use shared KingFlow auth-page styles", () => {
-  const styles = fs.readFileSync(path.join(frontend, "css", "auth-pages.css"), "utf8");
-  assert.match(styles, /--brand-primary:\s*#b98752/i);
-  assert.match(styles, /input:focus-visible[\s\S]*border-color:\s*var\(--brand-primary\)/);
+  const styles = fs.readFileSync(path.join(frontend, "styles", "tailwind.css"), "utf8");
+  assert.match(styles, /@import "tailwindcss"/);
 
   for (const page of ["signup.html", "reset-password.html"]) {
     const html = fs.readFileSync(path.join(frontend, page), "utf8");
-    assert.match(html, /href="\/css\/auth-pages\.css"/);
+    assert.match(html, /href="\/css\/tailwind\.css\?/);
     assert.match(html, /name="theme-color" content="#141412"/);
   }
 });

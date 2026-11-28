@@ -7,176 +7,96 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
-    <link rel="stylesheet" href="/css/account-security.css">
-    <link rel="stylesheet" href="/css/ui-feedback.css">
-    <link rel="stylesheet" href="/css/mfa-settings.css">
     <title>Admin - KingFlow Barber</title>
-    <style>
-        :root {
-            --brand-primary: #b98752;
-            --brand-secondary: #5a4635;
-            --brand-readable: #76512d;
-            --text-primary: #18181b;
-            --text-secondary: #52525b;
-            --surface: rgba(255, 255, 255, 0.92);
-            --ring: rgba(255, 255, 255, 0.35);
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #141412;
-            min-height: 100vh;
-            color: var(--text-primary);
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card {
-            background: var(--surface);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--ring);
-            border-radius: 18px;
-            padding: 24px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.16);
-            margin-bottom: 20px;
-        }
-        .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .header h1 { color: var(--brand-readable); font-size: 1.8em; letter-spacing: .2px; }
-        .header p { color: var(--text-secondary); margin-top: 4px; }
-        .header-actions { display: flex; align-items: center; gap: 12px; }
-        .badge { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: .85em; background: rgba(185, 135, 82, .12); color: var(--brand-readable); }
-        button.logout {
-            border: none; border-radius: 10px; padding: 10px 16px; font-weight: 700; cursor: pointer;
-            background: #f4f4f5; color: #27272a;
-        }
-        .title { font-size: 1.3em; font-weight: 800; margin-bottom: 14px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e4e4e7; font-size: .95em; }
-        th { color: var(--text-secondary); text-transform: uppercase; font-size: .78em; letter-spacing: .05em; }
-        tr:hover td { background: rgba(185, 135, 82, .04); }
-        .pill { padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: .78em; }
-        .pill.active { background: #dcfce7; color: #166534; }
-        .pill.inactive { background: #fee2e2; color: #991b1b; }
-        .pill.plan { background: #ede9fe; color: #5b21b6; }
-        select, input {
-            border: 1px solid #d4d4d8; background: #fff; border-radius: 10px;
-            padding: 8px 10px; font: inherit;
-        }
-        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
-        .toolbar button {
-            border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; color: #161713;
-            background: var(--brand-primary);
-            box-shadow: 0 8px 20px rgba(185, 135, 82, .25);
-        }
-        .toggle-btn {
-            border: none; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: .85em;
-        }
-        .toggle-btn.on { background: #dcfce7; color: #166534; }
-        .toggle-btn.off { background: #f4f4f5; color: #52525b; }
-        .empty-state { text-align: center; padding: 30px; color: var(--text-secondary); }
-        .overview-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
-        .overview-stat { border:1px solid #e4e4e7; border-radius:14px; padding:16px; background:rgba(255,255,255,.65); }
-        .overview-value { display:block; font-size:1.7em; font-weight:800; color:var(--brand-readable); margin-top:5px; }
-        .overview-label { color:var(--text-secondary); font-weight:600; font-size:.9em; }
-        .login-gate { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
-        .login-card { max-width: 420px; width: 100%; text-align: center; }
-        .login-card h2 { margin-bottom: 10px; color: var(--brand-readable); }
-        .login-card p { color: var(--text-secondary); margin-bottom: 18px; }
-        .login-card a { color: var(--brand-readable); font-weight: 700; text-decoration: none; }
-        @media (max-width: 700px) {
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tr { margin-bottom: 14px; border: 1px solid #e4e4e7; border-radius: 12px; padding: 10px; }
-            td { border: none; display: flex; justify-content: space-between; gap: 10px; }
-            td::before { content: attr(data-label); font-weight: 700; color: var(--text-secondary); }
-        }
-    </style>
+
+  <link rel="stylesheet" href="/css/tailwind.css?v=20261128-2">
 </head>
-<body>
-    <div class="container" id="gateContainer" style="display:none;">
-        <div class="login-gate">
-            <div class="card login-card">
-                <h2> Acceso restringido</h2>
+<body class="min-h-dvh bg-stone-100 p-4 font-[Arial,Helvetica,sans-serif] text-stone-900 antialiased sm:p-6 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_a]:underline-offset-4 [&_a:hover]:underline [&_p]:leading-relaxed">
+    <div class="container mx-auto w-full max-w-7xl space-y-6" id="gateContainer" style="display:none">
+        <div class="login-gate mx-auto w-full max-w-md">
+            <div class="card login-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7 grid gap-4">
+                <h2 class="text-2xl font-semibold tracking-tight"> Acceso restringido</h2>
                 <p>Esta sección es solo para Super Admin. Inicia sesión con una cuenta administradora.</p>
                 <a href="/index.html">Ir a iniciar sesión</a>
             </div>
         </div>
     </div>
 
-    <div class="container" id="adminContainer" style="display:none;">
-        <div class="card header">
+    <div class="container mx-auto w-full max-w-7xl space-y-6" id="adminContainer" style="display:none">
+        <div class="card header min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7 flex flex-wrap items-center justify-between gap-4">
             <div>
-                <h1> Panel de Administración</h1>
+                <h1 class="text-3xl font-bold tracking-tight sm:text-4xl"> Panel de Administración</h1>
                 <p>Gestión de barberías afiliadas, roles y soporte</p>
             </div>
-            <div class="header-actions">
-                <span class="badge" id="adminEmail">-</span>
-                <button class="logout" type="button" id="changePasswordBtn" aria-haspopup="dialog"> Contraseña</button>
-                <button class="logout" id="logoutBtn">Cerrar sesión</button>
+            <div class="header-actions flex flex-wrap items-center gap-3">
+                <span class="badge inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold" id="adminEmail">-</span>
+                <button class="logout inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button" id="changePasswordBtn" aria-haspopup="dialog"> Contraseña</button>
+                <button class="logout inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" id="logoutBtn">Cerrar sesión</button>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Métricas globales</div>
-            <div class="toolbar"><span id="overviewPeriod" style="color:var(--text-secondary);"></span><button id="refreshOverviewBtn" type="button"> Actualizar</button></div>
-            <div class="overview-grid">
-                <div class="overview-stat"><span class="overview-label">Barberías activas</span><strong class="overview-value" id="overviewTenants">—</strong></div>
-                <div class="overview-stat"><span class="overview-label">Suscripciones vigentes</span><strong class="overview-value" id="overviewSubscriptions">—</strong></div>
-                <div class="overview-stat"><span class="overview-label">Usuarios activos</span><strong class="overview-value" id="overviewUsers">—</strong></div>
-                <div class="overview-stat"><span class="overview-label">Citas creadas / completadas</span><strong class="overview-value" id="overviewAppointments">—</strong></div>
+            <div class="toolbar flex flex-wrap items-center gap-3"><span id="overviewPeriod"></span><button id="refreshOverviewBtn" type="button" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Actualizar</button></div>
+            <div class="overview-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="overview-stat min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7"><span class="overview-label text-sm text-stone-500">Barberías activas</span><strong class="overview-value text-3xl font-bold tabular-nums" id="overviewTenants">—</strong></div>
+                <div class="overview-stat min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7"><span class="overview-label text-sm text-stone-500">Suscripciones vigentes</span><strong class="overview-value text-3xl font-bold tabular-nums" id="overviewSubscriptions">—</strong></div>
+                <div class="overview-stat min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7"><span class="overview-label text-sm text-stone-500">Usuarios activos</span><strong class="overview-value text-3xl font-bold tabular-nums" id="overviewUsers">—</strong></div>
+                <div class="overview-stat min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7"><span class="overview-label text-sm text-stone-500">Citas creadas / completadas</span><strong class="overview-value text-3xl font-bold tabular-nums" id="overviewAppointments">—</strong></div>
             </div>
-            <p id="overviewRevenue" role="status" style="margin-top:14px;"></p>
+            <p id="overviewRevenue" role="status" class="[margin-top:0.875rem]"></p>
             <p id="overviewResult" role="status" aria-live="polite"></p>
         </div>
 
-        <section class="card">
+        <section class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Configuración general de plataforma</div>
-            <form id="platformSettingsForm" class="toolbar" style="align-items:flex-end;">
-                <label><input id="registrationsEnabled" type="checkbox"> Permitir nuevos registros de barberías</label>
-                <label for="freePeriodDays">Duración inicial del periodo gratuito (días)
-                    <input id="freePeriodDays" type="number" min="1" max="365" required>
+            <form id="platformSettingsForm" class="toolbar flex flex-wrap items-center gap-3 [align-items:flex-end] min-w-0 space-y-4">
+                <label class="text-sm font-medium"><input id="registrationsEnabled" type="checkbox" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50"> Permitir nuevos registros de barberías</label>
+                <label for="freePeriodDays" class="text-sm font-medium">Duración inicial del periodo gratuito (días)
+                    <input id="freePeriodDays" type="number" min="1" max="365" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
                 </label>
-                <button type="submit">Guardar configuración</button>
+                <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Guardar configuración</button>
             </form>
             <p id="platformSettingsResult" role="status" aria-live="polite"></p>
         </section>
 
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Barberías afiliadas</div>
-            <div class="toolbar">
-                <button id="refreshTenantsBtn"> Actualizar</button>
-                <span id="tenantsCount" style="color: var(--text-secondary); font-weight: 600;"></span>
+            <div class="toolbar flex flex-wrap items-center gap-3">
+                <button id="refreshTenantsBtn" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Actualizar</button>
+                <span id="tenantsCount" class="[font-weight:600]"></span>
             </div>
             <div id="tenantsTableWrap">
-                <table>
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold">
                     <thead>
                         <tr>
-                            <th>Barbería</th>
-                            <th>Owner</th>
-                            <th>Plan</th>
-                            <th>Estado suscripción</th>
-                            <th>Estado tenant</th>
-                            <th>Acciones</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Barbería</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Owner</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Plan</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Estado suscripción</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Estado tenant</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tenantsBody"></tbody>
                 </table>
-                <div id="tenantsEmpty" class="empty-state" style="display:none;">No hay barberías registradas aún.</div>
+                <div id="tenantsEmpty" class="empty-state rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-600" style="display:none">No hay barberías registradas aún.</div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Cobros y suscripción</div>
-            <div class="toolbar">
-                <select id="subscriptionTenantSelect" aria-label="Barbería para consultar la suscripción">
+            <div class="toolbar flex flex-wrap items-center gap-3">
+                <select id="subscriptionTenantSelect" aria-label="Barbería para consultar la suscripción" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                     <option value="">Selecciona una barbería...</option>
                 </select>
-                <button id="loadSubscriptionBtn"> Cargar</button>
+                <button id="loadSubscriptionBtn" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Cargar</button>
             </div>
-            <div id="subscriptionPanel" style="display:none;">
-                <div class="toolbar" style="align-items:flex-end;">
+            <div id="subscriptionPanel" style="display:none">
+                <div class="toolbar flex flex-wrap items-center gap-3 [align-items:flex-end]">
                     <div>
-                        <label for="subPlan" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Plan</label>
-                        <select id="subPlan">
+                        <label for="subPlan" class="[display:block] [font-size:.8em] [margin-bottom:0.25rem] text-sm font-medium">Plan</label>
+                        <select id="subPlan" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                             <option value="free">Free</option>
                             <option value="basic">Basic</option>
                             <option value="professional">Professional</option>
@@ -184,8 +104,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="subStatus" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Estado de suscripción</label>
-                        <select id="subStatus">
+                        <label for="subStatus" class="[display:block] [font-size:.8em] [margin-bottom:0.25rem] text-sm font-medium">Estado de suscripción</label>
+                        <select id="subStatus" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
                             <option value="suspended">Suspendido</option>
@@ -194,65 +114,65 @@
                         </select>
                     </div>
                     <div>
-                        <label for="subPeriodEnd" style="display:block;font-size:.8em;color:var(--text-secondary);margin-bottom:4px;">Fin del periodo</label>
-                        <input type="date" id="subPeriodEnd" />
+                        <label for="subPeriodEnd" class="[display:block] [font-size:.8em] [margin-bottom:0.25rem] text-sm font-medium">Fin del periodo</label>
+                        <input type="date" id="subPeriodEnd" / class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
                     </div>
-                    <button id="saveSubscriptionBtn"> Guardar</button>
+                    <button id="saveSubscriptionBtn" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Guardar</button>
                 </div>
-                <p id="subscriptionResult" style="margin-top:10px;color:var(--text-secondary);"></p>
-                <p style="color:var(--text-secondary);">La renovación es manual. Esta pantalla no procesa ni programa cargos; registra cada periodo después de confirmar que recibiste el pago. Para un plan pagado nuevo, guárdalo inactivo y regístralo en “Cobro recibido”; solo ese registro lo activa.</p>
+                <p id="subscriptionResult" class="[margin-top:0.625rem]"></p>
+                <p>La renovación es manual. Esta pantalla no procesa ni programa cargos; registra cada periodo después de confirmar que recibiste el pago. Para un plan pagado nuevo, guárdalo inactivo y regístralo en “Cobro recibido”; solo ese registro lo activa.</p>
                 <hr>
-                <h3>Registrar cobro recibido</h3>
+                <h3 class="text-lg font-semibold">Registrar cobro recibido</h3>
                 <p>Este registro confirma un cobro externo recibido. No procesa tarjetas ni crea un cobro ficticio.</p>
-                <form id="subscriptionPaymentForm" class="toolbar" style="align-items:flex-end;">
-                    <div><label for="subscriptionPaymentAmount">Importe recibido (<span id="subscriptionPaymentCurrency">moneda del negocio</span>)</label><input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" required></div>
-                    <div><label for="subscriptionPaymentMethod">Método</label><select id="subscriptionPaymentMethod"><option value="card">Tarjeta externa</option><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="other">Otro</option></select></div>
-                    <div><label for="subscriptionPaymentReference">Referencia</label><input id="subscriptionPaymentReference" maxlength="120"></div>
-                    <div><label for="subscriptionPaymentStart">Inicio del periodo</label><input id="subscriptionPaymentStart" type="date" required></div>
-                    <div><label for="subscriptionPaymentEnd">Fin del periodo</label><input id="subscriptionPaymentEnd" type="date" required></div>
-                    <label><input id="subscriptionPaymentConfirmed" type="checkbox" required> Confirmo que recibí el pago</label>
-                    <button id="recordSubscriptionPaymentBtn" type="submit">Registrar cobro recibido</button>
+                <form id="subscriptionPaymentForm" class="toolbar flex flex-wrap items-center gap-3 [align-items:flex-end] min-w-0 space-y-4">
+                    <div><label for="subscriptionPaymentAmount" class="text-sm font-medium">Importe recibido (<span id="subscriptionPaymentCurrency">moneda del negocio</span>)</label><input id="subscriptionPaymentAmount" type="number" min="0.01" step="0.01" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                    <div><label for="subscriptionPaymentMethod" class="text-sm font-medium">Método</label><select id="subscriptionPaymentMethod" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full"><option value="card">Tarjeta externa</option><option value="bank_transfer">Transferencia</option><option value="cash">Efectivo</option><option value="other">Otro</option></select></div>
+                    <div><label for="subscriptionPaymentReference" class="text-sm font-medium">Referencia</label><input id="subscriptionPaymentReference" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                    <div><label for="subscriptionPaymentStart" class="text-sm font-medium">Inicio del periodo</label><input id="subscriptionPaymentStart" type="date" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                    <div><label for="subscriptionPaymentEnd" class="text-sm font-medium">Fin del periodo</label><input id="subscriptionPaymentEnd" type="date" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+                    <label class="text-sm font-medium"><input id="subscriptionPaymentConfirmed" type="checkbox" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50"> Confirmo que recibí el pago</label>
+                    <button id="recordSubscriptionPaymentBtn" type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Registrar cobro recibido</button>
                 </form>
                 <p id="subscriptionPaymentResult" role="status" aria-live="polite"></p>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Usuarios y permisos</div>
-            <div class="toolbar">
-                <select id="tenantFilter" aria-label="Filtrar usuarios por barbería">
+            <div class="toolbar flex flex-wrap items-center gap-3">
+                <select id="tenantFilter" aria-label="Filtrar usuarios por barbería" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                     <option value="">Todas las barberías</option>
                 </select>
-                <input id="userSearch" type="search" aria-label="Buscar usuario por nombre o correo" placeholder="Nombre o correo">
-                <button id="userSearchBtn" type="button">Buscar</button>
-                <button id="refreshUsersBtn"> Actualizar</button>
-                <span id="usersCount" style="color: var(--text-secondary); font-weight: 600;"></span>
-                <button id="previousUsersBtn" type="button" disabled>← Anterior</button>
-                <button id="nextUsersBtn" type="button" disabled>Siguiente →</button>
+                <input id="userSearch" type="search" aria-label="Buscar usuario por nombre o correo" placeholder="Nombre o correo" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+                <button id="userSearchBtn" type="button" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Buscar</button>
+                <button id="refreshUsersBtn" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Actualizar</button>
+                <span id="usersCount" class="[font-weight:600]"></span>
+                <button id="previousUsersBtn" type="button" disabled class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">← Anterior</button>
+                <button id="nextUsersBtn" type="button" disabled class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Siguiente →</button>
             </div>
             <div id="usersTableWrap">
-                <table>
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold">
                     <thead>
                         <tr>
-                            <th>Usuario</th>
-                            <th>Rol</th>
-                            <th>Barbería</th>
-                            <th>Estado</th>
-                            <th>Acceso</th>
-                            <th>Soporte por correo</th>
-                            <th>Branding automático</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Usuario</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Rol</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Barbería</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Estado</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Acceso</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Soporte por correo</th>
+                            <th class="p-3 text-left text-xs font-semibold text-stone-500">Branding automático</th>
                         </tr>
                     </thead>
                     <tbody id="usersBody"></tbody>
                 </table>
-                <div id="usersEmpty" class="empty-state" style="display:none;">No hay usuarios para mostrar.</div>
+                <div id="usersEmpty" class="empty-state rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-600" style="display:none">No hay usuarios para mostrar.</div>
             </div>
         </div>
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Bandeja de soporte</div>
-            <div class="toolbar">
-                <label for="supportTicketFilter">Estado</label>
-                <select id="supportTicketFilter">
+            <div class="toolbar flex flex-wrap items-center gap-3">
+                <label for="supportTicketFilter" class="text-sm font-medium">Estado</label>
+                <select id="supportTicketFilter" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                     <option value="">Todos</option>
                     <option value="open">Abiertos</option>
                     <option value="in_progress">En curso</option>
@@ -260,72 +180,72 @@
                     <option value="closed">Cerrados</option>
                 </select>
                 <span id="supportOpenCount" role="status" aria-live="polite">Solicitudes abiertas: —</span>
-                <button id="refreshSupportTicketsBtn" type="button"> Actualizar</button>
-                <span id="supportTicketsResult" role="status" style="color:var(--text-secondary);"></span>
-                <button id="previousSupportTicketsBtn" type="button" disabled>← Anterior</button>
-                <button id="nextSupportTicketsBtn" type="button" disabled>Siguiente →</button>
+                <button id="refreshSupportTicketsBtn" type="button" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Actualizar</button>
+                <span id="supportTicketsResult" role="status"></span>
+                <button id="previousSupportTicketsBtn" type="button" disabled class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">← Anterior</button>
+                <button id="nextSupportTicketsBtn" type="button" disabled class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Siguiente →</button>
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Fecha</th><th>Barbería</th><th>Contacto</th><th>Mensaje</th><th>Aviso por correo</th><th>Estado</th><th>Acción</th></tr></thead>
+            <div class="table-wrap max-w-full overflow-x-auto">
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold">
+                    <thead><tr><th class="p-3 text-left text-xs font-semibold text-stone-500">Fecha</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Barbería</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Contacto</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Mensaje</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Aviso por correo</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Estado</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Acción</th></tr></thead>
                     <tbody id="supportTicketsBody"></tbody>
                 </table>
             </div>
         </div>
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Auditoría de operaciones</div>
-            <div class="toolbar">
-                <select id="auditTenantFilter" aria-label="Filtrar auditoría por barbería"><option value="">Todas las barberías</option></select>
-                <button id="loadAuditBtn" type="button"> Cargar historial</button>
-                <span id="auditResult" role="status" style="color:var(--text-secondary);"></span>
+            <div class="toolbar flex flex-wrap items-center gap-3">
+                <select id="auditTenantFilter" aria-label="Filtrar auditoría por barbería" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full"><option value="">Todas las barberías</option></select>
+                <button id="loadAuditBtn" type="button" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"> Cargar historial</button>
+                <span id="auditResult" role="status"></span>
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Fecha</th><th>Barbería</th><th>Usuario</th><th>Acción</th><th>Elemento</th><th>Datos</th></tr></thead>
+            <div class="table-wrap max-w-full overflow-x-auto">
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold">
+                    <thead><tr><th class="p-3 text-left text-xs font-semibold text-stone-500">Fecha</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Barbería</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Usuario</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Acción</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Elemento</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Datos</th></tr></thead>
                     <tbody id="auditBody"></tbody>
                 </table>
             </div>
         </div>
-        <div class="card">
+        <div class="card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <div class="title"> Programa de afiliados</div>
-            <form id="affiliateForm" class="toolbar">
-                <input id="affiliateFirstName" aria-label="Nombre del afiliado" required minlength="2" maxlength="100" placeholder="Nombre">
-                <input id="affiliateLastName" aria-label="Apellido del afiliado" required minlength="2" maxlength="100" placeholder="Apellido">
-                <input id="affiliateEmail" aria-label="Correo del afiliado" type="email" required placeholder="Correo">
-                <input id="affiliatePhone" aria-label="Teléfono del afiliado" maxlength="20" placeholder="Teléfono">
-                <label>Comisión % <input id="affiliateRate" type="number" min="0.01" max="100" step="0.01" value="15" required></label>
-                <button type="submit">Crear afiliado</button>
+            <form id="affiliateForm" class="toolbar flex flex-wrap items-center gap-3 min-w-0 space-y-4">
+                <input id="affiliateFirstName" aria-label="Nombre del afiliado" required minlength="2" maxlength="100" placeholder="Nombre" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+                <input id="affiliateLastName" aria-label="Apellido del afiliado" required minlength="2" maxlength="100" placeholder="Apellido" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+                <input id="affiliateEmail" aria-label="Correo del afiliado" type="email" required placeholder="Correo" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+                <input id="affiliatePhone" aria-label="Teléfono del afiliado" maxlength="20" placeholder="Teléfono" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+                <label class="text-sm font-medium">Comisión % <input id="affiliateRate" type="number" min="0.01" max="100" step="0.01" value="15" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></label>
+                <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Crear afiliado</button>
             </form>
             <p id="affiliateFormResult" role="status"></p>
-            <div class="table-wrap">
-                <table><thead><tr><th>Afiliado</th><th>Código</th><th>Estado</th><th>Referidos</th><th>Comisiones por moneda</th><th>Acciones</th></tr></thead><tbody id="affiliatesBody"></tbody></table>
+            <div class="table-wrap max-w-full overflow-x-auto">
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold"><thead><tr><th class="p-3 text-left text-xs font-semibold text-stone-500">Afiliado</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Código</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Estado</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Referidos</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Comisiones por moneda</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Acciones</th></tr></thead><tbody id="affiliatesBody"></tbody></table>
             </div>
-            <div class="toolbar" style="margin-top:18px;">
-                <select id="affiliateCommissionSelect" aria-label="Afiliado para consultar comisiones"><option value="">Selecciona afiliado para ver comisiones</option></select>
-                <button id="loadAffiliateCommissionsBtn" type="button">Ver comisiones</button>
+            <div class="toolbar flex flex-wrap items-center gap-3 [margin-top:1.125rem]">
+                <select id="affiliateCommissionSelect" aria-label="Afiliado para consultar comisiones" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full"><option value="">Selecciona afiliado para ver comisiones</option></select>
+                <button id="loadAffiliateCommissionsBtn" type="button" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Ver comisiones</button>
             </div>
-            <div class="table-wrap">
-                <table><thead><tr><th>Barbería</th><th>Importe</th><th>Periodo</th><th>Estado</th><th>Referencia de pago</th><th>Acciones</th></tr></thead><tbody id="affiliateCommissionsBody"></tbody></table>
+            <div class="table-wrap max-w-full overflow-x-auto">
+                <table class="w-full max-sm:block [&_thead]:max-sm:hidden [&_tbody]:max-sm:grid [&_tbody]:max-sm:gap-4 [&_tr]:max-sm:grid [&_tr]:max-sm:gap-2 [&_tr]:max-sm:rounded-xl [&_tr]:max-sm:border [&_tr]:max-sm:border-stone-200 [&_tr]:max-sm:p-3 [&_td]:max-sm:grid [&_td]:max-sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] [&_td]:max-sm:gap-3 [&_td]:max-sm:before:content-[attr(data-label)] [&_td]:max-sm:before:text-xs [&_td]:max-sm:before:font-semibold"><thead><tr><th class="p-3 text-left text-xs font-semibold text-stone-500">Barbería</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Importe</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Periodo</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Estado</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Referencia de pago</th><th class="p-3 text-left text-xs font-semibold text-stone-500">Acciones</th></tr></thead><tbody id="affiliateCommissionsBody"></tbody></table>
             </div>
             <p id="affiliateCommissionResult" role="status"></p>
         </div>
     </div>
 
-    <dialog id="passwordChangeDialog" class="password-dialog" aria-labelledby="passwordChangeTitle">
-        <h2 id="passwordChangeTitle">Cambiar contraseña</h2>
+    <dialog id="passwordChangeDialog" class="password-dialog m-auto w-[min(94vw,32rem)] space-y-4 rounded-2xl border border-stone-200 bg-white p-6 backdrop:bg-black/60" aria-labelledby="passwordChangeTitle">
+        <h2 id="passwordChangeTitle" class="text-2xl font-semibold tracking-tight">Cambiar contraseña</h2>
         <p>El cambio cerrará tus sesiones activas en todos los dispositivos.</p>
-        <form id="passwordChangeForm">
-            <label for="passwordCurrent">Contraseña actual</label>
-            <input id="passwordCurrent" type="password" autocomplete="current-password" required maxlength="72">
-            <label for="passwordNew">Nueva contraseña</label>
-            <input id="passwordNew" type="password" autocomplete="new-password" required minlength="12" maxlength="72" aria-describedby="passwordChangeHint">
+        <form id="passwordChangeForm" class="min-w-0 space-y-4">
+            <label for="passwordCurrent" class="text-sm font-medium">Contraseña actual</label>
+            <input id="passwordCurrent" type="password" autocomplete="current-password" required maxlength="72" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <label for="passwordNew" class="text-sm font-medium">Nueva contraseña</label>
+            <input id="passwordNew" type="password" autocomplete="new-password" required minlength="12" maxlength="72" aria-describedby="passwordChangeHint" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
             <small id="passwordChangeHint">Usa al menos 12 caracteres, una mayúscula y un número.</small>
-            <label for="passwordConfirm">Confirmar contraseña nueva</label>
-            <input id="passwordConfirm" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
+            <label for="passwordConfirm" class="text-sm font-medium">Confirmar contraseña nueva</label>
+            <input id="passwordConfirm" type="password" autocomplete="new-password" required minlength="12" maxlength="72" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
             <p id="passwordChangeResult" role="status" aria-live="polite"></p>
-            <div class="password-dialog-actions">
-                <button id="closePasswordChange" type="button" class="logout">Cancelar</button>
-                <button type="submit" class="logout">Actualizar contraseña</button>
+            <div class="password-dialog-actions flex flex-wrap items-center gap-3">
+                <button id="closePasswordChange" type="button" class="logout inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">Cancelar</button>
+                <button type="submit" class="logout inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">Actualizar contraseña</button>
             </div>
         </form>
     </dialog>

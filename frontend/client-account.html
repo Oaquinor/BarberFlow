@@ -7,129 +7,129 @@
   <meta name="referrer" content="no-referrer">
   <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/css/client-account.css?v=20261125-style-passport-1">
   <title>Mi cuenta · KingFlow Barber</title>
+  <link rel="stylesheet" href="/css/tailwind.css?v=20261128-2">
 </head>
-<body>
-  <main class="account-shell">
-    <a class="wordmark" href="/client.html">KINGFLOW <span>BARBER</span></a>
-    <section class="account-card" aria-labelledby="accountTitle">
-      <p class="eyebrow">TU ESPACIO PERSONAL</p>
-      <h1 id="accountTitle">Tus citas, bajo tu control.</h1>
+<body class="min-h-dvh bg-stone-100 p-4 font-[Arial,Helvetica,sans-serif] text-stone-900 antialiased sm:p-6 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_a]:underline-offset-4 [&_a:hover]:underline [&_p]:leading-relaxed">
+  <main class="account-shell mx-auto w-full max-w-5xl space-y-6">
+    <a class="wordmark inline-flex gap-2 text-sm font-bold uppercase tracking-widest text-stone-800" href="/client.html">KINGFLOW <span>BARBER</span></a>
+    <section class="account-card min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7" aria-labelledby="accountTitle">
+      <p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">TU ESPACIO PERSONAL</p>
+      <h1 id="accountTitle" class="text-3xl font-bold tracking-tight sm:text-4xl">Tus citas, bajo tu control.</h1>
       <p class="intro">Verifica tu correo para guardar y consultar tus citas en las barberías que usan KingFlow.</p>
-      <p id="accountStatus" class="status" role="status" aria-live="polite"></p>
+      <p id="accountStatus" class="status empty:hidden" role="status" aria-live="polite"></p>
 
-      <section id="authPanel" class="auth-panel">
-        <form id="loginForm" class="account-form">
-          <h2>Iniciar sesión</h2>
-          <label for="loginEmail">Correo</label><input id="loginEmail" type="email" autocomplete="email" required>
-          <label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required>
-          <button type="submit">Entrar a mi cuenta</button>
+      <section id="authPanel" class="auth-panel grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
+        <form id="loginForm" class="account-form grid min-w-0 gap-5 space-y-4">
+          <h2 class="text-2xl font-semibold tracking-tight">Iniciar sesión</h2>
+          <label for="loginEmail" class="text-sm font-medium">Correo</label><input id="loginEmail" type="email" autocomplete="email" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <label for="loginPassword" class="text-sm font-medium">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Entrar a mi cuenta</button>
         </form>
         <details>
           <summary>Crear cuenta de cliente</summary>
-          <form id="registerForm" class="account-form">
-            <label for="registerFirstName">Nombre</label><input id="registerFirstName" autocomplete="given-name" required minlength="2" maxlength="100">
-            <label for="registerLastName">Apellido</label><input id="registerLastName" autocomplete="family-name" required minlength="2" maxlength="100">
-            <label for="registerEmail">Correo para verificar tu cuenta</label><input id="registerEmail" type="email" autocomplete="email" required>
-            <label for="registerPhone">Teléfono (no se usa para reclamar citas)</label><input id="registerPhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30">
-            <label for="registerPassword">Contraseña (12 caracteres, una mayúscula y un número)</label><input id="registerPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="72">
-            <button type="submit">Crear cuenta</button>
+          <form id="registerForm" class="account-form grid min-w-0 gap-5 space-y-4">
+            <label for="registerFirstName" class="text-sm font-medium">Nombre</label><input id="registerFirstName" autocomplete="given-name" required minlength="2" maxlength="100" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <label for="registerLastName" class="text-sm font-medium">Apellido</label><input id="registerLastName" autocomplete="family-name" required minlength="2" maxlength="100" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <label for="registerEmail" class="text-sm font-medium">Correo para verificar tu cuenta</label><input id="registerEmail" type="email" autocomplete="email" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <label for="registerPhone" class="text-sm font-medium">Teléfono (no se usa para reclamar citas)</label><input id="registerPhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <label for="registerPassword" class="text-sm font-medium">Contraseña (12 caracteres, una mayúscula y un número)</label><input id="registerPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="72" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Crear cuenta</button>
           </form>
         </details>
         <details>
           <summary>No recibí el correo de verificación</summary>
-          <form id="resendForm" class="account-form">
-            <label for="resendEmail">Correo de la cuenta</label><input id="resendEmail" type="email" autocomplete="email" required>
-            <button type="submit">Enviar otro enlace</button>
+          <form id="resendForm" class="account-form grid min-w-0 gap-5 space-y-4">
+            <label for="resendEmail" class="text-sm font-medium">Correo de la cuenta</label><input id="resendEmail" type="email" autocomplete="email" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Enviar otro enlace</button>
           </form>
         </details>
       </section>
 
       <section id="customerPanel" hidden>
-        <div class="account-toolbar"><p id="customerGreeting"></p><button id="logoutButton" class="button-secondary" type="button">Cerrar sesión</button></div>
-        <section class="next-appointment" aria-labelledby="nextAppointmentTitle">
-          <p class="eyebrow">TU PRÓXIMA VISITA</p>
-          <h2 id="nextAppointmentTitle">Tu próxima cita</h2>
+        <div class="account-toolbar flex flex-wrap items-center gap-3"><p id="customerGreeting"></p><button id="logoutButton" class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button">Cerrar sesión</button></div>
+        <section class="next-appointment min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7" aria-labelledby="nextAppointmentTitle">
+          <p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">TU PRÓXIMA VISITA</p>
+          <h2 id="nextAppointmentTitle" class="text-2xl font-semibold tracking-tight">Tu próxima cita</h2>
           <div id="nextAppointmentContent" aria-live="polite"><p>Cargando tu agenda…</p></div>
         </section>
-        <form id="profileForm" class="account-form profile-form">
-          <h2>Tu perfil</h2>
+        <form id="profileForm" class="account-form profile-form grid min-w-0 gap-5 grid-cols-1 gap-4 sm:grid-cols-2 space-y-4">
+          <h2 class="text-2xl font-semibold tracking-tight">Tu perfil</h2>
           <p>Tu correo verificado identifica la cuenta. Para cambiarlo tendrás que verificar el nuevo correo.</p>
-          <label for="profileEmail">Correo verificado</label><input id="profileEmail" type="email" readonly aria-readonly="true">
-          <label for="profileFirstName">Nombre de tu cuenta</label><input id="profileFirstName" autocomplete="given-name" required minlength="2" maxlength="100">
-          <label for="profileLastName">Apellido de tu cuenta</label><input id="profileLastName" autocomplete="family-name" required minlength="2" maxlength="100">
-          <label for="profilePhone">Teléfono de tu cuenta</label><input id="profilePhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30">
-          <button type="submit">Guardar perfil</button>
-          <button type="button" class="button-secondary" id="exportDataButton">Descargar mis datos</button>
+          <label for="profileEmail" class="text-sm font-medium">Correo verificado</label><input id="profileEmail" type="email" readonly aria-readonly="true" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <label for="profileFirstName" class="text-sm font-medium">Nombre de tu cuenta</label><input id="profileFirstName" autocomplete="given-name" required minlength="2" maxlength="100" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <label for="profileLastName" class="text-sm font-medium">Apellido de tu cuenta</label><input id="profileLastName" autocomplete="family-name" required minlength="2" maxlength="100" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <label for="profilePhone" class="text-sm font-medium">Teléfono de tu cuenta</label><input id="profilePhone" type="tel" autocomplete="tel" required minlength="6" maxlength="30" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Guardar perfil</button>
+          <button type="button" class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" id="exportDataButton">Descargar mis datos</button>
         </form>
-        <form id="claimForm" class="account-form claim-form">
-          <h2>Añadir una cita anterior</h2>
+        <form id="claimForm" class="account-form claim-form grid min-w-0 gap-5 space-y-4">
+          <h2 class="text-2xl font-semibold tracking-tight">Añadir una cita anterior</h2>
           <p>Usa el código privado del enlace de seguimiento. El teléfono no sirve para reclamar citas.</p>
-          <label for="claimToken">Código privado de seguimiento</label><input id="claimToken" autocomplete="off" minlength="32" maxlength="128" required>
-          <button type="submit">Añadir cita a mi historial</button>
+          <label for="claimToken" class="text-sm font-medium">Código privado de seguimiento</label><input id="claimToken" autocomplete="off" minlength="32" maxlength="128" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+          <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Añadir cita a mi historial</button>
         </form>
         <section aria-labelledby="appointmentsTitle">
-          <h2 id="appointmentsTitle">Mis citas</h2>
-          <div id="appointmentsList" class="appointments-list"><p>Cargando tus citas…</p></div>
+          <h2 id="appointmentsTitle" class="text-2xl font-semibold tracking-tight">Mis citas</h2>
+          <div id="appointmentsList" class="appointments-list grid min-w-0 gap-5"><p>Cargando tus citas…</p></div>
         </section>
-        <section class="style-passport-section" aria-labelledby="stylePassportTitle">
-          <div class="style-passport-heading">
+        <section class="style-passport-section space-y-5 border-t border-stone-200 pt-6" aria-labelledby="stylePassportTitle">
+          <div class="style-passport-heading flex flex-wrap items-center gap-3">
             <div>
-              <p class="eyebrow">TU HISTORIAL DE ESTILO</p>
-              <h2 id="stylePassportTitle">Style Passport</h2>
+              <p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">TU HISTORIAL DE ESTILO</p>
+              <h2 id="stylePassportTitle" class="text-2xl font-semibold tracking-tight">Style Passport</h2>
               <p>Conserva los detalles de tus cortes y vuelve a reservarlos cuando quieras.</p>
             </div>
-            <button id="newStylePassportButton" class="button-secondary" type="button">Guardar un corte</button>
+            <button id="newStylePassportButton" class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button">Guardar un corte</button>
           </div>
-          <form id="stylePassportForm" class="account-form style-passport-form" hidden>
-            <input id="stylePassportEntryId" type="hidden">
-            <h3 id="stylePassportFormTitle">Guarda una visita completada</h3>
-            <label for="stylePassportAppointment">Visita completada</label>
-            <select id="stylePassportAppointment" required></select>
+          <form id="stylePassportForm" class="account-form style-passport-form grid min-w-0 gap-5 space-y-4" hidden>
+            <input id="stylePassportEntryId" type="hidden" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
+            <h3 id="stylePassportFormTitle" class="text-lg font-semibold">Guarda una visita completada</h3>
+            <label for="stylePassportAppointment" class="text-sm font-medium">Visita completada</label>
+            <select id="stylePassportAppointment" required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full"></select>
             <p id="stylePassportRetentionNotice" class="style-privacy-note" role="status" aria-live="polite"></p>
-            <div class="style-fields-grid">
-              <div><label for="stylePassportHaircut">Tipo de corte</label><input id="stylePassportHaircut" maxlength="120"></div>
-              <div><label for="stylePassportFade">Tipo de fade</label><input id="stylePassportFade" maxlength="120"></div>
-              <div><label for="stylePassportTop">Largo superior</label><input id="stylePassportTop" maxlength="120"></div>
-              <div><label for="stylePassportSides">Largo de los lados</label><input id="stylePassportSides" maxlength="120"></div>
-              <div><label for="stylePassportBeard">Estilo de barba</label><input id="stylePassportBeard" maxlength="120"></div>
-              <div><label for="stylePassportProducts">Productos usados</label><input id="stylePassportProducts" maxlength="300"></div>
+            <div class="style-fields-grid grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+              <div><label for="stylePassportHaircut" class="text-sm font-medium">Tipo de corte</label><input id="stylePassportHaircut" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <div><label for="stylePassportFade" class="text-sm font-medium">Tipo de fade</label><input id="stylePassportFade" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <div><label for="stylePassportTop" class="text-sm font-medium">Largo superior</label><input id="stylePassportTop" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <div><label for="stylePassportSides" class="text-sm font-medium">Largo de los lados</label><input id="stylePassportSides" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <div><label for="stylePassportBeard" class="text-sm font-medium">Estilo de barba</label><input id="stylePassportBeard" maxlength="120" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
+              <div><label for="stylePassportProducts" class="text-sm font-medium">Productos usados</label><input id="stylePassportProducts" maxlength="300" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full"></div>
             </div>
-            <label for="stylePassportPreferences">Detalles que quieres recordar</label>
-            <textarea id="stylePassportPreferences" maxlength="2000" rows="3" placeholder="Ej.: conservar el largo arriba y preguntar antes de recortar el flequillo"></textarea>
-            <div class="style-photo-fields">
-              <div><label for="stylePassportReferencePhotos">Fotos de referencia (hasta 2)</label><input id="stylePassportReferencePhotos" type="file" accept="image/jpeg,image/png" multiple></div>
-              <div><label for="stylePassportResultPhotos">Fotos del resultado (hasta 2)</label><input id="stylePassportResultPhotos" type="file" accept="image/jpeg,image/png" multiple></div>
+            <label for="stylePassportPreferences" class="text-sm font-medium">Detalles que quieres recordar</label>
+            <textarea id="stylePassportPreferences" maxlength="2000" rows="3" placeholder="Ej.: conservar el largo arriba y preguntar antes de recortar el flequillo" class="min-h-28 w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900"></textarea>
+            <div class="style-photo-fields grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+              <div><label for="stylePassportReferencePhotos" class="text-sm font-medium">Fotos de referencia (hasta 2)</label><input id="stylePassportReferencePhotos" type="file" accept="image/jpeg,image/png" multiple class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50"></div>
+              <div><label for="stylePassportResultPhotos" class="text-sm font-medium">Fotos del resultado (hasta 2)</label><input id="stylePassportResultPhotos" type="file" accept="image/jpeg,image/png" multiple class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50"></div>
             </div>
-            <label class="style-consent" for="stylePassportShare">
-              <input id="stylePassportShare" type="checkbox">
+            <label class="style-consent text-sm font-medium" for="stylePassportShare">
+              <input id="stylePassportShare" type="checkbox" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
               <span>Compartir este registro y sus fotos con el equipo de esta barbería. Puedes retirar el acceso cuando quieras.</span>
             </label>
             <p class="style-privacy-note">Por defecto, solo tú puedes ver este registro. Las fotos son privadas, no aparecen en la galería pública y se eliminan del almacenamiento al borrarlas.</p>
-            <p id="stylePassportFormResult" class="status" role="status" aria-live="polite"></p>
-            <div class="style-form-actions">
-              <button type="submit">Guardar en mi Style Passport</button>
-              <button id="cancelStylePassportEdit" class="button-secondary" type="button">Cancelar</button>
+            <p id="stylePassportFormResult" class="status empty:hidden" role="status" aria-live="polite"></p>
+            <div class="style-form-actions flex flex-wrap items-center gap-3">
+              <button type="submit" class="cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">Guardar en mi Style Passport</button>
+              <button id="cancelStylePassportEdit" class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button">Cancelar</button>
             </div>
           </form>
-          <div id="stylePassportList" class="style-passport-list" aria-live="polite"><p>Cargando tu historial de estilo…</p></div>
+          <div id="stylePassportList" class="style-passport-list grid min-w-0 gap-5" aria-live="polite"><p>Cargando tu historial de estilo…</p></div>
         </section>
-        <section class="favorites-section" aria-labelledby="favoritesTitle">
-          <h2 id="favoritesTitle">Mis favoritos</h2>
-          <div id="favoritesList" class="favorites-list"><p>Cargando tus favoritos…</p></div>
+        <section class="favorites-section space-y-5 border-t border-stone-200 pt-6" aria-labelledby="favoritesTitle">
+          <h2 id="favoritesTitle" class="text-2xl font-semibold tracking-tight">Mis favoritos</h2>
+          <div id="favoritesList" class="favorites-list grid grid-cols-1 gap-4 sm:grid-cols-2"><p>Cargando tus favoritos…</p></div>
         </section>
       </section>
 
       <section id="verifyPanel" hidden>
-        <h2>Verificando tu correo</h2><p>Comprobamos que el enlace siga vigente y no se haya usado antes.</p>
+        <h2 class="text-2xl font-semibold tracking-tight">Verificando tu correo</h2><p>Comprobamos que el enlace siga vigente y no se haya usado antes.</p>
       </section>
     </section>
-    <dialog id="stylePassportPhotoDialog" class="style-photo-dialog" aria-labelledby="stylePassportPhotoTitle">
-      <div class="style-photo-dialog-heading"><h2 id="stylePassportPhotoTitle">Foto privada de estilo</h2><button id="closeStylePassportPhoto" class="button-secondary" type="button">Cerrar</button></div>
+    <dialog id="stylePassportPhotoDialog" class="style-photo-dialog m-auto max-h-[90dvh] w-[min(94vw,60rem)] space-y-4 overflow-y-auto rounded-xl bg-white p-5 backdrop:bg-black/70 [&_img]:max-h-[70dvh] [&_img]:w-full [&_img]:object-contain" aria-labelledby="stylePassportPhotoTitle">
+      <div class="style-photo-dialog-heading flex flex-wrap items-center gap-3"><h2 id="stylePassportPhotoTitle" class="text-2xl font-semibold tracking-tight">Foto privada de estilo</h2><button id="closeStylePassportPhoto" class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" type="button">Cerrar</button></div>
       <img id="stylePassportPhotoPreview" alt="Foto privada de tu Style Passport">
     </dialog>
-    <p class="account-footer">Tus datos de cliente se mantienen separados por barbería.</p>
+    <p class="account-footer flex flex-wrap items-center gap-3">Tus datos de cliente se mantienen separados por barbería.</p>
   </main>
   <script src="/js/config.js"></script>
   <script src="/js/pwa.js"></script>

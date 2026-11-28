@@ -48,20 +48,13 @@ test("pre-caches app shell and removes only KingFlow caches from older versions"
   let installPromise;
   worker.listeners.get("install")({ waitUntil(promise) { installPromise = promise; } });
   await installPromise;
-  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v85");
-  assert.ok(worker.addedAssets[0].assets.includes("/css/owner-dashboard.css?v=20261126-agenda-board-5"));
-  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261126-agenda-board-5"));
+  assert.equal(worker.addedAssets[0].name, "kingflow-pwa-v87");
+  assert.ok(worker.addedAssets[0].assets.includes("/css/tailwind.css?v=20261128-2"));
+  assert.ok(worker.addedAssets[0].assets.includes("/js/main.js?v=20261128-tailwind-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client-account.js?v=20261125-style-retention-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/client.js?v=20261125-workspace-flow-2"));
   assert.ok(worker.addedAssets[0].assets.includes("/client-account.html"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/client-account.css?v=20261125-style-passport-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/offline.js"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/styles.css"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/auth-pages.css"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/ui-feedback.css"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/mfa-settings.css"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/client.css?v=20261125-waitlist-offer-1"));
-  assert.ok(worker.addedAssets[0].assets.includes("/css/business-gallery.css?v=20261125-cover-preview-1"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/ui-feedback.js"));
   assert.ok(worker.addedAssets[0].assets.includes("/js/mfa-settings.js"));
   for (const asset of worker.addedAssets[0].assets) {
@@ -304,7 +297,7 @@ test("admin user table headers align with rendered data labels", () => {
   const userTable = adminPage.match(/<div id="usersTableWrap">([\s\S]*?)<\/div>/)?.[1];
   assert.ok(userTable, "admin user table must exist");
   const columns = ["Usuario", "Rol", "Barbería", "Estado", "Acceso", "Soporte por correo", "Branding automático"];
-  const headers = [...userTable.matchAll(/<th>([^<]+)<\/th>/g)].map((match) => match[1]);
+  const headers = [...userTable.matchAll(/<th\b[^>]*>([^<]+)<\/th>/g)].map((match) => match[1]);
   assert.deepEqual(headers, columns);
   for (const column of columns) {
     assert.ok(adminScript.includes(`data-label="${column}"`), `rendered rows must label ${column}`);

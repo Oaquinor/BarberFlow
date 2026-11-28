@@ -115,7 +115,7 @@ test("confirmation modal resolves acceptance and cancellation and labels destruc
 test("all interactive portals load shared feedback before code that calls it", () => {
   for (const page of ["index.html", "admin.html", "client.html", "onboarding.html"]) {
     const html = fs.readFileSync(path.join(frontend, page), "utf8");
-    assert.match(html, /css\/ui-feedback\.css/);
+    assert.match(html, /css\/tailwind\.css/);
     assert.match(html, /js\/ui-feedback\.js/);
     const utilityPosition = html.indexOf("js/ui-feedback.js");
     for (const script of ["js/main.js", "js/admin.js", "js/client.js", "js/onboarding.js"]) {

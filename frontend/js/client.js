@@ -117,22 +117,22 @@ function renderServiceCards() {
   container.replaceChildren();
   serviceCatalog.forEach((service) => {
     const card = document.createElement('article');
-    card.className = 'service-card';
+    card.className = 'service-card min-w-0 overflow-hidden rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 [&.selected]:border-amber-700 [&.selected]:ring-2 [&.selected]:ring-amber-200';
     card.dataset.serviceId = String(Number(service.id));
     const selectButton = document.createElement('button');
     selectButton.type = 'button';
-    selectButton.className = 'service-select-trigger';
+    selectButton.className = 'service-select-trigger flex w-full flex-col gap-4 text-left';
     selectButton.setAttribute('aria-label', `Elegir ${service.name}`);
     selectButton.setAttribute('aria-pressed', 'false');
     const category = document.createElement('span');
-    category.className = 'service-category';
+    category.className = 'service-category text-xs font-bold uppercase tracking-widest text-amber-800';
     category.textContent = service.category || 'Servicio';
     const title = document.createElement('h3');
     title.textContent = service.name;
     const description = document.createElement('p');
     description.textContent = service.description || 'Un servicio preparado con atención al detalle.';
     const bottom = document.createElement('span');
-    bottom.className = 'service-bottom';
+    bottom.className = 'service-bottom mt-auto flex flex-wrap items-center justify-between gap-3 [&_strong]:text-xl';
     const price = document.createElement('strong');
     price.textContent = formatMoney(service.price_cents);
     const duration = document.createElement('span');
@@ -144,7 +144,7 @@ function renderServiceCards() {
       image.src = imageUrl;
       image.alt = '';
       image.loading = 'lazy';
-      image.className = 'service-photo';
+      image.className = 'service-photo aspect-video w-full rounded-xl object-cover';
       image.addEventListener('error', () => {
         const visual = document.createElement('span');
         visual.className = 'service-visual';
@@ -192,7 +192,7 @@ function renderPublicTeam(team) {
   }
   members.forEach((member) => {
     const card = document.createElement('article');
-    card.className = 'team-card';
+    card.className = 'team-card min-w-0 space-y-4 rounded-2xl border border-[var(--kf-line,#e7e5e4)] bg-[var(--kf-surface,#fff)] p-5 sm:p-7';
     const avatarUrl = trustedShopImage(member.avatar_url);
     if (avatarUrl) {
       const avatar = document.createElement('img');
@@ -225,7 +225,7 @@ function renderPublicTeam(team) {
 function favoriteButton(type, id, label) {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = 'public-favorite-button';
+  button.className = 'public-favorite-button inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50';
   button.dataset.favoriteType = type;
   button.dataset.favoriteId = String(Number(id));
   button.setAttribute('aria-label', `Guardar ${label} en favoritos`);
@@ -320,7 +320,7 @@ function renderPublicGallery(images) {
   if (!trustedImages.length) {
     const empty = document.createElement('div');
     empty.className = 'gallery-empty';
-    empty.innerHTML = '<span class="gallery-empty-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="5" y="8" width="38" height="32" rx="5"/><circle cx="17" cy="19" r="4"/><path d="m9 35 11-10 7 6 5-5 7 9"/></svg></span><div><p class="eyebrow">PORTAFOLIO</p><h3>El próximo estilo puede ser tuyo.</h3><p>Estamos preparando una selección de nuestros cortes. Mientras tanto, conoce los servicios y cuéntanos qué tienes en mente.</p><a href="#reserva" class="gallery-empty-link">Explorar servicios <span aria-hidden="true">→</span></a></div>';
+    empty.innerHTML = '<span class="gallery-empty-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="5" y="8" width="38" height="32" rx="5"/><circle cx="17" cy="19" r="4"/><path d="m9 35 11-10 7 6 5-5 7 9"/></svg></span><div><p class="eyebrow text-xs font-bold uppercase tracking-widest text-amber-800">PORTAFOLIO</p><h3>El próximo estilo puede ser tuyo.</h3><p>Estamos preparando una selección de nuestros cortes. Mientras tanto, conoce los servicios y cuéntanos qué tienes en mente.</p><a href="#reserva" class="gallery-empty-link">Explorar servicios <span aria-hidden="true">→</span></a></div>';
     container.append(empty);
     return;
   }
@@ -329,7 +329,7 @@ function renderPublicGallery(images) {
     image.src = src;
     image.alt = `Trabajo de la barbería, imagen ${index + 1}`;
     image.loading = 'lazy';
-    image.className = 'gallery-image';
+    image.className = 'gallery-image aspect-square w-full rounded-xl object-cover';
     container.append(image);
   });
 }
@@ -463,6 +463,10 @@ function applyPublicTheme(theme) {
   if (!document.documentElement) return;
   const normalized = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme = normalized;
+  const themeTokens = normalized === 'dark'
+    ? { page: '#171717', surface: '#242424', soft: '#303030', ink: '#fafafa', muted: '#d6d3d1', line: '#525252' }
+    : { page: '#fafaf9', surface: '#ffffff', soft: '#f5f5f4', ink: '#1c1917', muted: '#57534e', line: '#e7e5e4' };
+  Object.entries(themeTokens).forEach(([key, value]) => document.documentElement.style.setProperty('--kf-' + key, value));
   const button = document.getElementById('themeToggle');
   if (button) {
     const label = button.querySelector('span');
@@ -486,7 +490,7 @@ function renderCustomBookingQuestions(questions) {
   container.append(heading, intro);
   prompts.forEach((prompt, index) => {
     const field = document.createElement('label');
-    field.className = 'field';
+    field.className = 'field flex min-w-0 flex-col gap-2';
     field.htmlFor = `customBookingQuestion-${index}`;
     field.append(document.createTextNode(prompt));
     const answer = document.createElement('textarea');
@@ -808,10 +812,10 @@ async function trackAppointments() {
     const cards = await Promise.all(data.items.map(async (item) => {
       const d = new Date(item.scheduled_time).toLocaleString('es-DO', { timeZone: shopTimezone });
       const cancelButton = ['pending', 'confirmed'].includes(item.status)
-        ? `<button class="secondary cancel-booking" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
+        ? `<button class="secondary cancel-booking inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-token="${escapeHtml(token)}">Cancelar cita</button>`
         : '';
       const checkInButton = item.check_in_available && !item.checked_in_at
-        ? `<button class="primary check-in-booking" type="button" data-token="${escapeHtml(token)}">Ya llegué · confirmar llegada</button>`
+        ? `<button class="primary check-in-booking inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-800 bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-token="${escapeHtml(token)}">Ya llegué · confirmar llegada</button>`
         : '';
       const queueNotice = item.checked_in_at
         ? `<p class="booking-queue">Llegada confirmada${item.queue_position ? ` · posición aproximada ${Number(item.queue_position)}` : ''}${item.estimated_wait_minutes != null && Number.isFinite(Number(item.estimated_wait_minutes)) ? ` · espera estimada ${Number(item.estimated_wait_minutes)} min` : ''}${item.queue_estimate_note ? ` · ${escapeHtml(item.queue_estimate_note)}` : ''}. Consulta de nuevo para actualizar.</p>`
@@ -824,10 +828,10 @@ async function trackAppointments() {
         availableForService = await slotResults.get(duration) || [];
       }
       const rescheduleControls = ['pending', 'confirmed'].includes(item.status) && availableForService.length
-        ? `<label class="field">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {
+        ? `<label class="field flex min-w-0 flex-col gap-2">Nuevo turno<select class="reschedule-slot" data-token="${escapeHtml(token)}">${availableForService.map(slot => {
             const label = `${new Date(slot.slot_start).toLocaleString('es-DO', { timeZone: shopTimezone })} · ${escapeHtml(slot.barber_name)}`;
             return `<option value="${Number(slot.availability_id)}">${label}</option>`;
-          }).join('')}</select></label><button class="secondary reschedule-booking" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
+          }).join('')}</select></label><button class="secondary reschedule-booking inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-[var(--kf-surface,#fff)] px-4 py-2 text-sm font-semibold text-[var(--kf-ink,#1c1917)] hover:bg-[var(--kf-soft,#f5f5f4)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50" type="button" data-token="${escapeHtml(token)}">Reprogramar cita</button>`
         : '';
       return `<div class="item"><strong>ID ${Number(item.appointment_id)}</strong> • ${escapeHtml(statusLabel(item.status))}<br>${escapeHtml(item.service_type)}<br>${escapeHtml(d)}${item.barber_name ? `<br>Barbero: ${escapeHtml(item.barber_name)}` : ''}${queueNotice}<br>${checkInButton}<br>${rescheduleControls}<br>${cancelButton}</div>`;
     }));

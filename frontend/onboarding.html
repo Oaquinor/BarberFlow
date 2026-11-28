@@ -10,691 +10,237 @@
     <meta name="apple-mobile-web-app-title" content="KingFlow Barber">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
-    <link rel="stylesheet" href="/css/ui-feedback.css">
     <title>Onboarding - KingFlow Barber</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #141412;
-            min-height: 100vh; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
 
-        .onboarding-container { 
-            background: white; 
-            max-width: 600px; 
-            width: 100%; 
-            border-radius: 20px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        .progress-bar-container {
-            background: #f0f0f0;
-            height: 8px;
-            position: relative;
-        }
-
-        .progress-bar-fill {
-            background: linear-gradient(90deg, #b98752, #5a4635);
-            height: 100%;
-            transition: width 0.5s ease;
-        }
-
-        .onboarding-content {
-            padding: 50px;
-        }
-
-        .step-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .step-icon {
-            display: grid;
-            width: 46px; height: 46px; margin: 0 auto 18px; place-items: center;
-            border: 1px solid #ded8cf; border-radius: 50%; color: #775a3c;
-            background: #f5f1eb; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .08em;
-        }
-
-        .step-title {
-            font-size: 2em;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .step-subtitle {
-            color: #666;
-            font-size: 1.1em;
-        }
-
-        .form-group {
-            margin-bottom: 30px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 10px;
-            color: #333;
-            font-weight: 600;
-            font-size: 1.1em;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #b98752;
-            box-shadow: 0 0 0 3px rgba(185, 135, 82, 0.1);
-        }
-
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .radio-option {
-            padding: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .radio-option:hover {
-            border-color: #b98752;
-            background: rgba(185, 135, 82, 0.05);
-        }
-
-        .radio-option.selected {
-            border-color: #b98752;
-            background: rgba(185, 135, 82, 0.1);
-        }
-
-        .radio-option input[type="radio"] {
-            width: 20px;
-            height: 20px;
-        }
-
-        .option-content {
-            flex: 1;
-        }
-
-        .option-title {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .option-description {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .color-picker-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .color-picker {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .color-preview {
-            width: 100%;
-            height: 60px;
-            border-radius: 8px;
-            border: 2px solid #e0e0e0;
-        }
-
-        .color-presets {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .preset-btn {
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #e0e0e0;
-            cursor: pointer;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.9em;
-            transition: all 0.3s;
-        }
-
-        .preset-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .preset-classic { background: linear-gradient(135deg, #8B4513, #654321); color: white; }
-        .preset-modern { background: linear-gradient(135deg, #b98752, #5a4635); color: white; }
-        .preset-urban { background: linear-gradient(135deg, #1a1a1a, #333333); color: white; }
-        .preset-premium { background: linear-gradient(135deg, #FFD700, #FFA500); color: #333; }
-
-        .upload-area {
-            border: 3px dashed #e0e0e0;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .upload-area:hover {
-            border-color: #b98752;
-            background: rgba(185, 135, 82, 0.05);
-        }
-
-        .upload-area:focus-visible {
-            outline: 3px solid #b98752;
-            outline-offset: 3px;
-        }
-
-        .upload-area.dragover {
-            border-color: #b98752;
-            background: rgba(185, 135, 82, 0.1);
-        }
-
-        .upload-icon {
-            display: grid; width: 48px; height: 48px; place-items: center; margin: 0 auto 15px;
-            border-radius: 12px; background: #f2eee8; color: #795d42;
-        }
-        .upload-icon svg, .success-icon svg, .success-check svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-        .success-icon { display: grid; width: 72px; height: 72px; place-items: center; margin: 0 auto; border-radius: 50%; color: #52735c; background: #eaf1e9; }
-        .success-icon svg { width: 32px; height: 32px; }
-        .success-check { display: grid; width: 22px; height: 22px; flex: 0 0 22px; place-items: center; border-radius: 50%; color: #52735c; background: #eaf1e9; }
-        .success-check svg { width: 14px; height: 14px; }
-
-        .upload-text {
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .upload-hint {
-            color: #999;
-            font-size: 0.9em;
-        }
-
-        .logo-preview {
-            max-width: 200px;
-            max-height: 200px;
-            margin: 20px auto;
-            display: block;
-            border-radius: 12px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 40px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 16px 32px;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: var(--onboarding-primary, #b98752);
-            color: var(--onboarding-on-primary, #161713);
-            box-shadow: 0 4px 12px rgba(185, 135, 82, 0.3);
-        }
-
-        .install-banner {
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 18px;
-            background: rgba(185, 135, 82, 0.1);
-            border: 1px solid rgba(185, 135, 82, 0.25);
-        }
-
-        .install-banner button {
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
-            background: var(--onboarding-primary, #b98752);
-            color: var(--onboarding-on-primary, #161713);
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(185, 135, 82, 0.4);
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .step-indicator {
-            text-align: center;
-            color: #999;
-            font-size: 0.9em;
-            margin-top: 20px;
-        }
-
-        .tip-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        .tip-box strong {
-            color: #856404;
-        }
-
-        .tip-box p {
-            color: #856404;
-            margin-top: 5px;
-        }
-
-        .checkbox-group {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-        }
-
-        .checkbox-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .checkbox-option:hover {
-            border-color: #b98752;
-            background: rgba(185, 135, 82, 0.05);
-        }
-
-        .checkbox-option input[type="checkbox"]:checked + label {
-            font-weight: 600;
-            color: #b98752;
-        }
-
-        .time-input-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .success-animation {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .success-icon {
-            font-size: 5em;
-            animation: scaleIn 0.5s ease;
-        }
-
-        @keyframes scaleIn {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-
-        .success-title {
-            font-size: 2.5em;
-            color: #333;
-            margin: 20px 0;
-        }
-
-        .success-subtitle {
-            color: #666;
-            font-size: 1.2em;
-            margin-bottom: 30px;
-        }
-
-        .success-checklist {
-            text-align: left;
-            max-width: 400px;
-            margin: 30px auto;
-        }
-
-        .success-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .success-item:last-child {
-            border-bottom: none;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        html { font-size: clamp(14px, 1vw, 16px); }
-
-        @media (max-width: 992px) {
-            body { padding: 14px; align-items: flex-start; }
-            .onboarding-container { max-width: 100%; }
-            .onboarding-content { padding: 28px; }
-            .step-title { font-size: 1.7rem; }
-            .step-subtitle { font-size: 1rem; }
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .onboarding-content { padding: 18px 14px; }
-            .step-icon { font-size: 2.5rem; margin-bottom: 10px; }
-            .step-title { font-size: 1.35rem; }
-            .step-subtitle { font-size: 0.95rem; }
-            .color-picker-group,
-            .time-input-group,
-            .checkbox-group { grid-template-columns: 1fr; }
-            .color-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .upload-area { padding: 20px; }
-            .upload-icon { font-size: 2rem; }
-            .button-group { flex-direction: column; margin-top: 24px; }
-            .btn { width: 100%; padding: 14px 16px; font-size: 1rem; }
-            .install-banner { flex-direction: column; align-items: flex-start; }
-            .install-banner button { width: 100%; }
-            .success-animation { padding: 24px 10px; }
-            .success-icon { font-size: 3rem; }
-            .success-title { font-size: 1.8rem; }
-            .success-subtitle { font-size: 1rem; }
-        }
-
-        @media (max-width: 480px) {
-            body { padding: 8px; }
-            .onboarding-container { border-radius: 14px; }
-            .onboarding-content { padding: 14px 10px; }
-            .step-header { margin-bottom: 20px; }
-            .form-group { margin-bottom: 16px; }
-            .form-group label { font-size: 1rem; }
-            .form-group input,
-            .form-group select { padding: 12px; font-size: 1rem; }
-            .radio-option { padding: 12px; gap: 10px; }
-            .radio-option input[type="radio"] { width: 18px; height: 18px; }
-            .preset-btn { padding: 10px; font-size: 0.8rem; }
-            .tip-box { padding: 12px; }
-            .success-checklist { margin: 14px auto; }
-        }
-
-        @media (max-width: 360px) {
-            .color-presets { grid-template-columns: 1fr; }
-            .step-title { font-size: 1.2rem; }
-            .step-indicator { font-size: 0.8rem; }
-        }
-    </style>
+  <link rel="stylesheet" href="/css/tailwind.css?v=20261128-2">
 </head>
-<body>
-    <div class="onboarding-container">
+<body class="min-h-dvh bg-stone-100 p-4 font-[Arial,Helvetica,sans-serif] text-stone-900 antialiased sm:p-6 [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_a]:underline-offset-4 [&_a:hover]:underline [&_p]:leading-relaxed">
+    <div class="onboarding-container mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-stone-200 bg-white">
         <!-- Progress Bar -->
-        <div class="progress-bar-container">
-            <div class="progress-bar-fill" id="progressBar" style="width: 10%"></div>
+        <div class="progress-bar-container h-2 overflow-hidden rounded-full bg-stone-200">
+            <div class="progress-bar-fill h-full rounded-full bg-amber-800" id="progressBar" style="width:10%"></div>
         </div>
 
         <!-- Step 1: Welcome -->
-        <div id="step1" class="onboarding-content">
-            <div class="step-header">
-                <div class="step-icon">01</div>
-                <h1 class="step-title">¡Bienvenido a KingFlow Barber!</h1>
-                <p class="step-subtitle">Vamos a personalizar el sistema para tu barbería.<br>Solo tomará 3 minutos.</p>
+        <div id="step1" class="onboarding-content space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">01</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¡Bienvenido a KingFlow Barber!</h1>
+                <p class="step-subtitle text-stone-600">Vamos a personalizar el sistema para tu barbería.<br>Solo tomará 3 minutos.</p>
             </div>
 
-            <div class="form-group">
-                <label for="barbershopName">¿Cuál es el nombre de tu barbería? *</label>
-                <input type="text" id="barbershopName" placeholder="Ej: El Rey del Corte, Barbería Moderna..." required>
+            <div class="form-group flex min-w-0 flex-col gap-2">
+                <label for="barbershopName" class="text-sm font-medium">¿Cuál es el nombre de tu barbería? *</label>
+                <input type="text" id="barbershopName" placeholder="Ej: El Rey del Corte, Barbería Moderna..." required class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-primary" data-next-step="2">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="2">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 1 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 1 de 10</div>
         </div>
 
         <!-- Step 2: Logo -->
-        <div id="step2" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">02</div>
-                <h1 class="step-title">Sube el logo de tu barbería</h1>
-                <p class="step-subtitle">Lo usaremos en todo el sistema</p>
+        <div id="step2" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">02</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">Sube el logo de tu barbería</h1>
+                <p class="step-subtitle text-stone-600">Lo usaremos en todo el sistema</p>
             </div>
 
-            <div class="upload-area" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" data-open-logo>
-                <div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7.5h7l2 2H21v9H3z"/><path d="M3 7.5V5h7l2 2"/><path d="M12 14v4m-2-2 2-2 2 2"/></svg></div>
+            <div class="upload-area grid cursor-pointer place-items-center gap-3 rounded-xl border border-dashed border-stone-400 p-8 text-center" id="uploadArea" role="button" tabindex="0" aria-controls="logoFile" aria-label="Seleccionar logo de la barbería" data-open-logo>
+                <div class="upload-icon text-3xl" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7.5h7l2 2H21v9H3z"/><path d="M3 7.5V5h7l2 2"/><path d="M12 14v4m-2-2 2-2 2 2"/></svg></div>
                 <div class="upload-text">Arrastra tu logo aquí o haz click para seleccionar</div>
-                <div class="upload-hint">PNG o JPG • Máx 5MB</div>
+                <div class="upload-hint text-xs text-stone-500">PNG o JPG • Máx 5MB</div>
             </div>
-            <input type="file" id="logoFile" aria-label="Logo de la barbería, archivo PNG o JPG" accept="image/png,image/jpeg,image/jpg" style="display: none" >
-            <img id="logoPreview" class="logo-preview hidden" alt="Vista previa del logo de la barbería" />
+            <input type="file" id="logoFile" aria-label="Logo de la barbería, archivo PNG o JPG" accept="image/png,image/jpeg,image/jpg" style="display:none"  class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+            <img id="logoPreview" class="logo-preview hidden size-24 rounded-xl object-cover" alt="Vista previa del logo de la barbería" />
             <p id="logoUploadStatus" role="status" aria-live="polite"></p>
 
-            <div class="tip-box">
+            <div class="tip-box min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
                 <strong>Consejo</strong>
                 <p>Usaremos tu logo en notificaciones, recibos y todo el dashboard personalizado.</p>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="1">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="3">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="1">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="3">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 2 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 2 de 10</div>
         </div>
 
         <!-- Step 3: Colors -->
-        <div id="step3" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">03</div>
-                <h1 class="step-title">¿Cuáles son los colores de tu marca?</h1>
-                <p class="step-subtitle">Personalizaremos toda la interfaz</p>
+        <div id="step3" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">03</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cuáles son los colores de tu marca?</h1>
+                <p class="step-subtitle text-stone-600">Personalizaremos toda la interfaz</p>
             </div>
 
-            <div class="color-picker-group">
-                <div class="color-picker">
-                    <label for="primaryColor">Color Principal</label>
-                    <input type="color" id="primaryColor" value="#b98752" >
-                    <div class="color-preview" id="primaryPreview" style="background: #b98752"></div>
+            <div class="color-picker-group flex min-w-0 flex-col gap-2">
+                <div class="color-picker grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label for="primaryColor" class="text-sm font-medium">Color Principal</label>
+                    <input type="color" id="primaryColor" value="#b98752"  class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="color-preview min-h-24 rounded-xl border border-stone-300 [background:#b98752]" id="primaryPreview"></div>
                 </div>
-                <div class="color-picker">
-                    <label for="secondaryColor">Color Secundario</label>
-                    <input type="color" id="secondaryColor" value="#5a4635" >
-                    <div class="color-preview" id="secondaryPreview" style="background: #5a4635"></div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>O elige un preset:</label>
-                <div class="color-presets">
-                    <button class="preset-btn preset-classic" data-preset-primary="#8B4513" data-preset-secondary="#654321">Clásico</button>
-                    <button class="preset-btn preset-modern" data-preset-primary="#b98752" data-preset-secondary="#5a4635">Moderno</button>
-                    <button class="preset-btn preset-urban" data-preset-primary="#1a1a1a" data-preset-secondary="#333333">Urbano</button>
-                    <button class="preset-btn preset-premium" data-preset-primary="#FFD700" data-preset-secondary="#FFA500">Premium</button>
+                <div class="color-picker grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label for="secondaryColor" class="text-sm font-medium">Color Secundario</label>
+                    <input type="color" id="secondaryColor" value="#5a4635"  class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="color-preview min-h-24 rounded-xl border border-stone-300 [background:#5a4635]" id="secondaryPreview"></div>
                 </div>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="2">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="4">Siguiente →</button>
+            <div class="form-group flex min-w-0 flex-col gap-2">
+                <label class="text-sm font-medium">O elige un preset:</label>
+                <div class="color-presets flex flex-wrap items-center gap-3">
+                    <button class="preset-btn preset-classic inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-preset-primary="#8B4513" data-preset-secondary="#654321">Clásico</button>
+                    <button class="preset-btn preset-modern inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-preset-primary="#b98752" data-preset-secondary="#5a4635">Moderno</button>
+                    <button class="preset-btn preset-urban inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-preset-primary="#1a1a1a" data-preset-secondary="#333333">Urbano</button>
+                    <button class="preset-btn preset-premium inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-preset-primary="#FFD700" data-preset-secondary="#FFA500">Premium</button>
+                </div>
             </div>
 
-            <div class="step-indicator">Paso 3 de 10</div>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="2">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="4">Siguiente →</button>
+            </div>
+
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 3 de 10</div>
         </div>
 
         <!-- Step 4: Style -->
-        <div id="step4" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">04</div>
-                <h1 class="step-title">¿Cómo describirías el estilo de tu barbería?</h1>
-                <p class="step-subtitle">Esto nos ayuda a personalizar la experiencia</p>
+        <div id="step4" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">04</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cómo describirías el estilo de tu barbería?</h1>
+                <p class="step-subtitle text-stone-600">Esto nos ayuda a personalizar la experiencia</p>
             </div>
 
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="style" value="classic">
-                    <div class="option-content">
-                        <div class="option-title"> Clásica</div>
-                        <div class="option-description">Tradición y experiencia</div>
+            <div class="radio-group grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="style" value="classic" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Clásica</div>
+                        <div class="option-description text-sm text-stone-500">Tradición y experiencia</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="style" value="modern">
-                    <div class="option-content">
-                        <div class="option-title"> Moderna</div>
-                        <div class="option-description">Tendencias y estilo actual</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="style" value="modern" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Moderna</div>
+                        <div class="option-description text-sm text-stone-500">Tendencias y estilo actual</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="style" value="urban">
-                    <div class="option-content">
-                        <div class="option-title"> Urbana</div>
-                        <div class="option-description">Streetwear y cultura urbana</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="style" value="urban" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Urbana</div>
+                        <div class="option-description text-sm text-stone-500">Streetwear y cultura urbana</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="style" value="premium">
-                    <div class="option-content">
-                        <div class="option-title"> Premium</div>
-                        <div class="option-description">Lujo y exclusividad</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="style" value="premium" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Premium</div>
+                        <div class="option-description text-sm text-stone-500">Lujo y exclusividad</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="style" value="family">
-                    <div class="option-content">
-                        <div class="option-title"> Familiar</div>
-                        <div class="option-description">Cercana y acogedora</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="style" value="family" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Familiar</div>
+                        <div class="option-description text-sm text-stone-500">Cercana y acogedora</div>
                     </div>
                 </label>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="3">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="5">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="3">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="5">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 4 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 4 de 10</div>
         </div>
 
         <!-- Step 5: Primary Goal -->
-        <div id="step5" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">05</div>
-                <h1 class="step-title">¿Qué es lo más importante para ti ahora?</h1>
-                <p class="step-subtitle">Personalizaremos tu dashboard según tu objetivo</p>
+        <div id="step5" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">05</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Qué es lo más importante para ti ahora?</h1>
+                <p class="step-subtitle text-stone-600">Personalizaremos tu dashboard según tu objetivo</p>
             </div>
 
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="more_clients">
-                    <div class="option-content">
-                        <div class="option-title"> Conseguir más clientes</div>
-                        <div class="option-description">Crecimiento y nuevos clientes</div>
+            <div class="radio-group grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="more_clients" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Conseguir más clientes</div>
+                        <div class="option-description text-sm text-stone-500">Crecimiento y nuevos clientes</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="organization">
-                    <div class="option-content">
-                        <div class="option-title"> Mejor organización</div>
-                        <div class="option-description">Agenda y flujo de trabajo</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="organization" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Mejor organización</div>
+                        <div class="option-description text-sm text-stone-500">Agenda y flujo de trabajo</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="reduce_cancellations">
-                    <div class="option-content">
-                        <div class="option-title"> Reducir cancelaciones</div>
-                        <div class="option-description">Menos no-shows y cancelaciones</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="reduce_cancellations" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Reducir cancelaciones</div>
+                        <div class="option-description text-sm text-stone-500">Menos no-shows y cancelaciones</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="save_time">
-                    <div class="option-content">
-                        <div class="option-title"> Ahorrar tiempo</div>
-                        <div class="option-description">Automatización y eficiencia</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="save_time" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Ahorrar tiempo</div>
+                        <div class="option-description text-sm text-stone-500">Automatización y eficiencia</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="better_service">
-                    <div class="option-content">
-                        <div class="option-title">Mejorar atención</div>
-                        <div class="option-description">Calidad y satisfacción</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="better_service" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold">Mejorar atención</div>
+                        <div class="option-description text-sm text-stone-500">Calidad y satisfacción</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="goal" value="productivity">
-                    <div class="option-content">
-                        <div class="option-title"> Aumentar productividad</div>
-                        <div class="option-description">Más servicios por día</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="goal" value="productivity" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Aumentar productividad</div>
+                        <div class="option-description text-sm text-stone-500">Más servicios por día</div>
                     </div>
                 </label>
             </div>
 
-            <div class="tip-box">
+            <div class="tip-box min-w-0 space-y-4 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
                 <strong>Consejo</strong>
                 <p>Tu dashboard mostrará métricas enfocadas en este objetivo.</p>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="4">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="6">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="4">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="6">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 5 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 5 de 10</div>
         </div>
 
         <!-- Step 6: Team Size -->
-        <div id="step6" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">06</div>
-                <h1 class="step-title">¿Cuántos barberos trabajan contigo?</h1>
-                <p class="step-subtitle">Inclúyete si eres barbero</p>
+        <div id="step6" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">06</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cuántos barberos trabajan contigo?</h1>
+                <p class="step-subtitle text-stone-600">Inclúyete si eres barbero</p>
             </div>
 
-            <div class="form-group">
-                <label for="teamSize">Número de barberos</label>
-                <select id="teamSize">
+            <div class="form-group flex min-w-0 flex-col gap-2">
+                <label for="teamSize" class="text-sm font-medium">Número de barberos</label>
+                <select id="teamSize" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                     <option value="1">Solo yo</option>
                     <option value="2">2 barberos</option>
                     <option value="3">3 barberos</option>
@@ -705,25 +251,25 @@
                 </select>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="5">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="7">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="5">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="7">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 6 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 6 de 10</div>
         </div>
 
         <!-- Step 7: Service Duration -->
-        <div id="step7" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">07</div>
-                <h1 class="step-title">¿Cuál es la duración promedio de un servicio?</h1>
-                <p class="step-subtitle">Nos ayuda a optimizar tu agenda</p>
+        <div id="step7" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">07</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cuál es la duración promedio de un servicio?</h1>
+                <p class="step-subtitle text-stone-600">Nos ayuda a optimizar tu agenda</p>
             </div>
 
-            <div class="form-group">
-                <label for="avgDuration">Minutos promedio</label>
-                <select id="avgDuration">
+            <div class="form-group flex min-w-0 flex-col gap-2">
+                <label for="avgDuration" class="text-sm font-medium">Minutos promedio</label>
+                <select id="avgDuration" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 w-full">
                     <option value="15">15 minutos</option>
                     <option value="20">20 minutos</option>
                     <option value="25">25 minutos</option>
@@ -735,115 +281,115 @@
                 </select>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="6">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="8">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="6">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="8">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 7 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 7 de 10</div>
         </div>
 
         <!-- Step 8: Business Hours -->
-        <div id="step8" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">08</div>
-                <h1 class="step-title">¿Cuáles son tus horarios?</h1>
-                <p class="step-subtitle">Horario general de lunes a viernes</p>
+        <div id="step8" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">08</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cuáles son tus horarios?</h1>
+                <p class="step-subtitle text-stone-600">Horario general de lunes a viernes</p>
             </div>
 
-            <div class="time-input-group">
-                <div class="form-group">
-                    <label for="openingTime">Hora de apertura</label>
-                    <input type="time" id="openingTime" value="09:00">
+            <div class="time-input-group grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="form-group flex min-w-0 flex-col gap-2">
+                    <label for="openingTime" class="text-sm font-medium">Hora de apertura</label>
+                    <input type="time" id="openingTime" value="09:00" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
                 </div>
-                <div class="form-group">
-                    <label for="closingTime">Hora de cierre</label>
-                    <input type="time" id="closingTime" value="19:00">
+                <div class="form-group flex min-w-0 flex-col gap-2">
+                    <label for="closingTime" class="text-sm font-medium">Hora de cierre</label>
+                    <input type="time" id="closingTime" value="19:00" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50 w-full">
                 </div>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="7">← Atrás</button>
-                <button class="btn btn-primary" data-next-step="9">Siguiente →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="7">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-next-step="9">Siguiente →</button>
             </div>
 
-            <div class="step-indicator">Paso 8 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 8 de 10</div>
         </div>
 
         <!-- Step 9: Personality -->
-        <div id="step9" class="onboarding-content hidden">
-            <div class="step-header">
-                <div class="step-icon">09</div>
-                <h1 class="step-title">¿Cuál es la personalidad de tu negocio?</h1>
-                <p class="step-subtitle">Ajustará el tono de los mensajes del sistema</p>
+        <div id="step9" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="step-header space-y-3 border-b border-stone-200 p-5 sm:p-8">
+                <div class="step-icon grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-900">09</div>
+                <h1 class="step-title text-3xl font-bold tracking-tight sm:text-4xl">¿Cuál es la personalidad de tu negocio?</h1>
+                <p class="step-subtitle text-stone-600">Ajustará el tono de los mensajes del sistema</p>
             </div>
 
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="personality" value="professional">
-                    <div class="option-content">
-                        <div class="option-title"> Profesional y seria</div>
-                        <div class="option-description">Formal y corporativa</div>
+            <div class="radio-group grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="personality" value="professional" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Profesional y seria</div>
+                        <div class="option-description text-sm text-stone-500">Formal y corporativa</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="personality" value="friendly">
-                    <div class="option-content">
-                        <div class="option-title"> Amigable y relajada</div>
-                        <div class="option-description">Cercana y casual</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="personality" value="friendly" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Amigable y relajada</div>
+                        <div class="option-description text-sm text-stone-500">Cercana y casual</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="personality" value="energetic">
-                    <div class="option-content">
-                        <div class="option-title"> Energética y divertida</div>
-                        <div class="option-description">Dinámica y juvenil</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="personality" value="energetic" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Energética y divertida</div>
+                        <div class="option-description text-sm text-stone-500">Dinámica y juvenil</div>
                     </div>
                 </label>
-                <label class="radio-option">
-                    <input type="radio" name="personality" value="elegant">
-                    <div class="option-content">
-                        <div class="option-title"> Elegante y sofisticada</div>
-                        <div class="option-description">Refinada y exclusiva</div>
+                <label class="radio-option flex min-w-0 items-start gap-3 rounded-xl border border-stone-300 p-4 has-checked:border-amber-800 has-checked:bg-amber-50 text-sm font-medium">
+                    <input type="radio" name="personality" value="elegant" class="min-h-11 max-w-full min-w-0 rounded-lg border border-stone-300 bg-white p-3 text-base text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                    <div class="option-content min-w-0 space-y-2">
+                        <div class="option-title font-semibold"> Elegante y sofisticada</div>
+                        <div class="option-description text-sm text-stone-500">Refinada y exclusiva</div>
                     </div>
                 </label>
             </div>
 
-            <div class="button-group">
-                <button class="btn btn-secondary" data-prev-step="8">← Atrás</button>
-                <button class="btn btn-primary" data-onboarding-action="complete">Finalizar →</button>
+            <div class="button-group flex flex-wrap items-center gap-3">
+                <button class="btn btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer" data-prev-step="8">← Atrás</button>
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-onboarding-action="complete">Finalizar →</button>
             </div>
 
-            <div class="step-indicator">Paso 9 de 10</div>
+            <div class="step-indicator text-sm font-semibold text-amber-800">Paso 9 de 10</div>
         </div>
 
         <!-- Step 10: Success -->
-        <div id="step10" class="onboarding-content hidden">
-            <div class="success-animation">
-                <div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></div>
-                <h1 class="success-title">¡Todo listo!</h1>
+        <div id="step10" class="onboarding-content hidden space-y-6 p-5 sm:p-10">
+            <div class="success-animation grid place-items-center py-5">
+                <div class="success-icon grid size-8 place-items-center rounded-full bg-emerald-100 text-emerald-800" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></div>
+                <h1 class="success-title text-3xl font-bold tracking-tight sm:text-4xl">¡Todo listo!</h1>
                 <p class="success-subtitle">Hemos personalizado el sistema para ti</p>
 
-                <div class="success-checklist">
-                    <div class="success-item">
+                <div class="success-checklist grid min-w-0 gap-5">
+                    <div class="success-item flex items-start gap-3">
                         <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Logo y colores aplicados</span>
                     </div>
-                    <div class="success-item">
+                    <div class="success-item flex items-start gap-3">
                         <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Dashboard adaptado a tu objetivo</span>
                     </div>
-                    <div class="success-item">
+                    <div class="success-item flex items-start gap-3">
                         <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Horarios configurados</span>
                     </div>
-                    <div class="success-item">
+                    <div class="success-item flex items-start gap-3">
                         <span class="success-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></svg></span>
                         <span>Mensajes personalizados activos</span>
                     </div>
                 </div>
 
-                <button class="btn btn-primary" style="max-width: 300px; margin: 30px auto;" data-onboarding-action="dashboard">
+                <button class="btn btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:cursor-not-allowed disabled:opacity-50 border-amber-800 [max-width:18.75rem] [margin:1.875rem_auto] cursor-pointer bg-[var(--brand-primary,#92400e)] text-[var(--brand-on-primary,#fff)] hover:brightness-95" data-onboarding-action="dashboard">
                     Ir a mi dashboard →
                 </button>
             </div>

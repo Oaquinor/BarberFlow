@@ -5,6 +5,11 @@
     const apiRoot = (config.apiBaseUrl || window.location.origin).replace(/\/$/, "");
     const h = (tag, attrs = {}, text = "") => {
         const node = document.createElement(tag);
+        const shared = {
+            button: 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-stone-100',
+            dialog: 'm-auto max-h-[90dvh] w-[min(94vw,36rem)] space-y-5 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 backdrop:bg-black/60 [&_section]:grid [&_section]:gap-3 [&_input]:min-h-11 [&_input]:min-w-0 [&_input]:rounded-lg [&_input]:border [&_input]:border-stone-300 [&_input]:p-3 [&_button]:min-h-11 [&_button]:rounded-lg [&_button]:bg-stone-100 [&_button]:p-3 [&_pre]:overflow-x-auto',
+        };
+        attrs.class = [attrs.class || '', shared[tag] || ''].join(' ').trim();
         for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
         if (text) node.textContent = text;
         return node;
